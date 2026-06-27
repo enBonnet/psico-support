@@ -4,6 +4,9 @@
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./src/entry-server.tsx",
+  "routes": [
+    { "pattern": "psicoayudaven.com", "custom_domain": true },
+  ],
   "d1_databases": [
     {
       "binding": "DB",
