@@ -63,7 +63,10 @@ function PanelPage() {
             </Link>
           )}
           <button
-            onClick={() => authClient.signOut()}
+            onClick={async () => {
+              await authClient.signOut()
+              window.location.href = '/profesional/login'
+            }}
             className="text-sm font-medium text-[var(--medi-secondary)]"
           >
             Salir

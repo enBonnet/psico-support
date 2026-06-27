@@ -5,8 +5,10 @@ import { useSuspenseQuery } from '@tanstack/react-query'
 import { listProfessionals } from '#/server/professionals'
 import type { PublicProfessional } from '#/server/professionals'
 
+// ponytail: bare URL (no ?modality=) used to 500 — default to in_person so
+// direct entry resolves instead of throwing on the missing search param.
 const searchSchema = z.object({
-  modality: z.enum(['in_person', 'remote']),
+  modality: z.enum(['in_person', 'remote']).default('in_person'),
 })
 
 export const Route = createFileRoute('/ayuda/profesionales/')({
