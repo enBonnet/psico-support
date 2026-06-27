@@ -1,287 +1,108 @@
-Welcome to your new TanStack Start app! 
+# Red de Apoyo Psicológico Venezuela
 
-# Getting Started
+Plataforma de apoyo psicológico para respuesta a emergencias en Venezuela. Conecta a personas que necesitan contención emocional con psicólogos verificados, y permite a los profesionales registrarse, subir sus credenciales y gestionar su disponibilidad.
 
-To run this application:
+**Producción:** [psicoayudaven.com](https://psicoayudaven.com)
+
+## Características
+
+- **Ruta de paciente** (`/ayuda`): acceso rápido a ayuda presencial o a distancia.
+- **Directorio de profesionales** (`/ayuda/profesionales`): psicólogos verificados con estado en línea y contacto directo por WhatsApp. Los disponibles aparecen primero.
+- **Registro de profesionales** (`/profesional/registro`): formulario en dos pasos. Soporta psicólogos dentro y fuera de Venezuela (cédula, FPV y colegio regional dependen del país de la credencial). El archivo de credencial se sube a R2.
+- **Panel del profesional** (`/profesional/panel`): activar/desactivar disponibilidad ("En línea" / "No conectado").
+- **Panel de administración** (`/admin`): revisar y verificar o rechazar registros. Acceso basado en base de datos (columna `user.role`).
+- **Autenticación** con Better Auth (email + contraseña).
+- UI *mobile-first* con estética *liquid glass* sobre la paleta Medicall.
+
+## Stack técnico
+
+- [TanStack Start](https://tanstack.com/start) (React 19, SSR) + TanStack Router / Query / Form
+- [Cloudflare Workers](https://workers.cloudflare.com/) + [D1](https://developers.cloudflare.com/d1/) (SQLite) + [R2](https://developers.cloudflare.com/r2/) (credenciales)
+- [Better Auth](https://www.better-auth.com/) — email/contraseña, admin basado en BD
+- [Drizzle ORM](https://orm.drizzle.team/) + drizzle-kit (migraciones)
+- [Tailwind CSS v4](https://tailwindcss.com/) + componentes UI propios
+- [Zod](https://zod.dev/) para validación
+- [Sentry](https://sentry.io) (opcional)
+
+## Desarrollo local
 
 ```bash
 npm install
-npm run dev
+cp .env.example .env.local           # completa los valores
+npx wrangler d1 migrations apply psico-support-db --local
+npm run dev                          # http://localhost:3000
 ```
 
-# Building For Production
+La BD local se guarda en `dev.db` (ignorado por git).
 
-To build this application for production:
+### Variables de entorno
+
+Copia `.env.example` a `.env.local` y completa:
+
+| Variable | Requerida | Descripción |
+|---|---|---|
+| `BETTER_AUTH_SECRET` | sí | Secreto para firmar sesiones. Genera con `npx -y @better-auth/cli secret` |
+| `BETTER_AUTH_URL` | sí | URL base pública (local: `http://localhost:3000`) |
+| `DATABASE_URL` | sí | Ruta a la BD SQLite local (p. ej. `file:./dev.db`) |
+| `VITE_SENTRY_DSN` | no | DSN de Sentry para el cliente |
+
+### Base de datos
+
+Las migraciones viven en `drizzle/`. Tras editar `src/db/schema.ts`:
 
 ```bash
-npm run build
+npm run db:generate                                         # crea el SQL en drizzle/
+npx wrangler d1 migrations apply psico-support-db --local   # aplica en local
 ```
 
-## Testing
+### Dar permisos de administrador
 
-This project uses [Vitest](https://vitest.dev/) for testing. You can run the tests with:
+El admin se define en la BD (`user.role`), no por variable de entorno:
+
+```sql
+UPDATE user SET role = 'admin' WHERE email = 'tu@correo.com';
+```
+
+## Despliegue (Cloudflare)
+
+Los bindings de D1/R2 y el dominio están en `wrangler.jsonc`.
 
 ```bash
-npm run test
+# 1. Recursos (una sola vez); copia el database_id devuelto a wrangler.jsonc
+npx wrangler d1 create psico-support-db
+npx wrangler r2 bucket create psico-support-credentials
+
+# 2. Migraciones a remoto
+npx wrangler d1 migrations apply psico-support-db --remote
+
+# 3. Secretos
+npx wrangler secret put BETTER_AUTH_SECRET
+npx wrangler secret put BETTER_AUTH_URL        # https://tu-dominio.com
+npx wrangler secret put VITE_SENTRY_DSN        # opcional
+
+# 4. Desplegar
+npm run deploy
 ```
 
-## Styling
+## Estructura
 
-This project uses [Tailwind CSS](https://tailwindcss.com/) for styling.
-
-### Removing Tailwind CSS
-
-If you prefer not to use Tailwind CSS:
-
-1. Remove the demo pages in `src/routes/demo/`
-2. Replace the Tailwind import in `src/styles.css` with your own styles
-3. Remove `tailwindcss()` from the plugins array in `vite.config.ts`
-4. Uninstall the packages: `npm install @tailwindcss/vite tailwindcss -D`
-
-## Linting & Formatting
-
-
-This project uses [eslint](https://eslint.org/) and [prettier](https://prettier.io/) for linting and formatting. Eslint is configured using [tanstack/eslint-config](https://tanstack.com/config/latest/docs/eslint). The following scripts are available:
-
-```bash
-npm run lint
-npm run format
-npm run check
+```
+src/
+  routes/
+    ayuda/               # ruta de paciente + directorio de profesionales
+    profesional/         # registro (2 pasos), login, panel
+    admin/               # panel de administración
+    api/
+      auth/$             # handler de Better Auth
+      credential/upload  # subida de credenciales a R2
+  server/                # server functions (profesionales, ubicaciones)
+  db/                    # esquema Drizzle + cliente D1
+  lib/auth.ts            # configuración Better Auth
+  components/ui/         # button, card, badge, input, switch, label
+drizzle/                 # migraciones SQL
 ```
 
+## Notas
 
-## Deploy to Cloudflare Workers
-
-This project uses the Cloudflare Vite plugin (configured in `vite.config.ts`) and `wrangler.jsonc`:
-
-1. Install Wrangler: `npm install -g wrangler`
-2. Authenticate: `wrangler login`
-3. Deploy: `npx wrangler deploy`
-
-For production env vars, run `wrangler secret put MY_VAR` for each secret listed in `.env.example`. Public (non-secret) vars go in `wrangler.jsonc` under `vars`.
-
-KV, D1, R2, and Durable Object bindings are configured in `wrangler.jsonc` — see https://developers.cloudflare.com/workers/wrangler/configuration/.
-
-
-# Paraglide i18n
-
-This add-on wires up ParaglideJS for localized routing and message formatting.
-
-- Messages live in `project.inlang/messages`.
-- URLs are localized through the Paraglide Vite plugin and router `rewrite` hooks.
-- Run the dev server or build to regenerate the `src/paraglide` outputs.
-
-
-## Shadcn
-
-Add components using the latest version of [Shadcn](https://ui.shadcn.com/).
-
-```bash
-pnpm dlx shadcn@latest add button
-```
-
-
-## T3Env
-
-- You can use T3Env to add type safety to your environment variables.
-- Add Environment variables to the `src/env.mjs` file.
-- Use the environment variables in your code.
-
-### Usage
-
-```ts
-import { env } from "#/env";
-
-console.log(env.VITE_APP_TITLE);
-```
-
-
-
-
-
-## Setting up Better Auth
-
-1. Generate and set the `BETTER_AUTH_SECRET` environment variable in your `.env.local`:
-
-   ```bash
-   npx -y @better-auth/cli secret
-   ```
-
-2. Visit the [Better Auth documentation](https://www.better-auth.com) to unlock the full potential of authentication in your app.
-
-### Adding a Database (Optional)
-
-Better Auth can work in stateless mode, but to persist user data, add a database:
-
-```typescript
-// src/lib/auth.ts
-import { betterAuth } from "better-auth";
-import { Pool } from "pg";
-
-export const auth = betterAuth({
-  database: new Pool({
-    connectionString: process.env.DATABASE_URL,
-  }),
-  // ... rest of config
-});
-```
-
-Then run migrations:
-
-```bash
-npx -y @better-auth/cli migrate
-```
-
-
-
-## Routing
-
-This project uses [TanStack Router](https://tanstack.com/router) with file-based routing. Routes are managed as files in `src/routes`.
-
-### Adding A Route
-
-To add a new route to your application just add a new file in the `./src/routes` directory.
-
-TanStack will automatically generate the content of the route file for you.
-
-Now that you have two routes you can use a `Link` component to navigate between them.
-
-### Adding Links
-
-To use SPA (Single Page Application) navigation you will need to import the `Link` component from `@tanstack/react-router`.
-
-```tsx
-import { Link } from "@tanstack/react-router";
-```
-
-Then anywhere in your JSX you can use it like so:
-
-```tsx
-<Link to="/about">About</Link>
-```
-
-This will create a link that will navigate to the `/about` route.
-
-More information on the `Link` component can be found in the [Link documentation](https://tanstack.com/router/v1/docs/framework/react/api/router/linkComponent).
-
-### Using A Layout
-
-In the File Based Routing setup the layout is located in `src/routes/__root.tsx`. Anything you add to the root route will appear in all the routes. The route content will appear in the JSX where you render `{children}` in the `shellComponent`.
-
-Here is an example layout that includes a header:
-
-```tsx
-import { HeadContent, Scripts, createRootRoute } from '@tanstack/react-router'
-
-export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: 'utf-8' },
-      { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'My App' },
-    ],
-  }),
-  shellComponent: ({ children }) => (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        <header>
-          <nav>
-            <Link to="/">Home</Link>
-            <Link to="/about">About</Link>
-          </nav>
-        </header>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  ),
-})
-```
-
-More information on layouts can be found in the [Layouts documentation](https://tanstack.com/router/latest/docs/framework/react/guide/routing-concepts#layouts).
-
-## Server Functions
-
-TanStack Start provides server functions that allow you to write server-side code that seamlessly integrates with your client components.
-
-```tsx
-import { createServerFn } from '@tanstack/react-start'
-
-const getServerTime = createServerFn({
-  method: 'GET',
-}).handler(async () => {
-  return new Date().toISOString()
-})
-
-// Use in a component
-function MyComponent() {
-  const [time, setTime] = useState('')
-  
-  useEffect(() => {
-    getServerTime().then(setTime)
-  }, [])
-  
-  return <div>Server time: {time}</div>
-}
-```
-
-## API Routes
-
-You can create API routes by using the `server` property in your route definitions:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { json } from '@tanstack/react-start'
-
-export const Route = createFileRoute('/api/hello')({
-  server: {
-    handlers: {
-      GET: () => json({ message: 'Hello, World!' }),
-    },
-  },
-})
-```
-
-## Data Fetching
-
-There are multiple ways to fetch data in your application. You can use TanStack Query to fetch data from a server. But you can also use the `loader` functionality built into TanStack Router to load the data for a route before it's rendered.
-
-For example:
-
-```tsx
-import { createFileRoute } from '@tanstack/react-router'
-
-export const Route = createFileRoute('/people')({
-  loader: async () => {
-    const response = await fetch('https://swapi.dev/api/people')
-    return response.json()
-  },
-  component: PeopleComponent,
-})
-
-function PeopleComponent() {
-  const data = Route.useLoaderData()
-  return (
-    <ul>
-      {data.results.map((person) => (
-        <li key={person.name}>{person.name}</li>
-      ))}
-    </ul>
-  )
-}
-```
-
-Loaders simplify your data fetching logic dramatically. Check out more information in the [Loader documentation](https://tanstack.com/router/latest/docs/framework/react/guide/data-loading#loader-parameters).
-
-# Demo files
-
-Files prefixed with `demo` can be safely deleted. They are there to provide a starting point for you to play around with the features you've installed.
-
-# Learn More
-
-You can learn more about all of the offerings from TanStack in the [TanStack documentation](https://tanstack.com).
-
-For TanStack Start specific documentation, visit [TanStack Start](https://tanstack.com/start).
+- El registro desacopla país de residencia, país de la credencial y país de WhatsApp, para soportar psicólogos venezolanos dentro y fuera del país.
+- Los mensajes de error al usuario están en español; nunca se filtran detalles de SQL al cliente.

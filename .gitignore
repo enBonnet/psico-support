@@ -15,3 +15,5 @@ dev.db
 dev.db-bak
 dev.db.bak
 .claude/
+.agents/
+.cursorrules
