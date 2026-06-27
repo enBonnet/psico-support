@@ -70,9 +70,14 @@ function ProfessionalsList() {
 }
 
 function ProfessionalCard({ p }: { p: PublicProfessional }) {
-  const href = p.whatsapp.startsWith('+')
-    ? `https://wa.me/${p.whatsapp.slice(1)}`
-    : `https://wa.me/${p.whatsapp}`
+  // ponytail: wa.me wants digits only (no +, no spaces). Stored format is
+  // "+58 1234567890", so strip everything but \d. Default message pre-fills
+  // the chat so the professional knows where the lead came from.
+  const digits = p.whatsapp.replace(/\D/g, '')
+  const text = encodeURIComponent(
+    'Hola, te escribo por medio de psicoayudaven.',
+  )
+  const href = `https://wa.me/${digits}?text=${text}`
 
   return (
     <li className="glass-card p-4">
