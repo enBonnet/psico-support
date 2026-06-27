@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "dotenv -e .env.local -- sh -c \"NODE_OPTIONS='--import ./instrument.server.mjs' vite dev --port 3000\"",
     "generate-routes": "tsr generate",
-    "build": "vite build && cp instrument.server.mjs .output/server",
+    "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
     "lint": "eslint",
@@ -58,6 +58,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260627.1",
     "@inlang/paraglide-js": "^2.13.1",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-event-client": "latest",
@@ -78,6 +79,7 @@
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",
     "vite": "^8.0.0",
+    "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.5",
     "wrangler": "^4.70.0"
   },

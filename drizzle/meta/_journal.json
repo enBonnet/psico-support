@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1782583180650,
+      "tag": "0000_greedy_dracula",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1782583200000,
+      "tag": "0001_add_country_estado_ciudad",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1782583300000,
+      "tag": "0002_nullable_credential_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1782583400000,
+      "tag": "0003_add_credential_and_whatsapp_country",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1782591700015,
+      "tag": "0004_bent_domino",
+      "breakpoints": true
+    }
+  ]
+}

@@ -1,7 +1,21 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "tanstack-start-app",
+  "name": "psico-support",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+  "main": "./src/entry-server.tsx",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "psico-support-db",
+      "database_id": "17ebb29c-bb8f-4b08-af00-19230623fa1d",
+      "migrations_dir": "./drizzle",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CREDENTIAL_FILES",
+      "bucket_name": "psico-support-credentials",
+    },
+  ],
 }

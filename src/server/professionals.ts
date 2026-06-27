@@ -1,0 +1,436 @@
+import { createServerFn } from '@tanstack/react-start'
+import { z } from 'zod'
+import { eq, and, or, desc, asc, DrizzleError } from 'drizzle-orm'
+
+import { getDb } from '#/db'
+import { professionals, user as userTable } from '#/db/schema'
+import { getAuth, isAdminEmail } from '#/lib/auth'
+import {
+  PAIS_OPTIONS,
+  VENEZUELA,
+  VENEZUELA_ESTADOS,
+} from './locations'
+
+export type PublicProfessional = {
+  id: number
+  name: string
+  modality: 'in_person' | 'remote' | 'both'
+  country: string
+  estado: string | null
+  ciudad: string | null
+  whatsapp: string
+  available: boolean
+}
+
+const listSchema = z.object({
+  modality: z.enum(['in_person', 'remote']),
+})
+
+export const listProfessionals = createServerFn({ method: 'GET' })
+  .validator(listSchema)
+  .handler(async ({ data }) => {
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        modality: professionals.modality,
+        country: professionals.country,
+        estado: professionals.estado,
+        ciudad: professionals.ciudad,
+        whatsapp: professionals.whatsapp,
+        available: professionals.available,
+      })
+      .from(professionals)
+      .where(
+        and(
+          eq(professionals.verifiedStatus, 'verified'),
+          or(
+            eq(professionals.modality, data.modality),
+            eq(professionals.modality, 'both'),
+          ),
+        ),
+      )
+      // ponytail: list all verified pros (not just on-turn), but float the
+      // available ones to the top so patients see who's reachable now first.
+      .orderBy(desc(professionals.available), asc(professionals.name))
+    return rows
+  })
+
+const COLEGIOS = [
+  'Distrito Capital',
+  'La Guaira',
+  'Miranda',
+  'Zulia',
+  'Carabobo',
+  'Aragua',
+  'Lara',
+  'Anzoátegui',
+  'Bolívar',
+  'Otro',
+] as const
+
+// ponytail: location is conditional. When country=Venezuela, estado and
+// ciudad must come from the fixed maps. Abroad, only country is required
+// (estado/ciudad are optional free text, but we keep them nullable and
+// don't collect them in the form).
+export const registerStep1Schema = z.object({
+  name: z.string().min(2, 'Tu nombre es obligatorio'),
+  email: z.string().email('Correo inválido'),
+  password: z.string().min(8, 'Mínimo 8 caracteres'),
+})
+
+// ponytail: shared superRefine. credentialCountry drives the Venezuelan
+// credential fields (cedula/fpv/colegio); country drives location
+// (estado/ciudad). They're independent — a Venezuelan-credentialed
+// psychologist living abroad keeps cédula/FPV/colegio but skips
+// estado/ciudad, and vice versa.
+function refineProfessional(val: {
+  credentialCountry?: string | null
+  country: string
+  cedula?: string | null
+  fpvNumber?: string | null
+  colegioRegional?: string | null
+  estado?: string | null
+  ciudad?: string | null
+  whatsappCountry?: string | null
+  whatsapp: string
+}, ctx: z.RefinementCtx) {
+  if (val.credentialCountry === VENEZUELA) {
+    if (!val.cedula || !/^[VE]-?\d{4,9}$/i.test(val.cedula)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['cedula'],
+        message: 'Formato: V-12345678 o E-12345678',
+      })
+    }
+    if (!val.fpvNumber || !/^\d{4,12}$/.test(val.fpvNumber)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fpvNumber'],
+        message: 'Solo dígitos',
+      })
+    }
+    if (!val.colegioRegional) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['colegioRegional'],
+        message: 'Selecciona el colegio',
+      })
+    }
+  }
+  if (val.country === VENEZUELA) {
+    if (!val.estado) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['estado'],
+        message: 'Selecciona el estado',
+      })
+    }
+    if (!val.ciudad || val.ciudad.trim().length < 2) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['ciudad'],
+        message: 'Selecciona la ciudad',
+      })
+    }
+  }
+}
+
+// ponytail: estado defaults to '' in the form (select placeholder), but
+// z.enum().optional() only accepts undefined — empty string fails the
+// enum. Preprocess '' -> null so the field is valid when the country is
+// not Venezuela and estado is never shown.
+const nullableWhenEmptyEstado = z.preprocess(
+  (v) => (v === '' ? null : v),
+  z.enum(VENEZUELA_ESTADOS).optional().nullable(),
+)
+
+// ponytail: step 2 schema validates only step-2 fields.
+export const registerStep2Schema = z
+  .object({
+    cedula: z.string().optional().nullable(),
+    fpvNumber: z.string().optional().nullable(),
+    colegioRegional: z.string().optional().nullable(),
+    modality: z.enum(['in_person', 'remote', 'both']),
+    country: z.enum(PAIS_OPTIONS),
+    estado: nullableWhenEmptyEstado,
+    ciudad: z.string().max(80).optional().nullable(),
+    credentialCountry: z.enum(PAIS_OPTIONS).optional().nullable(),
+    whatsappCountry: z.string().optional().nullable(),
+    whatsapp: z
+      .string()
+      .min(8, 'WhatsApp inválido')
+      .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
+    credentialFileR2Key: z.string().min(1, 'Sube tu credencial'),
+  })
+  .superRefine(refineProfessional)
+
+export const registerSchema = z
+  .object({
+    name: z.string().min(2, 'Tu nombre es obligatorio'),
+    email: z.string().email('Correo inválido'),
+    password: z.string().min(8, 'Mínimo 8 caracteres'),
+    cedula: z.string().optional().nullable(),
+    fpvNumber: z.string().optional().nullable(),
+    colegioRegional: z.string().optional().nullable(),
+    modality: z.enum(['in_person', 'remote', 'both']),
+    country: z.enum(PAIS_OPTIONS),
+    estado: nullableWhenEmptyEstado,
+    ciudad: z.string().max(80).optional().nullable(),
+    credentialCountry: z.enum(PAIS_OPTIONS).optional().nullable(),
+    whatsappCountry: z.string().optional().nullable(),
+    whatsapp: z
+      .string()
+      .min(8, 'WhatsApp inválido')
+      .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
+    credentialFileR2Key: z.string().min(1, 'Sube tu credencial'),
+  })
+  .superRefine(refineProfessional)
+
+export type RegisterInput = z.infer<typeof registerSchema>
+export const COLEGIO_OPTIONS = COLEGIOS
+export { PAIS_OPTIONS, VENEZUELA_ESTADOS }
+
+export const registerProfessional = createServerFn({ method: 'POST' })
+  .validator(registerSchema)
+  .handler(async ({ data }) => {
+    // ponytail: single server fn creates the auth user + professional row.
+    // The credential file is uploaded separately to /api/upload first,
+    // which returns the R2 key included here. All errors thrown here are
+    // user-facing Spanish messages; raw DB/SQL details are logged, never
+    // returned to the client.
+    const db = getDb()
+
+    const existing = await db
+      .select({ id: userTable.id })
+      .from(userTable)
+      .where(eq(userTable.email, data.email))
+      .limit(1)
+    if (existing.length > 0) {
+      throw new Error('Ya existe una cuenta con ese correo. Inicia sesión.')
+    }
+
+    let userId: string | undefined
+    try {
+      const created = await getAuth().api.signUpEmail({
+        body: {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+        },
+        headers: getHeaders(),
+      })
+      userId = created.user.id
+    } catch (err) {
+      // ponytail: better-auth throws APIError with code; surface friendly text.
+      const msg = (err as { message?: string; code?: string }).message ?? ''
+      if (/exist|already|registered|duplicat/i.test(msg)) {
+        throw new Error(
+          'Ya existe una cuenta con ese correo. Inicia sesión.',
+        )
+      }
+      if (/password|weak|common/i.test(msg)) {
+        throw new Error(
+          'La contraseña no cumple los requisitos. Usa al menos 8 caracteres.',
+        )
+      }
+      console.error('[registerProfessional] signUp failed:', err)
+      throw new Error('No se pudo crear la cuenta. Inténtalo de nuevo.')
+    }
+    if (!userId) {
+      throw new Error('No se pudo crear la cuenta.')
+    }
+
+    try {
+      await db.insert(professionals).values({
+        userId,
+        name: data.name,
+        cedula: data.cedula ?? null,
+        rif: null,
+        fpvNumber: data.fpvNumber ?? null,
+        colegioRegional: data.colegioRegional ?? null,
+        credentialFileR2Key: data.credentialFileR2Key,
+        modality: data.modality,
+        country: data.country,
+        estado: data.country === VENEZUELA ? (data.estado ?? null) : null,
+        ciudad: data.country === VENEZUELA ? (data.ciudad ?? null) : null,
+        credentialCountry: data.credentialCountry ?? null,
+        whatsappCountry: data.whatsappCountry ?? null,
+        whatsapp: data.whatsapp,
+      })
+    } catch (err) {
+      // ponytail: clean up the orphan auth user so a failed professional
+      // insert doesn't leave a half-registered account that blocks a retry
+      // with the same email.
+      try {
+        await db.delete(userTable).where(eq(userTable.id, userId))
+      } catch {
+        /* best-effort; don't mask the original error */
+      }
+      if (err instanceof DrizzleError && /UNIQUE/i.test(err.message)) {
+        throw new Error(
+          'Ya existe un registro profesional para este usuario. Si ya tienes cuenta, inicia sesión.',
+        )
+      }
+      // ponytail: NOT NULL on cedula/rif/fpv/colegio means the schema
+      // migration (0002) hasn't been applied — tell the admin to run it
+      // instead of confusing the user with a generic "try again".
+      if (
+        err instanceof DrizzleError &&
+        /NOT NULL/i.test(err.message)
+      ) {
+        console.error(
+          '[registerProfessional] insert failed (NOT NULL): likely migration 0002 not applied.',
+          err,
+        )
+        throw new Error(
+          'El registro no está disponible en este momento. Avísanos para que apliquemos una actualización.',
+        )
+      }
+      // ponytail: never leak raw SQL/params to the client.
+      console.error('[registerProfessional] insert failed:', err)
+      throw new Error(
+        'No pudimos guardar tu registro. Revisa los datos e inténtalo de nuevo. Si persiste, escríbenos.',
+      )
+    }
+    return { ok: true, userId }
+  })
+
+const setAvailabilitySchema = z.object({
+  available: z.boolean(),
+})
+
+export const setAvailability = createServerFn({ method: 'POST' })
+  .validator(setAvailabilitySchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const db = getDb()
+    await db
+      .update(professionals)
+      .set({ available: data.available })
+      .where(eq(professionals.userId, session.user.id))
+    return { ok: true, available: data.available }
+  })
+
+export const amIAdmin = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) return false
+    return isAdminEmail(session.user.email)
+  },
+)
+
+// ponytail: session check for route guards. authClient.getSession() called
+// in beforeLoad during SSR does NOT forward the browser cookie, so every
+// SSR'd protected route saw null and bounced to login. This server fn reads
+// the request headers via the global __TSS_REQUEST__, which works both
+// during SSR (same request context) and client navigation (browser sends
+// the cookie on the fn fetch).
+export const getCurrentUser = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    return session?.user ?? null
+  },
+)
+
+export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      return null
+    }
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        verifiedStatus: professionals.verifiedStatus,
+        available: professionals.available,
+        modality: professionals.modality,
+      })
+      .from(professionals)
+      .where(eq(professionals.userId, session.user.id))
+      .limit(1)
+    return rows[0] ?? null
+  },
+)
+
+const decisionSchema = z.object({
+  professionalId: z.number(),
+  status: z.enum(['verified', 'rejected']),
+})
+
+export const reviewProfessional = createServerFn({ method: 'POST' })
+  .validator(decisionSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    await db
+      .update(professionals)
+      .set({ verifiedStatus: data.status })
+      .where(eq(professionals.id, data.professionalId))
+    return { ok: true }
+  })
+
+export const listPending = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    return db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        cedula: professionals.cedula,
+        fpvNumber: professionals.fpvNumber,
+        colegioRegional: professionals.colegioRegional,
+        country: professionals.country,
+        estado: professionals.estado,
+        ciudad: professionals.ciudad,
+        credentialCountry: professionals.credentialCountry,
+        whatsappCountry: professionals.whatsappCountry,
+        modality: professionals.modality,
+        whatsapp: professionals.whatsapp,
+        credentialFileR2Key: professionals.credentialFileR2Key,
+        userEmail: userTable.email,
+      })
+      .from(professionals)
+      .innerJoin(userTable, eq(userTable.id, professionals.userId))
+      .where(eq(professionals.verifiedStatus, 'pending'))
+  },
+)
+
+export const listVerified = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const db = getDb()
+    return db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        cedula: professionals.cedula,
+        fpvNumber: professionals.fpvNumber,
+        verifiedStatus: professionals.verifiedStatus,
+        available: professionals.available,
+      })
+      .from(professionals)
+      .where(eq(professionals.verifiedStatus, 'verified'))
+  },
+)
+
+function getHeaders(): Headers {
+  // ponytail: TanStack Start sets the incoming request on a global; auth
+  // needs cookies from the Cookie header. Falls back to empty headers
+  // when called outside a request (e.g. tests).
+  const req = (globalThis as unknown as { __TSS_REQUEST__?: Request })
+    .__TSS_REQUEST__
+  return req ? new Headers(req.headers) : new Headers()
+}

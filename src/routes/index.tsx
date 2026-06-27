@@ -1,7 +1,39 @@
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
 
-export const Route = createFileRoute('/')({ component: Home })
+export const Route = createFileRoute('/')({ component: Landing })
 
-function Home() {
-  return <main />
+function Landing() {
+  return (
+    <main className="page-wrap flex min-h-[100dvh] flex-col justify-between py-8">
+      <header className="text-center">
+        <p className="section-kicker">Venezuela</p>
+        <h1 className="mt-2 text-3xl font-bold leading-tight text-[var(--medi-primary)] sm:text-4xl">
+          Red de Apoyo Psicológico
+        </h1>
+        <div className="section-underline mx-auto mt-3" />
+        <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
+          Conectamos a personas afectadas con psicólogos verificados.
+        </p>
+      </header>
+
+      <nav className="mt-10 flex flex-col gap-4">
+        <Link
+          to="/ayuda"
+          className="glass-primary flex min-h-16 items-center justify-center rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        >
+          Necesito Ayuda Ahora
+        </Link>
+        <Link
+          to="/profesional/registro"
+          className="glass-card-soft flex min-h-16 items-center justify-center rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        >
+          Ofrezco Ayuda (Soy Psicólogo)
+        </Link>
+      </nav>
+
+      <footer className="glass-card-soft mt-10 rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)]">
+        Servicio gratuito y confidencial.
+      </footer>
+    </main>
+  )
 }

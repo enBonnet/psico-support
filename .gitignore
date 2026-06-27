@@ -11,3 +11,7 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+dev.db
+dev.db-bak
+dev.db.bak
+.claude/

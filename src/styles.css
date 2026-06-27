@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap');
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
@@ -7,118 +7,169 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --sea-ink: #173a40;
-  --sea-ink-soft: #416166;
-  --lagoon: #4fb8b2;
-  --lagoon-deep: #328f97;
-  --palm: #2f6a4a;
-  --sand: #e7f0e8;
-  --foam: #f3faf5;
+  /* Medicall palette — deep medical blue + bright blue accent */
+  --medi-primary: #13297e;
+  --medi-primary-hover: #1e3ebd;
+  --medi-secondary: #178cef;
+  --medi-white: #ffffff;
+  --medi-text-primary: #252525;
+  --medi-text-secondary: #606060;
+  --medi-line: #ececec;
+  --medi-bg: #eff7fe;
+
+  /* Legacy aliases (kept so existing decorative CSS keeps working) */
+  --sea-ink: #252525;
+  --sea-ink-soft: #606060;
+  --lagoon: #178cef;
+  --lagoon-deep: #13297e;
+  --palm: #13297e;
+  --sand: #eff7fe;
+  --foam: #eff7fe;
   --surface: rgba(255, 255, 255, 0.74);
   --surface-strong: rgba(255, 255, 255, 0.9);
-  --line: rgba(23, 58, 64, 0.14);
+  --line: rgba(19, 41, 126, 0.14);
   --inset-glint: rgba(255, 255, 255, 0.82);
-  --kicker: rgba(47, 106, 74, 0.9);
-  --bg-base: #e7f3ec;
-  --header-bg: rgba(251, 255, 248, 0.84);
+  --kicker: #13297e;
+  --bg-base: #eff7fe;
+  --header-bg: rgba(255, 255, 255, 0.84);
   --chip-bg: rgba(255, 255, 255, 0.8);
-  --chip-line: rgba(47, 106, 74, 0.18);
+  --chip-line: rgba(19, 41, 126, 0.18);
   --link-bg-hover: rgba(255, 255, 255, 0.9);
-  --hero-a: rgba(79, 184, 178, 0.36);
-  --hero-b: rgba(47, 106, 74, 0.2);
+  --hero-a: rgba(23, 140, 239, 0.18);
+  --hero-b: rgba(19, 41, 126, 0.1);
 
+  /* Liquid glass — Apple iOS 26 / macOS Tahoe material language.
+     Translucent layered surfaces with backdrop blur, saturation boost,
+     specular edge highlights and a refractive tint. The deep medical
+     blue identity is preserved; glass is a material, not a recolor. */
+  --glass-tint: rgba(255, 255, 255, 0.55);
+  --glass-tint-strong: rgba(255, 255, 255, 0.72);
+  --glass-tint-soft: rgba(255, 255, 255, 0.38);
+  --glass-edge: rgba(255, 255, 255, 0.6);
+  --glass-edge-dim: rgba(255, 255, 255, 0.28);
+  --glass-specular: rgba(255, 255, 255, 0.9);
+  --glass-stroke: rgba(19, 41, 126, 0.12);
+  --glass-blur: 22px;
+  --glass-saturate: 180%;
+  --glass-brightness: 108%;
+  --glass-radius: 1rem;
+  --glass-radius-sm: 0.75rem;
+  --glass-radius-pill: 999px;
+  --glass-shadow:
+    0 1px 0 0 var(--glass-specular) inset,
+    0 1px 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 18px 40px -12px rgba(19, 41, 126, 0.28),
+    0 6px 16px -8px rgba(19, 41, 126, 0.18);
+  --glass-shadow-pressed:
+    0 1px 0 0 var(--glass-edge-dim) inset,
+    0 8px 20px -10px rgba(19, 41, 126, 0.22);
+
+  /* shadcn semantic tokens mapped to Medicall */
   --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.22 0.02 264);
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
+  --card-foreground: oklch(0.22 0.02 264);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
+  --popover-foreground: oklch(0.22 0.02 264);
+  --primary: oklch(0.32 0.17 264);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.96 0.01 240);
+  --secondary-foreground: oklch(0.32 0.17 264);
+  --muted: oklch(0.96 0.01 240);
+  --muted-foreground: oklch(0.55 0.01 264);
+  --accent: oklch(0.62 0.19 244);
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.871 0.006 286.286);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.871 0.006 286.286);
+  --border: oklch(0.93 0 0);
+  --input: oklch(0.93 0 0);
+  --ring: oklch(0.62 0.19 244);
+  --chart-1: oklch(0.32 0.17 264);
+  --chart-2: oklch(0.62 0.19 244);
+  --chart-3: oklch(0.55 0.12 200);
+  --chart-4: oklch(0.7 0.15 160);
+  --chart-5: oklch(0.82 0.18 84);
+  --radius: 0.25rem;
+  --sidebar: oklch(0.99 0.005 240);
+  --sidebar-foreground: oklch(0.22 0.02 264);
+  --sidebar-primary: oklch(0.32 0.17 264);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.01 240);
+  --sidebar-accent-foreground: oklch(0.32 0.17 264);
+  --sidebar-border: oklch(0.93 0 0);
+  --sidebar-ring: oklch(0.62 0.19 244);
 }
 
 .dark {
-  --sea-ink: #d7ece8;
-  --sea-ink-soft: #afcdc8;
-  --lagoon: #60d7cf;
-  --lagoon-deep: #8de5db;
-  --palm: #6ec89a;
-  --sand: #0f1a1e;
-  --foam: #101d22;
-  --surface: rgba(16, 30, 34, 0.8);
-  --surface-strong: rgba(15, 27, 31, 0.92);
-  --line: rgba(141, 229, 219, 0.18);
-  --inset-glint: rgba(194, 247, 238, 0.14);
-  --kicker: #b8efe5;
-  --bg-base: #0a1418;
-  --header-bg: rgba(10, 20, 24, 0.8);
-  --chip-bg: rgba(13, 28, 32, 0.9);
-  --chip-line: rgba(141, 229, 219, 0.24);
-  --link-bg-hover: rgba(24, 44, 49, 0.8);
-  --hero-a: rgba(96, 215, 207, 0.18);
-  --hero-b: rgba(110, 200, 154, 0.12);
+  --sea-ink: #dbe7ff;
+  --sea-ink-soft: #9fb4e0;
+  --lagoon: #4aa8f5;
+  --lagoon-deep: #6b8ef0;
+  --palm: #8aa8f0;
+  --sand: #0b1530;
+  --foam: #0a1228;
+  --surface: rgba(16, 26, 52, 0.8);
+  --surface-strong: rgba(13, 22, 46, 0.92);
+  --line: rgba(107, 142, 240, 0.2);
+  --inset-glint: rgba(180, 205, 255, 0.14);
+  --kicker: #8aa8f0;
+  --bg-base: #070d1c;
+  --header-bg: rgba(10, 18, 40, 0.82);
+  --chip-bg: rgba(13, 24, 52, 0.9);
+  --chip-line: rgba(107, 142, 240, 0.26);
+  --link-bg-hover: rgba(20, 34, 70, 0.8);
+  --hero-a: rgba(74, 168, 245, 0.18);
+  --hero-b: rgba(107, 142, 240, 0.12);
 
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.141 0.005 285.823);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.141 0.005 285.823);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.985 0 0);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
+  /* Liquid glass — dark variant. Same construction, inverted luminance:
+     a darker tint over the navy bg, cool specular highlights. */
+  --glass-tint: rgba(20, 32, 64, 0.5);
+  --glass-tint-strong: rgba(16, 26, 52, 0.7);
+  --glass-tint-soft: rgba(20, 32, 64, 0.32);
+  --glass-edge: rgba(180, 205, 255, 0.22);
+  --glass-edge-dim: rgba(180, 205, 255, 0.1);
+  --glass-specular: rgba(180, 205, 255, 0.28);
+  --glass-stroke: rgba(107, 142, 240, 0.24);
+  --glass-blur: 24px;
+  --glass-saturate: 160%;
+  --glass-brightness: 112%;
+
+  --background: oklch(0.16 0.03 264);
+  --foreground: oklch(0.97 0.01 240);
+  --card: oklch(0.2 0.03 264);
+  --card-foreground: oklch(0.97 0.01 240);
+  --popover: oklch(0.2 0.03 264);
+  --popover-foreground: oklch(0.97 0.01 240);
+  --primary: oklch(0.7 0.15 244);
+  --primary-foreground: oklch(0.16 0.03 264);
+  --secondary: oklch(0.3 0.04 264);
+  --secondary-foreground: oklch(0.97 0.01 240);
+  --muted: oklch(0.3 0.04 264);
+  --muted-foreground: oklch(0.72 0.02 264);
+  --accent: oklch(0.62 0.19 244);
+  --accent-foreground: oklch(1 0 0);
   --destructive: oklch(0.396 0.141 25.723);
   --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.274 0.006 286.033);
-  --input: oklch(0.274 0.006 286.033);
-  --ring: oklch(0.442 0.017 285.786);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(0.274 0.006 286.033);
-  --sidebar-ring: oklch(0.442 0.017 285.786);
+  --border: oklch(0.3 0.04 264);
+  --input: oklch(0.3 0.04 264);
+  --ring: oklch(0.62 0.19 244);
+  --chart-1: oklch(0.7 0.15 244);
+  --chart-2: oklch(0.62 0.19 244);
+  --chart-3: oklch(0.55 0.12 200);
+  --chart-4: oklch(0.7 0.15 160);
+  --chart-5: oklch(0.82 0.18 84);
+  --sidebar: oklch(0.18 0.03 264);
+  --sidebar-foreground: oklch(0.97 0.01 240);
+  --sidebar-primary: oklch(0.7 0.15 244);
+  --sidebar-primary-foreground: oklch(0.16 0.03 264);
+  --sidebar-accent: oklch(0.3 0.04 264);
+  --sidebar-accent-foreground: oklch(0.97 0.01 240);
+  --sidebar-border: oklch(0.3 0.04 264);
+  --sidebar-ring: oklch(0.62 0.19 244);
 }
 
 @theme inline {
-  --font-sans: 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -143,10 +194,13 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
+  --radius-sm: calc(var(--radius) - 1px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-glass: var(--glass-radius);
+  --radius-glass-sm: var(--glass-radius-sm);
+  --radius-glass-pill: var(--glass-radius-pill);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -165,14 +219,24 @@ body,
 
 body {
   margin: 0;
-  color: var(--sea-ink);
+  color: var(--medi-text-primary);
   font-family: var(--font-sans);
-  background-color: var(--bg-base);
+  font-size: 1rem;
+  line-height: 1.778;
+  background-color: var(--medi-bg);
   background:
     radial-gradient(1100px 620px at -8% -10%, var(--hero-a), transparent 58%),
     radial-gradient(1050px 620px at 112% -12%, var(--hero-b), transparent 62%),
-    radial-gradient(720px 380px at 50% 115%, rgba(79, 184, 178, 0.1), transparent 68%),
-    linear-gradient(180deg, color-mix(in oklab, var(--sand) 68%, white) 0%, var(--foam) 44%, var(--bg-base) 100%);
+    radial-gradient(
+      720px 380px at 50% 115%,
+      rgba(23, 140, 239, 0.08),
+      transparent 68%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--medi-bg) 80%, white) 0%,
+      var(--medi-bg) 100%
+    );
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -184,11 +248,19 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: 0.28;
+  opacity: 0.26;
   background:
-    radial-gradient(circle at 20% 15%, rgba(255, 255, 255, 0.8), transparent 34%),
-    radial-gradient(circle at 78% 26%, rgba(79, 184, 178, 0.2), transparent 42%),
-    radial-gradient(circle at 42% 82%, rgba(47, 106, 74, 0.14), transparent 36%);
+    radial-gradient(
+      circle at 20% 15%,
+      rgba(255, 255, 255, 0.8),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 78% 26%,
+      rgba(23, 140, 239, 0.18),
+      transparent 42%
+    ),
+    radial-gradient(circle at 42% 82%, rgba(19, 41, 126, 0.1), transparent 36%);
 }
 
 body::after {
@@ -197,7 +269,7 @@ body::after {
   inset: 0;
   pointer-events: none;
   z-index: -1;
-  opacity: 0.14;
+  opacity: 0.12;
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
@@ -206,21 +278,21 @@ body::after {
 }
 
 a {
-  color: var(--lagoon-deep);
-  text-decoration-color: rgba(50, 143, 151, 0.4);
+  color: var(--medi-secondary);
+  text-decoration-color: rgba(23, 140, 239, 0.4);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
 
 a:hover {
-  color: #246f76;
+  color: var(--medi-primary);
 }
 
 code {
   font-size: 0.9em;
-  border: 1px solid var(--line);
+  border: 1px solid var(--medi-line);
   background: color-mix(in oklab, var(--surface-strong) 82%, white 18%);
-  border-radius: 7px;
+  border-radius: 4px;
   padding: 2px 7px;
 }
 
@@ -235,9 +307,9 @@ pre code {
 
 .prose pre {
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: #1d2e45;
-  color: #e8efff;
+  border-radius: 4px;
+  background: #0b1530;
+  color: #dbe7ff;
 }
 
 .page-wrap {
@@ -245,37 +317,249 @@ pre code {
   margin-inline: auto;
 }
 
-.display-title {
-  font-family: 'Fraunces', Georgia, serif;
+/* Medicall signature: 100x6 gradient bar under section titles */
+.section-underline {
+  height: 6px;
+  width: 100px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #178cef 0,
+    #349bef 26.56%,
+    #76b9f0 55.21%,
+    #8fc5f1 80.21%,
+    #b0d6f5 100%
+  );
+}
+
+.section-kicker {
+  color: var(--medi-primary);
+  text-transform: capitalize;
+  font-weight: 700;
+  font-size: 1.125rem;
+  letter-spacing: 0.01em;
 }
 
 .island-shell {
-  border: 1px solid var(--line);
-  background: linear-gradient(165deg, var(--surface-strong), var(--surface));
-  box-shadow:
-    0 1px 0 var(--inset-glint) inset,
-    0 22px 44px rgba(30, 90, 72, 0.1),
-    0 6px 18px rgba(23, 58, 64, 0.08);
-  backdrop-filter: blur(4px);
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(
+    165deg,
+    var(--glass-tint-strong),
+    var(--glass-tint)
+  );
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  position: relative;
+  overflow: hidden;
+}
+
+/* Specular edge: a faint top-left highlight that reads as light catching
+   the rim of the glass. Pseudo so it never intercepts pointer events. */
+.island-shell::before,
+.glass-card::before,
+.glass-bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    140deg,
+    var(--glass-specular) 0%,
+    transparent 18%,
+    transparent 82%,
+    var(--glass-edge-dim) 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.5;
 }
 
 .feature-card {
-  background: linear-gradient(165deg, color-mix(in oklab, var(--surface-strong) 93%, white 7%), var(--surface));
-  box-shadow:
-    0 1px 0 var(--inset-glint) inset,
-    0 18px 34px rgba(30, 90, 72, 0.1),
-    0 4px 14px rgba(23, 58, 64, 0.06);
+  background: linear-gradient(
+    165deg,
+    color-mix(in oklab, var(--glass-tint-strong) 93%, white 7%),
+    var(--glass-tint)
+  );
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  position: relative;
+  overflow: hidden;
 }
 
 .feature-card:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in oklab, var(--lagoon-deep) 35%, var(--line));
+  border-color: color-mix(
+    in oklab,
+    var(--medi-secondary) 35%,
+    var(--glass-stroke)
+  );
+}
+
+/* ── Liquid glass surfaces ──────────────────────────────────────────────
+   Three tiers plus a sticky bar and an input treatment. All use the
+   --glass-* tokens so dark mode adapts automatically. Pair with the
+   existing Medicall tokens for text/accent colors. */
+
+.glass-card {
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(
+    165deg,
+    var(--glass-tint-strong),
+    var(--glass-tint)
+  );
+  box-shadow: var(--glass-shadow);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur))
+    saturate(var(--glass-saturate));
+  border-radius: var(--glass-radius);
+  position: relative;
+  overflow: hidden;
+}
+
+.glass-card-soft {
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(
+    165deg,
+    var(--glass-tint),
+    var(--glass-tint-soft)
+  );
+  box-shadow: var(--glass-shadow-pressed);
+  backdrop-filter: blur(calc(var(--glass-blur) * 0.7))
+    saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 0.7))
+    saturate(var(--glass-saturate));
+  border-radius: var(--glass-radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Pill — for badges, chips, segmented controls, the availability toggle
+   background. Tightly rounded, lighter blur. */
+.glass-pill {
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(
+    180deg,
+    var(--glass-tint-strong),
+    var(--glass-tint)
+  );
+  box-shadow:
+    0 1px 0 0 var(--glass-specular) inset,
+    0 6px 14px -8px rgba(19, 41, 126, 0.22);
+  backdrop-filter: blur(12px) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(12px) saturate(var(--glass-saturate));
+  border-radius: var(--glass-radius-pill);
+}
+
+/* Sticky bar — for headers/footers that pin to the viewport edge.
+   Slightly stronger tint so content reads against the blurred bg. */
+.glass-bar {
+  border: 1px solid var(--glass-stroke);
+  background: linear-gradient(
+    180deg,
+    var(--glass-tint-strong),
+    var(--glass-tint)
+  );
+  box-shadow:
+    0 1px 0 0 var(--glass-specular) inset,
+    0 12px 30px -16px rgba(19, 41, 126, 0.3);
+  backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
+    saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
+    saturate(var(--glass-saturate));
+  position: relative;
+  overflow: hidden;
+}
+
+/* Input field glass — translucent fill so the page tint shows through,
+   with a brighter inset highlight on focus. */
+.glass-input {
+  border: 1px solid var(--glass-stroke);
+  background: var(--glass-tint-soft);
+  box-shadow: 0 1px 0 0 var(--glass-edge) inset;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--glass-radius-sm);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease;
+}
+.glass-input:focus,
+.glass-input:focus-visible {
+  outline: none;
+  border-color: color-mix(
+    in oklab,
+    var(--medi-secondary) 60%,
+    var(--glass-stroke)
+  );
+  background: var(--glass-tint);
+  box-shadow:
+    0 1px 0 0 var(--glass-specular) inset,
+    0 0 0 3px color-mix(in oklab, var(--medi-secondary) 35%, transparent);
+}
+
+/* Primary CTA rendered as glass — a saturated tint of the deep medical
+   blue with a specular top highlight, used on the landing triage.
+   Gradient stops stay deep enough that white text passes WCAG AA
+   across the whole surface. */
+.glass-primary {
+  border: 1px solid color-mix(in oklab, var(--medi-primary) 70%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--medi-primary) 94%, white 6%),
+    var(--medi-primary)
+  );
+  box-shadow:
+    0 1px 0 0 rgba(255, 255, 255, 0.35) inset,
+    0 14px 30px -10px rgba(19, 41, 126, 0.5),
+    0 4px 10px -6px rgba(19, 41, 126, 0.35);
+  backdrop-filter: blur(6px) saturate(140%);
+  -webkit-backdrop-filter: blur(6px) saturate(140%);
+  color: #fff;
+}
+.glass-primary:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--medi-primary-hover) 94%, white 6%),
+    var(--medi-primary-hover)
+  );
+  color: #fff;
+}
+
+/* Reduced motion / no-blur fallback: keep the tint + shadow, drop the
+   filter so old browsers and users with prefers-reduced-transparency
+   still get a readable surface. */
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card,
+  .glass-card-soft,
+  .glass-pill,
+  .glass-bar,
+  .glass-input,
+  .island-shell,
+  .feature-card {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: var(--glass-tint-strong);
+  }
 }
 
 button,
 .island-shell,
+.glass-card,
+.glass-card-soft,
+.glass-pill,
+.glass-bar,
+.glass-primary,
 a {
-  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease,
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    box-shadow 180ms ease,
     transform 180ms ease;
 }
 
@@ -302,7 +586,7 @@ a {
   height: 2px;
   transform: scaleX(0);
   transform-origin: left;
-  background: linear-gradient(90deg, var(--lagoon), #7ed3bf);
+  background: linear-gradient(90deg, #178cef, #b0d6f5);
   transition: transform 170ms ease;
 }
 
@@ -343,5 +627,15 @@ a {
   body {
     background-color: var(--background);
     color: var(--foreground);
+  }
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-weight: 700;
+    line-height: 1.6;
+    color: var(--medi-text-primary);
   }
 }
