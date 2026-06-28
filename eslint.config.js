@@ -15,6 +15,13 @@ export default [
     },
   },
   {
-    ignores: ['eslint.config.js', 'prettier.config.js'],
+    // ponytail: generated + vendored code is never hand-edited, so linting it
+    // only produces noise (paraglide-js output, installed skill templates).
+    ignores: [
+      'eslint.config.js',
+      'prettier.config.js',
+      'src/paraglide/**',
+      '.agents/**',
+    ],
   },
 ]

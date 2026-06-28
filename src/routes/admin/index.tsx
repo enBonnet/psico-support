@@ -7,6 +7,8 @@ import {
   reviewProfessional,
   amIAdmin,
   getCurrentUser,
+  listUsers,
+  promoteToAdmin,
 } from '#/server/professionals'
 
 export const Route = createFileRoute('/admin/')({
@@ -56,6 +58,29 @@ function AdminPage() {
       notify({
         type: 'error',
         title: 'No se pudo actualizar el estado',
+        body: 'Inténtalo de nuevo.',
+      }),
+  })
+
+  const { data: users = [] } = useQuery({
+    queryKey: ['admin-users'],
+    queryFn: () => listUsers(),
+  })
+
+  const promote = useMutation({
+    mutationFn: (userId: string) => promoteToAdmin({ data: { userId } }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] })
+      notify({
+        type: 'success',
+        title: 'Usuario promovido a admin',
+        body: 'Ahora tiene acceso al panel de administración.',
+      })
+    },
+    onError: () =>
+      notify({
+        type: 'error',
+        title: 'No se pudo promover',
         body: 'Inténtalo de nuevo.',
       }),
   })
@@ -182,6 +207,45 @@ function AdminPage() {
           ))}
         </ul>
       )}
+
+      {/* ── Usuarios ── */}
+      <h2 className="mt-10 border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
+        Usuarios
+      </h2>
+      <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
+        Promueve una cuenta a administrador. Solo para cuentas de confianza.
+      </p>
+      <ul className="mt-3 flex flex-col gap-2 pb-6">
+        {users.map((u) => (
+          <li
+            key={u.id}
+            className="glass-card flex items-center justify-between gap-3 p-3"
+          >
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[var(--medi-text-primary)]">
+                {u.name}
+              </p>
+              <p className="truncate text-xs text-[var(--medi-text-secondary)]">
+                {u.email}
+              </p>
+            </div>
+            {u.role === 'admin' ? (
+              <span className="shrink-0 rounded-full bg-[var(--medi-secondary)] px-3 py-1 text-xs font-semibold text-white">
+                admin
+              </span>
+            ) : (
+              <button
+                type="button"
+                disabled={promote.isPending}
+                onClick={() => promote.mutate(u.id)}
+                className="glass-card-soft shrink-0 rounded-[var(--glass-radius-sm)] px-3 py-2 text-xs font-semibold text-[var(--medi-secondary)] transition-all hover:translate-y-[-1px] disabled:opacity-60"
+              >
+                Hacer admin
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
 
       <footer className="mt-auto pt-6 text-center text-xs text-[var(--medi-text-secondary)]">
         <Link to="/" className="underline">

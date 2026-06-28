@@ -191,7 +191,42 @@ export const registerSchema = z
   .superRefine(refineProfessional)
 
 export type RegisterInput = z.infer<typeof registerSchema>
+export type RegisterStep2Input = z.infer<typeof registerStep2Schema>
 export { PAIS_OPTIONS, VENEZUELA_ESTADOS }
+
+// ponytail: shared insert-shape builder. registerProfessional (full one-shot
+// signup) and createProfessionalProfile (logged-in user adding a pro row)
+// both build the same row, so the field mapping lives in one place to avoid drift.
+type ProInsertData = {
+  name: string
+  certificationNumber: string
+  certifyingSchool?: string | null
+  population: string[]
+  modality: 'in_person' | 'remote' | 'both'
+  country: string
+  estado?: string | null
+  ciudad?: string | null
+  credentialCountry?: string | null
+  whatsappCountry?: string | null
+  whatsapp: string
+}
+
+function buildProValues(data: ProInsertData, userId: string) {
+  return {
+    userId,
+    name: data.name,
+    certificationNumber: data.certificationNumber.trim(),
+    certifyingSchool: data.certifyingSchool?.trim() || null,
+    population: JSON.stringify(data.population),
+    modality: data.modality,
+    country: data.country,
+    estado: data.country === VENEZUELA ? (data.estado ?? null) : null,
+    ciudad: data.country === VENEZUELA ? (data.ciudad ?? null) : null,
+    credentialCountry: data.credentialCountry ?? null,
+    whatsappCountry: data.whatsappCountry ?? null,
+    whatsapp: data.whatsapp,
+  }
+}
 
 export const registerProfessional = createServerFn({ method: 'POST' })
   .validator(registerSchema)
@@ -242,21 +277,7 @@ export const registerProfessional = createServerFn({ method: 'POST' })
     }
 
     try {
-      await db.insert(professionals).values({
-        userId,
-        name: data.name,
-        certificationNumber: data.certificationNumber.trim(),
-        certifyingSchool: data.certifyingSchool?.trim() || null,
-        // ponytail: population stored as a JSON text array for later filtering.
-        population: JSON.stringify(data.population),
-        modality: data.modality,
-        country: data.country,
-        estado: data.country === VENEZUELA ? (data.estado ?? null) : null,
-        ciudad: data.country === VENEZUELA ? (data.ciudad ?? null) : null,
-        credentialCountry: data.credentialCountry ?? null,
-        whatsappCountry: data.whatsappCountry ?? null,
-        whatsapp: data.whatsapp,
-      })
+      await db.insert(professionals).values(buildProValues(data, userId))
     } catch (err) {
       // ponytail: clean up the orphan auth user so a failed professional
       // insert doesn't leave a half-registered account that blocks a retry
@@ -289,6 +310,47 @@ export const registerProfessional = createServerFn({ method: 'POST' })
       )
     }
     return { ok: true, userId }
+  })
+
+// ponytail: for users who created a bare account (/signup) and later want to
+// become a professional. Auth-gated: links the new pro row to the logged-in
+// user. No name/email/password here — those come from the existing account.
+export const createProfessionalProfile = createServerFn({ method: 'POST' })
+  .validator(registerStep2Schema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión para crear tu perfil profesional.')
+    }
+    const db = getDb()
+    const existing = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(eq(professionals.userId, session.user.id))
+      .limit(1)
+    if (existing.length > 0) {
+      throw new Error('Ya tienes un registro profesional.')
+    }
+    try {
+      await db.insert(professionals).values(
+        buildProValues({ ...data, name: session.user.name }, session.user.id),
+      )
+    } catch (err) {
+      if (err instanceof DrizzleError && /NOT NULL/i.test(err.message)) {
+        console.error(
+          '[createProfessionalProfile] insert failed (NOT NULL): a migration is likely not applied.',
+          err,
+        )
+        throw new Error(
+          'El registro no está disponible en este momento. Avísanos para que apliquemos una actualización.',
+        )
+      }
+      console.error('[createProfessionalProfile] insert failed:', err)
+      throw new Error(
+        'No pudimos guardar tu registro. Revisa los datos e inténtalo de nuevo.',
+      )
+    }
+    return { ok: true }
   })
 
 const setAvailabilitySchema = z.object({
@@ -422,6 +484,47 @@ export const listVerified = createServerFn({ method: 'GET' }).handler(
       .where(eq(professionals.verifiedStatus, 'verified'))
   },
 )
+
+// ponytail: admin-gated user management for the "promote from panel" model.
+// listUsers feeds the admin UI; promoteToAdmin sets role='admin'. There is
+// intentionally no demote action — promote-only means an admin can never
+// accidentally lock themselves (or the last admin) out.
+export const listUsers = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    return db
+      .select({
+        id: userTable.id,
+        name: userTable.name,
+        email: userTable.email,
+        role: userTable.role,
+        createdAt: userTable.createdAt,
+      })
+      .from(userTable)
+      .orderBy(asc(userTable.createdAt))
+  },
+)
+
+const promoteSchema = z.object({ userId: z.string() })
+
+export const promoteToAdmin = createServerFn({ method: 'POST' })
+  .validator(promoteSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    await db
+      .update(userTable)
+      .set({ role: 'admin' })
+      .where(eq(userTable.id, data.userId))
+    return { ok: true }
+  })
 
 function getHeaders(): Headers {
   // ponytail: TanStack Start sets the incoming request on a global; auth

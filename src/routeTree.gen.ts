@@ -9,15 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignupRouteImport } from './routes/signup'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
 import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
+import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -48,6 +55,11 @@ const ProfesionalLoginRoute = ProfesionalLoginRouteImport.update({
   path: '/profesional/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfesionalCompletarRoute = ProfesionalCompletarRouteImport.update({
+  id: '/profesional/completar',
+  path: '/profesional/completar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   id: '/ayuda/profesionales/',
   path: '/ayuda/profesionales/',
@@ -61,6 +73,8 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/signup': typeof SignupRoute
+  '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
@@ -71,6 +85,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/signup': typeof SignupRoute
+  '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
@@ -82,6 +98,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/signup': typeof SignupRoute
+  '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
@@ -94,6 +112,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/signup'
+    | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
@@ -104,6 +124,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/signup'
+    | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
@@ -114,6 +136,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/signup'
+    | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
@@ -125,6 +149,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SignupRoute: typeof SignupRoute
+  ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
   ProfesionalPanelRoute: typeof ProfesionalPanelRoute
   ProfesionalRegistroRoute: typeof ProfesionalRegistroRoute
@@ -136,6 +162,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -178,6 +211,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfesionalLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profesional/completar': {
+      id: '/profesional/completar'
+      path: '/profesional/completar'
+      fullPath: '/profesional/completar'
+      preLoaderRoute: typeof ProfesionalCompletarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ayuda/profesionales/': {
       id: '/ayuda/profesionales/'
       path: '/ayuda/profesionales'
@@ -197,6 +237,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SignupRoute: SignupRoute,
+  ProfesionalCompletarRoute: ProfesionalCompletarRoute,
   ProfesionalLoginRoute: ProfesionalLoginRoute,
   ProfesionalPanelRoute: ProfesionalPanelRoute,
   ProfesionalRegistroRoute: ProfesionalRegistroRoute,

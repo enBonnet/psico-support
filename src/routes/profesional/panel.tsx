@@ -94,10 +94,10 @@ function PanelPage() {
         <p className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4 text-sm text-[var(--medi-text-secondary)]">
           No tienes un registro profesional todavía.{' '}
           <Link
-            to="/profesional/registro"
+            to="/profesional/completar"
             className="font-semibold text-[var(--medi-secondary)]"
           >
-            Regístrate aquí.
+            Completa tu perfil profesional.
           </Link>
         </p>
       )}
