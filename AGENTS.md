@@ -41,6 +41,29 @@ npm run db:generate                                         # writes drizzle/000
 npx wrangler d1 migrations apply psico-support-db --local   # local
 ```
 
+### Versioning
+
+The app version is the single source of truth in `package.json` `version`,
+injected at build time via `vite.config.ts` `define` (`__APP_VERSION__`) and
+re-exported as `APP_VERSION` from `src/lib/version.ts` (currently shown in the
+account page footer). `CHANGELOG.md` tracks human-readable history.
+
+**Bump the version after any deployable/user-facing change.** Release flow:
+
+```bash
+npm version patch|minor|major     # bumps package.json, commits, tags (git must be clean)
+# 1. move [Unreleased] items into a new [X.Y.Z] - YYYY-MM-DD entry in CHANGELOG.md
+# 2. breaking server/API/DB change? bump CACHE in public/sw.js to match the
+#    new version — this force-invalidates every installed PWA client at once
+npm run deploy
+npx wrangler d1 migrations apply psico-support-db --remote   # if schema changed
+```
+
+Semver: **patch** = bugfix, **minor** = backwards-compatible feature, **major**
+= breaking change. The SW cache key in `public/sw.js` mirrors the version on
+purpose — bump it ONLY on breaking releases; for compatible releases SWR +
+`skipWaiting` refreshes installed clients within one reload.
+
 ## Critical gotchas
 
 These have each caused prod incidents. Read twice.

@@ -2,6 +2,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { LifeBuoy, LogIn, LogOut, ShieldCheck, UserPlus } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { APP_VERSION } from '#/lib/version'
 import {
   getMyProfessional,
   amIAdmin,
@@ -137,6 +138,10 @@ function CuentaPage() {
           </button>
         </div>
       )}
+
+      <p className="mt-8 text-center text-xs text-[var(--medi-text-secondary)]">
+        v{APP_VERSION}
+      </p>
     </main>
   )
 }

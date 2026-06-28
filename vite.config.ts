@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
 import { devtools } from '@tanstack/devtools-vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -9,8 +10,20 @@ import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 
+// ponytail: single source of truth for the app version. Read at build time
+// from package.json and injected via `define` below. To release a new
+// version: bump package.json `version`, update CHANGELOG.md, then redeploy.
+// The SW cache key in public/sw.js mirrors this on purpose — bump both
+// together when you need to force-invalidate every installed PWA client.
+const APP_VERSION = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+).version
+
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
+  },
   plugins: [
     devtools(),
     paraglideVitePlugin({
@@ -38,6 +51,21 @@ const config = defineConfig({
         display: 'standalone',
         start_url: '/',
         lang: 'es',
+        icons: [
+          { src: '/logo192.png', sizes: '192x192', type: 'image/png' },
+          { src: '/logo512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          {
+            src: '/maskable-icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
+          {
+            src: '/favicon.ico',
+            sizes: '64x64 32x32 24x24 16x16',
+            type: 'image/x-icon',
+          },
+        ],
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024" role="img" aria-label="Bloom (maskable)">
+  <defs>
+    <linearGradient id="bg-bloom-m" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#eff7fe"/>
+      <stop offset="1" stop-color="#cfe7fb"/>
+    </linearGradient>
+    <linearGradient id="spec-bloom-m" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="0.4" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg-bloom-m)"/>
+    <g transform="translate(112.64 112.64) scale(0.78)">
+      <g fill="#13297e">
+        <path d="M512,640 C457,560 457,430 512,300 C567,430 567,560 512,640 Z"/>
+        <path d="M512,640 C430,610 360,540 330,430 C410,470 475,540 512,640 Z"/>
+        <path d="M512,640 C594,610 664,540 694,430 C614,470 549,540 512,640 Z"/>
+        <path d="M512,640 C468,624 430,604 410,560 C468,576 496,604 512,640 Z"/>
+        <path d="M512,640 C556,624 594,604 614,560 C556,576 528,604 512,640 Z"/>
+      </g>
+      <circle cx="512" cy="556" r="20" fill="#ffffff" fill-opacity="0.55"/>
+      <path d="M205,760 Q280,720 355,760 T505,760 T655,760 T819,760" fill="none" stroke="#178cef" stroke-width="26" stroke-linecap="round"/>
+      <path d="M205,824 Q280,788 355,824 T505,824 T655,824 T819,824" fill="none" stroke="#178cef" stroke-width="18" stroke-linecap="round" opacity="0.45"/>
+    </g>
+    <rect width="1024" height="1024" fill="url(#spec-bloom-m)"/>
+</svg>

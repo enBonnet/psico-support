@@ -22,6 +22,7 @@ export default [
       'prettier.config.js',
       'src/paraglide/**',
       '.agents/**',
+      'public/**',
     ],
   },
 ]
