@@ -695,6 +695,10 @@ a {
   padding: 0.75rem 0.625rem 0.75rem 0.875rem;
   border-radius: var(--glass-radius-sm);
   border-left: 4px solid var(--notif-accent, var(--medi-secondary));
+  /* ponytail: override the glass-card translucent fill — at ~55% tint the
+     hero color gradients bleed through and the title/body become hard to
+     read. Near-opaque white keeps the blur accent but guarantees contrast. */
+  background: color-mix(in oklab, var(--medi-white) 94%, transparent);
   cursor: pointer;
   transform-origin: top center;
   animation: notif-in 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
