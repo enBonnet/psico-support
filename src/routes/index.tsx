@@ -1,6 +1,16 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { seoHead } from '#/lib/seo'
 
-export const Route = createFileRoute('/')({ component: Landing })
+export const Route = createFileRoute('/')({
+  head: () =>
+    seoHead({
+      title: 'Red de Apoyo Psicológico Venezuela',
+      description:
+        'Conectamos a personas afectadas con psicólogos verificados. Apoyo presencial y online por WhatsApp, gratuito y confidencial.',
+      path: '/',
+    }),
+  component: Landing,
+})
 
 function Landing() {
   return (

@@ -13,6 +13,7 @@ import {
 import type { PublicProfessional } from '#/server/professionals'
 import { VENEZUELA_ESTADOS, ESTADO_CIUDADES } from '#/server/locations'
 import { notify } from '#/lib/notifications'
+import { seoHead } from '#/lib/seo'
 
 // ponytail: bare URL (no ?modality=) used to 500 — default to in_person so
 // direct entry resolves instead of throwing on the missing search param.
@@ -64,6 +65,23 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
       },
     })
     return { initial, filters: deps }
+  },
+  // ponytail: head() declared after loader so its loaderData param resolves
+  // against the loader's inferred return (declaring it earlier collapsed the
+  // route's generics). head has no `search` in context, so read the active
+  // modality from loaderData.filters — a shared list link previews the right
+  // intent (in-person vs remote are different searches).
+  head: ({ loaderData }) => {
+    const modality = loaderData?.filters.modality ?? 'in_person'
+    return seoHead({
+      title:
+        modality === 'remote'
+          ? 'Contención a Distancia — Psicólogos Verificados'
+          : 'Asistencia Presencial — Psicólogos Verificados',
+      description:
+        'Directorio de psicólogos verificados. Filtra por estado, ciudad o población y contacta directamente por WhatsApp.',
+      path: `/ayuda/profesionales?modality=${modality}`,
+    })
   },
   component: ProfessionalsList,
 })
@@ -415,9 +433,15 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
     <li className="glass-card p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-[var(--medi-text-primary)]">
+          <Link
+            to="/ayuda/profesionales/$id"
+            params={{ id: String(p.id) }}
+            className="truncate text-lg font-semibold text-[var(--medi-text-primary)] underline-offset-2 hover:underline"
+            // ponytail: name links to the per-pro profile (shareable + SEO);
+            // the WhatsApp button below stays the primary contact CTA.
+          >
             {p.name}
-          </p>
+          </Link>
           <p className="mt-0.5 text-sm text-[var(--medi-text-secondary)]">
             {p.country === 'Venezuela'
               ? [p.estado, p.ciudad].filter(Boolean).join(', ')

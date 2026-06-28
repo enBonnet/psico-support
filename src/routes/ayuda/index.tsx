@@ -1,7 +1,15 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { MapPin, MessageCircle } from 'lucide-react'
+import { seoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/ayuda/')({
+  head: () =>
+    seoHead({
+      title: '¿Qué tipo de apoyo necesitas?',
+      description:
+        'Elige entre asistencia presencial (brigadas en zonas críticas) o contención a distancia por WhatsApp con psicólogos verificados.',
+      path: '/ayuda',
+    }),
   component: ModalitySelection,
 })
 

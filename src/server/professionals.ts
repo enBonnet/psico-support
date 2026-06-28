@@ -152,6 +152,48 @@ export const listProfessionals = createServerFn({ method: 'GET' })
     }
   })
 
+// ponytail: single-profile fetch for the public profile page + its SSR head.
+// Returns ONLY verified rows — pending/rejected are invisible to the public,
+// so a shared link to an unverified/rejected pro 404s instead of leaking state.
+const getOneSchema = z.object({ id: z.number().int().positive() })
+
+export const getPublicProfessional = createServerFn({ method: 'GET' })
+  .validator(getOneSchema)
+  .handler(async ({ data }) => {
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        modality: professionals.modality,
+        country: professionals.country,
+        estado: professionals.estado,
+        ciudad: professionals.ciudad,
+        whatsapp: professionals.whatsapp,
+        available: professionals.available,
+        populationRaw: professionals.population,
+        verifiedStatus: professionals.verifiedStatus,
+      })
+      .from(professionals)
+      .where(eq(professionals.id, data.id))
+      .limit(1)
+    // ponytail: .at(0) is type-honest (T | undefined) without needing
+    // noUncheckedIndexedAccess; rows[0] would type as always-present.
+    const r = rows.at(0)
+    if (!r || r.verifiedStatus !== 'verified') return null
+    return {
+      id: r.id,
+      name: r.name,
+      modality: r.modality,
+      country: r.country,
+      estado: r.estado,
+      ciudad: r.ciudad,
+      whatsapp: r.whatsapp,
+      available: r.available,
+      population: parsePopulation(r.populationRaw),
+    }
+  })
+
 // ponytail: "contact a random professional" — same filter pool as the list,
 // any verified pro (NOT restricted to available=1, per product decision).
 // ORDER BY RANDOM() is fine while the directory is <~1k rows; if it grows,
