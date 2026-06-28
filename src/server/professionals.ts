@@ -1,6 +1,16 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { eq, and, or, desc, asc, DrizzleError } from 'drizzle-orm'
+import {
+  eq,
+  and,
+  or,
+  desc,
+  asc,
+  like,
+  count,
+  sql,
+  DrizzleError,
+} from 'drizzle-orm'
 
 import { getDb } from '#/db'
 import { professionals, user as userTable } from '#/db/schema'
@@ -10,52 +20,6 @@ import {
   VENEZUELA,
   VENEZUELA_ESTADOS,
 } from './locations'
-
-export type PublicProfessional = {
-  id: number
-  name: string
-  modality: 'in_person' | 'remote' | 'both'
-  country: string
-  estado: string | null
-  ciudad: string | null
-  whatsapp: string
-  available: boolean
-}
-
-const listSchema = z.object({
-  modality: z.enum(['in_person', 'remote']),
-})
-
-export const listProfessionals = createServerFn({ method: 'GET' })
-  .validator(listSchema)
-  .handler(async ({ data }) => {
-    const db = getDb()
-    const rows = await db
-      .select({
-        id: professionals.id,
-        name: professionals.name,
-        modality: professionals.modality,
-        country: professionals.country,
-        estado: professionals.estado,
-        ciudad: professionals.ciudad,
-        whatsapp: professionals.whatsapp,
-        available: professionals.available,
-      })
-      .from(professionals)
-      .where(
-        and(
-          eq(professionals.verifiedStatus, 'verified'),
-          or(
-            eq(professionals.modality, data.modality),
-            eq(professionals.modality, 'both'),
-          ),
-        ),
-      )
-      // ponytail: list all verified pros (not just on-turn), but float the
-      // available ones to the top so patients see who's reachable now first.
-      .orderBy(desc(professionals.available), asc(professionals.name))
-    return rows
-  })
 
 // ponytail: target demographics a professional serves. Multi-select, stored
 // as a JSON text array. Spanish labels are the stored keys (single-language app).
@@ -68,7 +32,7 @@ export const POPULATION_OPTIONS = [
 export type Population = (typeof POPULATION_OPTIONS)[number]
 
 // ponytail: parse the JSON population column; never throw on bad data.
-function parsePopulation(raw: string | null | undefined): Population[] {
+export function parsePopulation(raw: string | null | undefined): Population[] {
   if (!raw) return []
   try {
     const v = JSON.parse(raw)
@@ -81,6 +45,143 @@ function parsePopulation(raw: string | null | undefined): Population[] {
     return []
   }
 }
+
+export type PublicProfessional = {
+  id: number
+  name: string
+  modality: 'in_person' | 'remote' | 'both'
+  country: string
+  estado: string | null
+  ciudad: string | null
+  whatsapp: string
+  available: boolean
+  population: Population[]
+}
+
+// ponytail: filter shape shared by the list route (search params) and the
+// server fns. modality is required (the directory splits on it); the rest are
+// plain optional strings — they only feed eq()/like(), never get persisted,
+// so enum validation here is YAGNI (the <select> already constrains them).
+// page is 1-based.
+export const listSchema = z.object({
+  modality: z.enum(['in_person', 'remote']),
+  q: z.string().trim().optional(),
+  estado: z.string().trim().optional(),
+  ciudad: z.string().trim().optional(),
+  population: z.string().trim().optional(),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(48).default(12),
+})
+
+export const PAGE_SIZE_DEFAULT = 12
+
+// ponytail: shared WHERE builder so listProfessionals (paginated) and
+// pickRandomProfessional draw from the exact same pool for a given filter
+// set — the random button never picks someone the list would filter out.
+// All clauses are optional except verified + modality; undefined filters are
+// simply not added (drizzle `and` with undefined is a no-op).
+function buildProfessionalWhere(
+  data: Pick<
+    z.infer<typeof listSchema>,
+    'modality' | 'q' | 'estado' | 'ciudad' | 'population'
+  >,
+) {
+  return and(
+    eq(professionals.verifiedStatus, 'verified'),
+    or(
+      eq(professionals.modality, data.modality),
+      eq(professionals.modality, 'both'),
+    ),
+    data.q ? like(professionals.name, `%${data.q}%`) : undefined,
+    data.estado ? eq(professionals.estado, data.estado) : undefined,
+    data.ciudad ? eq(professionals.ciudad, data.ciudad) : undefined,
+    // ponytail: population is a JSON text array ('["Niños","Adultos"]').
+    // LIKE '%"Niños"%' matches the tag anywhere in the serialized string.
+    data.population
+      ? like(professionals.population, `%"${data.population}"%`)
+      : undefined,
+  )
+}
+
+export const listProfessionals = createServerFn({ method: 'GET' })
+  .validator(listSchema)
+  .handler(async ({ data }) => {
+    const db = getDb()
+    const where = buildProfessionalWhere(data)
+    const offset = (data.page - 1) * data.pageSize
+
+    const [rows, totalRows] = await Promise.all([
+      db
+        .select({
+          id: professionals.id,
+          name: professionals.name,
+          modality: professionals.modality,
+          country: professionals.country,
+          estado: professionals.estado,
+          ciudad: professionals.ciudad,
+          whatsapp: professionals.whatsapp,
+          available: professionals.available,
+          populationRaw: professionals.population,
+        })
+        .from(professionals)
+        .where(where)
+        // ponytail: float available pros to the top so patients see who's
+        // reachable now first, then alphabetical by name.
+        .orderBy(desc(professionals.available), asc(professionals.name))
+        .limit(data.pageSize)
+        .offset(offset),
+      db
+        .select({ n: count() })
+        .from(professionals)
+        .where(where),
+    ])
+
+    return {
+      rows: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        modality: r.modality,
+        country: r.country,
+        estado: r.estado,
+        ciudad: r.ciudad,
+        whatsapp: r.whatsapp,
+        available: r.available,
+        population: parsePopulation(r.populationRaw),
+      })),
+      total: totalRows.at(0)?.n ?? 0,
+    }
+  })
+
+// ponytail: "contact a random professional" — same filter pool as the list,
+// any verified pro (NOT restricted to available=1, per product decision).
+// ORDER BY RANDOM() is fine while the directory is <~1k rows; if it grows,
+// switch to a count-based random offset (pick n in [0,count), LIMIT 1 OFFSET n).
+export const pickRandomProfessional = createServerFn({ method: 'GET' })
+  .validator(
+    z.object({
+      modality: z.enum(['in_person', 'remote']),
+      q: z.string().trim().optional(),
+      estado: z.string().trim().optional(),
+      ciudad: z.string().trim().optional(),
+      population: z.string().trim().optional(),
+    }),
+  )
+  .handler(async ({ data }) => {
+    const db = getDb()
+    const rows = await db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        whatsapp: professionals.whatsapp,
+      })
+      .from(professionals)
+      .where(buildProfessionalWhere(data))
+      .orderBy(sql`RANDOM()`)
+      .limit(1)
+    // ponytail: .at(0) is type-honest (T | undefined) without needing
+    // noUncheckedIndexedAccess; rows[0] would type as always-present.
+    return rows.at(0) ?? null
+  })
 
 // ponytail: location is conditional. When country=Venezuela, estado and
 // ciudad must come from the fixed maps. Abroad, only country is required

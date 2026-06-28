@@ -91,41 +91,56 @@ export const verification = sqliteTable(
   (table) => [index('verification_identifier_idx').on(table.identifier)],
 )
 
-export const professionals = sqliteTable('professionals', {
-  id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
-  userId: text('user_id')
-    .notNull()
-    .references(() => user.id, { onDelete: 'cascade' }),
-  name: text('name').notNull(),
-  // ponytail: credential capture collapsed from cédula/FPV/colegio/photo into
-  // a single country-agnostic registration number at the certifying psychology
-  // board, plus the board name (free text — boards vary per country). The
-  // certifying country lives in credentialCountry (decoupled from residence:
-  // a pro may live in Chile but hold a Venezuelan board registration).
-  certificationNumber: text('certification_number').notNull(),
-  certifyingSchool: text('certifying_school'),
-  // ponytail: JSON array of population tags (e.g. '["Niños","Adultos"]').
-  // Stored as text; filter later via LIKE on the serialized string.
-  population: text('population').notNull(),
-  modality: text('modality', {
-    enum: ['in_person', 'remote', 'both'],
-  }).notNull(),
-  country: text('country').notNull(),
-  estado: text('estado'),
-  ciudad: text('ciudad'),
-  credentialCountry: text('credential_country'),
-  whatsappCountry: text('whatsapp_country'),
-  whatsapp: text('whatsapp').notNull(),
-  verifiedStatus: text('verified_status', {
-    enum: ['pending', 'verified', 'rejected'],
-  })
-    .notNull()
-    .default('pending'),
-  available: integer('available', { mode: 'boolean' }).notNull().default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' }).default(
-    sql`(unixepoch())`,
-  ),
-})
+export const professionals = sqliteTable(
+  'professionals',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    // ponytail: credential capture collapsed from cédula/FPV/colegio/photo into
+    // a single country-agnostic registration number at the certifying psychology
+    // board, plus the board name (free text — boards vary per country). The
+    // certifying country lives in credentialCountry (decoupled from residence:
+    // a pro may live in Chile but hold a Venezuelan board registration).
+    certificationNumber: text('certification_number').notNull(),
+    certifyingSchool: text('certifying_school'),
+    // ponytail: JSON array of population tags (e.g. '["Niños","Adultos"]').
+    // Stored as text; filter via LIKE on the serialized string (no index —
+    // LIKE-leading-wildcard can't use one anyway).
+    population: text('population').notNull(),
+    modality: text('modality', {
+      enum: ['in_person', 'remote', 'both'],
+    }).notNull(),
+    country: text('country').notNull(),
+    estado: text('estado'),
+    ciudad: text('ciudad'),
+    credentialCountry: text('credential_country'),
+    whatsappCountry: text('whatsapp_country'),
+    whatsapp: text('whatsapp').notNull(),
+    verifiedStatus: text('verified_status', {
+      enum: ['pending', 'verified', 'rejected'],
+    })
+      .notNull()
+      .default('pending'),
+    available: integer('available', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(
+      sql`(unixepoch())`,
+    ),
+  },
+  (table) => [
+    // ponytail: every directory query filters on verifiedStatus + modality;
+    // estado/country carry the location filters; available is the ORDER BY
+    // tiebreak. Cover the hot paths without over-indexing a small table.
+    index('professionals_verifiedStatus_idx').on(table.verifiedStatus),
+    index('professionals_estado_idx').on(table.estado),
+    index('professionals_country_idx').on(table.country),
+    index('professionals_available_idx').on(table.available),
+  ],
+)
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),

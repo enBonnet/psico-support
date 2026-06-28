@@ -43,6 +43,13 @@
       "when": 1782598800000,
       "tag": "0005_collapse_credential_add_population",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1782611888648,
+      "tag": "0006_silent_metal_master",
+      "breakpoints": true
     }
   ]
 }
