@@ -333,6 +333,20 @@ pre code {
   padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px) + 1rem);
 }
 
+/* ponytail: desktop fallback. The app is mobile-first single-column, so the
+   1080px page-wrap stretches cards/forms/buttons edge-to-edge on desktop.
+   Cap it to a readable centered column at >=640px; mobile (<640px) is
+   untouched (calc(100% - 2rem) still drives the width). The directory opts
+   out via .page-wrap--wide so its card grid can use the full width. */
+@media (min-width: 640px) {
+  .page-wrap {
+    max-width: 32rem;
+  }
+  .page-wrap--wide {
+    max-width: none;
+  }
+}
+
 /* Medicall signature: 100x6 gradient bar under section titles */
 .section-underline {
   height: 6px;
@@ -762,12 +776,12 @@ a {
   }
 }
 
-/* ── Reddit-style persistent bottom tab bar ─────────────────────────────
-   Fixed glass bar pinned above the iOS home indicator. Each tab is a
-   column (icon + label); the active tab gets the brand accent and a
-   3px pill indicator above it. Reuses --glass-* tokens so dark mode
-   adapts automatically. Centered at <=480px on >=768px screens so it
-   never stretches edge-to-edge on tablet/desktop (matches Reddit). */
+/* ── Navigation bars ────────────────────────────────────────────────────
+   Mobile: Reddit-style persistent bottom tab bar (fixed, above the home
+   indicator; md:hidden so it never shows on desktop). Desktop: sticky
+   glass pill at the top (hidden md:flex) with brand + horizontal links.
+   Both reuse --glass-* tokens so dark mode adapts automatically, and both
+   hide on chromeless auth routes (see bottom-tabs.tsx). */
 :root {
   --bar-h: 4rem;
 }
@@ -837,12 +851,33 @@ a {
 }
 
 @media (min-width: 768px) {
-  .bottom-tabs {
-    max-width: 30rem;
-    margin-inline: auto;
-    inset-inline: 50%;
-    transform: translateX(-50%);
-    border-radius: var(--glass-radius) var(--glass-radius) 0 0;
+  /* Desktop top nav — sticky glass pill, centered, brand left + links right.
+     display is toggled by the component (hidden md:flex), so this rule only
+     sets the surface + layout, never display. */
+  .top-nav {
+    position: sticky;
+    top: 0.75rem;
+    z-index: 40;
+    width: min(1080px, calc(100% - 2rem));
+    margin: 0.75rem auto 0;
+    padding: 0.625rem 0.875rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    border: 1px solid var(--glass-stroke);
+    border-radius: var(--glass-radius-pill);
+    background: linear-gradient(
+      180deg,
+      var(--glass-tint-strong),
+      var(--glass-tint)
+    );
+    box-shadow:
+      0 1px 0 0 var(--glass-specular) inset,
+      0 12px 30px -16px rgba(19, 41, 126, 0.3);
+    backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
+      saturate(var(--glass-saturate));
+    -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
+      saturate(var(--glass-saturate));
   }
 }
 

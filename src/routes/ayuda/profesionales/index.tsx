@@ -210,7 +210,7 @@ function ProfessionalsList() {
   )[filters.estado] ?? []
 
   return (
-    <main className="page-wrap flex min-h-[100dvh] flex-col py-4">
+    <main className="page-wrap page-wrap--wide flex min-h-[100dvh] flex-col py-4">
       <Link
         to="/ayuda"
         className="inline-flex items-center gap-1 self-start py-2 text-base font-medium text-[var(--medi-secondary)]"
@@ -373,9 +373,9 @@ function ProfessionalsList() {
         )}
       </div>
 
-      <ul className="mt-4 flex flex-col gap-3 pb-8">
+      <ul className="mt-4 grid grid-cols-1 gap-3 pb-8 md:grid-cols-2">
         {data.rows.length === 0 ? (
-          <li className="glass-card-soft p-5 text-center text-[var(--medi-text-secondary)]">
+          <li className="glass-card-soft p-5 text-center text-[var(--medi-text-secondary)] md:col-span-2">
             {hasActiveFilters
               ? 'No hay profesionales que coincidan con tu búsqueda.'
               : 'No hay profesionales en esta modalidad en este momento.'}

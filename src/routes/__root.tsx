@@ -14,7 +14,7 @@ import { getLocale } from '#/paraglide/runtime'
 import appCss from '../styles.css?url'
 
 import { NotificationStack } from '#/lib/notifications'
-import { BottomTabs } from '#/components/bottom-tabs'
+import { BottomTabs, DesktopNav } from '#/components/bottom-tabs'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -68,6 +68,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <DesktopNav pathname={pathname} />
         {children}
         <BottomTabs pathname={pathname} />
         <NotificationStack />
