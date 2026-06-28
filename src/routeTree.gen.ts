@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -23,6 +24,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CuentaRoute = CuentaRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -73,6 +79,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
@@ -85,6 +92,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
@@ -98,6 +106,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
@@ -112,6 +121,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/cuenta'
     | '/signup'
     | '/profesional/completar'
     | '/profesional/login'
@@ -124,6 +134,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/cuenta'
     | '/signup'
     | '/profesional/completar'
     | '/profesional/login'
@@ -136,6 +147,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/cuenta'
     | '/signup'
     | '/profesional/completar'
     | '/profesional/login'
@@ -149,6 +161,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CuentaRoute: typeof CuentaRoute
   SignupRoute: typeof SignupRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
@@ -167,6 +180,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cuenta': {
+      id: '/cuenta'
+      path: '/cuenta'
+      fullPath: '/cuenta'
+      preLoaderRoute: typeof CuentaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -237,6 +257,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CuentaRoute: CuentaRoute,
   SignupRoute: SignupRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
   ProfesionalLoginRoute: ProfesionalLoginRoute,

@@ -81,7 +81,7 @@ function PanelPage() {
           <button
             onClick={async () => {
               await authClient.signOut()
-              window.location.href = '/profesional/login'
+              window.location.href = '/'
             }}
             className="text-sm font-medium text-[var(--medi-secondary)]"
           >
@@ -159,11 +159,6 @@ function PanelPage() {
           </div>
         </>
       )}
-      <footer className="mt-auto pt-10 text-center text-xs text-[var(--medi-text-secondary)]">
-        <Link to="/" className="underline">
-          Volver al inicio
-        </Link>
-      </footer>
     </main>
   )
 }

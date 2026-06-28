@@ -2,6 +2,7 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  useLocation,
 } from '@tanstack/react-router'
 import { TanStackRouterDevtoolsPanel } from '@tanstack/react-router-devtools'
 import { TanStackDevtools } from '@tanstack/react-devtools'
@@ -13,6 +14,7 @@ import { getLocale } from '#/paraglide/runtime'
 import appCss from '../styles.css?url'
 
 import { NotificationStack } from '#/lib/notifications'
+import { BottomTabs } from '#/components/bottom-tabs'
 
 import type { QueryClient } from '@tanstack/react-query'
 
@@ -57,6 +59,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
 })
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  // ponytail: pathname drives chromeless-route hiding. Read once here so the
+  // bar hides on auth flows without each route opting out.
+  const { pathname } = useLocation()
   return (
     <html lang={getLocale()}>
       <head>
@@ -64,6 +69,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <BottomTabs pathname={pathname} />
         <NotificationStack />
         <TanStackDevtools
           config={{

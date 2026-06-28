@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Link } from '@tanstack/react-router'
+import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
@@ -94,7 +94,7 @@ function AdminPage() {
         <button
           onClick={async () => {
             await authClient.signOut()
-            window.location.href = '/profesional/login'
+            window.location.href = '/'
           }}
           className="text-sm font-medium text-[var(--medi-secondary)]"
         >
@@ -246,12 +246,6 @@ function AdminPage() {
           </li>
         ))}
       </ul>
-
-      <footer className="mt-auto pt-6 text-center text-xs text-[var(--medi-text-secondary)]">
-        <Link to="/" className="underline">
-          Volver al inicio
-        </Link>
-      </footer>
     </main>
   )
 }

@@ -201,7 +201,7 @@ function ProfessionalsList() {
         ‹ Atrás
       </Link>
 
-      <div className="glass-bar sticky top-0 z-10 rounded-[var(--glass-radius-sm)] px-4 py-3">
+      <div className="glass-bar sticky top-[env(safe-area-inset-top,0px)] z-10 rounded-[var(--glass-radius-sm)] px-4 py-3">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-[var(--medi-text-primary)]">
@@ -413,7 +413,7 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
 
   return (
     <li className="glass-card p-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <p className="truncate text-lg font-semibold text-[var(--medi-text-primary)]">
             {p.name}
@@ -429,7 +429,7 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
             </p>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
           <BadgeFPV />
           <StatusPill available={p.available} />
         </div>
@@ -472,7 +472,7 @@ function StatusPill({ available }: { available: boolean }) {
 function BadgeFPV() {
   return (
     <span className="glass-pill px-2.5 py-1 text-xs font-semibold text-[var(--medi-primary)]">
-      FPV Verificado
+      Confirmado
     </span>
   )
 }
