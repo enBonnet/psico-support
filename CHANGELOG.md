@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-06-28
+
+### Added
+- Skeleton loading states for the admin, cuenta, and profesional panel pages.
+
+### Fixed
+- Mobile password-manager autofill on the professional login: missing `name` attributes caused autofilled credentials to be submitted empty.
+
 ## [1.0.0] - 2026-06-28
 
 Initial production release of the disaster-response psychological-support
@@ -21,5 +29,6 @@ platform connecting people in Venezuela with verified psychologists.
 - Installable PWA with offline app shell (stale-while-revalidate service worker).
 - Cloudflare Workers + D1 (SQLite) backend via TanStack Start (SSR).
 
-[Unreleased]: https://github.com/anomalyco/psico-support/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/anomalyco/psico-support/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/anomalyco/psico-support/releases/tag/v1.1.0
 [1.0.0]: https://github.com/anomalyco/psico-support/releases/tag/v1.0.0
