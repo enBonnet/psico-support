@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '#/lib/auth-client'
+import { notify } from '#/lib/notifications'
 import {
   listPending,
   reviewProfessional,
@@ -37,8 +38,26 @@ function AdminPage() {
       professionalId: number
       status: 'verified' | 'rejected'
     }) => reviewProfessional({ data: vars }),
-    onSuccess: () =>
-      qc.invalidateQueries({ queryKey: ['pending-professionals'] }),
+    onSuccess: (_data, vars) => {
+      qc.invalidateQueries({ queryKey: ['pending-professionals'] })
+      notify({
+        type: vars.status === 'verified' ? 'success' : 'warning',
+        title:
+          vars.status === 'verified'
+            ? 'Profesional aprobado'
+            : 'Profesional rechazado',
+        body:
+          vars.status === 'verified'
+            ? 'Ya aparece en la lista pública.'
+            : 'Quedó fuera de la lista pública.',
+      })
+    },
+    onError: () =>
+      notify({
+        type: 'error',
+        title: 'No se pudo actualizar el estado',
+        body: 'Inténtalo de nuevo.',
+      }),
   })
 
   return (
@@ -79,9 +98,7 @@ function AdminPage() {
                     <dt className="col-span-2 mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
                       Ubicación
                     </dt>
-                    <dt className="text-[var(--medi-text-secondary)]">
-                      País
-                    </dt>
+                    <dt className="text-[var(--medi-text-secondary)]">País</dt>
                     <dd>
                       {p.country === 'Venezuela'
                         ? `Venezuela — ${[p.estado, p.ciudad].filter(Boolean).join(', ')}`

@@ -12,6 +12,8 @@ import { getLocale } from '#/paraglide/runtime'
 
 import appCss from '../styles.css?url'
 
+import { NotificationStack } from '#/lib/notifications'
+
 import type { QueryClient } from '@tanstack/react-query'
 
 interface MyRouterContext {
@@ -62,6 +64,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <NotificationStack />
         <TanStackDevtools
           config={{
             position: 'bottom-right',

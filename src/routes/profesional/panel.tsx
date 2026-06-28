@@ -1,6 +1,7 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '#/lib/auth-client'
+import { notify } from '#/lib/notifications'
 import {
   getMyProfessional,
   setAvailability,
@@ -41,7 +42,22 @@ function PanelPage() {
       qc.setQueryData(['my-professional'], (old: typeof me | undefined) =>
         old ? { ...old, available } : old,
       )
+      notify({
+        type: 'success',
+        title: available
+          ? 'Ahora estás visible para pacientes'
+          : 'Pasaste a fuera de turno',
+        body: available
+          ? 'Los pacientes pueden contactarte de inmediato.'
+          : 'Ya no apareces en la lista.',
+      })
     },
+    onError: () =>
+      notify({
+        type: 'error',
+        title: 'No se pudo cambiar tu disponibilidad',
+        body: 'Inténtalo de nuevo en unos segundos.',
+      }),
   })
 
   const available = me?.available ?? false
