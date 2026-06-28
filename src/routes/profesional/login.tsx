@@ -49,6 +49,7 @@ function LoginPage() {
           <span className="text-sm font-medium">Correo</span>
           <input
             type="email"
+            name="email"
             inputMode="email"
             autoComplete="email"
             className="glass-input h-12 w-full px-3 text-base"
@@ -61,6 +62,7 @@ function LoginPage() {
           <span className="text-sm font-medium">Contraseña</span>
           <input
             type="password"
+            name="password"
             autoComplete="current-password"
             className="glass-input h-12 w-full px-3 text-base"
             value={password}
