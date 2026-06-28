@@ -17,13 +17,21 @@ function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { error: err } = await authClient.signIn.email({ email, password })
-    setLoading(false)
-    if (err) {
-      setError(err.message ?? 'No se pudo iniciar sesión.')
-      return
+    try {
+      const { error: err } = await authClient.signIn.email({ email, password })
+      if (err) {
+        setError(err.message ?? 'No se pudo iniciar sesión.')
+        return
+      }
+      // ponytail: await navigation so the button stays loading until the
+      // panel is committed. Without this, setLoading(false) re-armed the
+      // button while the panel's beforeLoad/loaders (2 D1 server fns) were
+      // still pending — the idle button looked like the first click failed,
+      // prompting a second submit.
+      await navigate({ to: '/profesional/panel' })
+    } finally {
+      setLoading(false)
     }
-    navigate({ to: '/profesional/panel' })
   }
 
   return (

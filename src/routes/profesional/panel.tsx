@@ -1,5 +1,6 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
 import { Skeleton } from '#/components/ui/skeleton'
@@ -22,6 +23,7 @@ export const Route = createFileRoute('/profesional/panel')({
 
 function PanelPage() {
   const qc = useQueryClient()
+  const [signingOut, setSigningOut] = useState(false)
   const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ['my-professional'],
     queryFn: () => getMyProfessional(),
@@ -64,6 +66,21 @@ function PanelPage() {
   const available = me?.available ?? false
   const verified = me?.verifiedStatus === 'verified'
 
+  async function signOut() {
+    setSigningOut(true)
+    const { error } = await authClient.signOut()
+    if (error) {
+      setSigningOut(false)
+      notify({
+        type: 'error',
+        title: 'No se pudo cerrar sesión',
+        body: 'Inténtalo de nuevo.',
+      })
+      return
+    }
+    window.location.href = '/'
+  }
+
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
       <div className="flex items-center justify-between">
@@ -80,13 +97,11 @@ function PanelPage() {
             </Link>
           )}
           <button
-            onClick={async () => {
-              await authClient.signOut()
-              window.location.href = '/'
-            }}
-            className="text-sm font-medium text-[var(--medi-secondary)]"
+            onClick={signOut}
+            disabled={signingOut}
+            className="text-sm font-medium text-[var(--medi-secondary)] disabled:opacity-60"
           >
-            Salir
+            {signingOut ? 'Saliendo…' : 'Salir'}
           </button>
         </div>
       </div>

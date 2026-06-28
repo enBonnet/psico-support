@@ -1,7 +1,9 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
 import { LifeBuoy, LogIn, LogOut, ShieldCheck, UserPlus } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { notify } from '#/lib/notifications'
 import { APP_VERSION } from '#/lib/version'
 import { Skeleton } from '#/components/ui/skeleton'
 import {
@@ -13,6 +15,7 @@ import {
 export const Route = createFileRoute('/cuenta')({ component: CuentaPage })
 
 function CuentaPage() {
+  const [signingOut, setSigningOut] = useState(false)
   const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => getCurrentUser(),
@@ -33,7 +36,17 @@ function CuentaPage() {
   })
 
   async function signOut() {
-    await authClient.signOut()
+    setSigningOut(true)
+    const { error } = await authClient.signOut()
+    if (error) {
+      setSigningOut(false)
+      notify({
+        type: 'error',
+        title: 'No se pudo cerrar sesión',
+        body: 'Inténtalo de nuevo.',
+      })
+      return
+    }
     window.location.href = '/'
   }
 
@@ -149,9 +162,11 @@ function CuentaPage() {
           <button
             type="button"
             onClick={signOut}
-            className="glass-card-soft mt-2 flex min-h-12 items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] px-4 py-3 text-base font-semibold text-[var(--medi-secondary)] transition-all hover:translate-y-[-1px]"
+            disabled={signingOut}
+            className="glass-card-soft mt-2 flex min-h-12 items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] px-4 py-3 text-base font-semibold text-[var(--medi-secondary)] transition-all hover:translate-y-[-1px] disabled:opacity-60"
           >
-            <LogOut className="size-5" /> Cerrar sesión
+            <LogOut className="size-5" />{' '}
+            {signingOut ? 'Cerrando…' : 'Cerrar sesión'}
           </button>
         </div>
       )}
