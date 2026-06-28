@@ -2,6 +2,7 @@ import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
+import { Skeleton } from '#/components/ui/skeleton'
 import {
   getMyProfessional,
   setAvailability,
@@ -21,7 +22,7 @@ export const Route = createFileRoute('/profesional/panel')({
 
 function PanelPage() {
   const qc = useQueryClient()
-  const { data: me } = useQuery({
+  const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ['my-professional'],
     queryFn: () => getMyProfessional(),
   })
@@ -90,7 +91,7 @@ function PanelPage() {
         </div>
       </div>
       <div className="section-underline mt-2" />
-      {!me && (
+      {!meLoading && !me && (
         <p className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4 text-sm text-[var(--medi-text-secondary)]">
           No tienes un registro profesional todavía.{' '}
           <Link
@@ -100,6 +101,14 @@ function PanelPage() {
             Completa tu perfil profesional.
           </Link>
         </p>
+      )}
+
+      {meLoading && (
+        <div className="mt-4 flex flex-col gap-3" aria-busy="true">
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="mt-6 h-48 w-full" />
+        </div>
       )}
 
       {me && (

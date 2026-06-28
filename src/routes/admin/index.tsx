@@ -2,6 +2,7 @@ import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
+import { Skeleton } from '#/components/ui/skeleton'
 import {
   listPending,
   reviewProfessional,
@@ -30,7 +31,7 @@ export const Route = createFileRoute('/admin/')({
 
 function AdminPage() {
   const qc = useQueryClient()
-  const { data: pending = [] } = useQuery({
+  const { data: pending = [], isLoading: pendingLoading } = useQuery({
     queryKey: ['pending-professionals'],
     queryFn: () => listPending(),
   })
@@ -62,7 +63,7 @@ function AdminPage() {
       }),
   })
 
-  const { data: users = [] } = useQuery({
+  const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => listUsers(),
   })
@@ -103,7 +104,17 @@ function AdminPage() {
       </div>
       <div className="section-underline mt-2" />
 
-      {pending.length === 0 ? (
+      {pendingLoading ? (
+        <ul className="mt-6 flex flex-col gap-3 pb-6" aria-busy="true">
+          {[0, 1, 2].map((i) => (
+            <li key={i} className="glass-card p-4">
+              <Skeleton className="h-5 w-44" />
+              <Skeleton className="mt-2 h-4 w-60" />
+              <Skeleton className="mt-4 h-24 w-full" />
+            </li>
+          ))}
+        </ul>
+      ) : pending.length === 0 ? (
         <p className="glass-card-soft mt-6 p-5 text-center text-[var(--medi-text-secondary)]">
           No hay registros por validar.
         </p>
@@ -216,7 +227,20 @@ function AdminPage() {
         Promueve una cuenta a administrador. Solo para cuentas de confianza.
       </p>
       <ul className="mt-3 flex flex-col gap-2 pb-6">
-        {users.map((u) => (
+        {usersLoading
+          ? [0, 1, 2, 3].map((i) => (
+              <li
+                key={i}
+                className="glass-card flex items-center justify-between gap-3 p-3"
+              >
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+                <Skeleton className="h-7 w-24 rounded-full" />
+              </li>
+            ))
+          : users.map((u) => (
           <li
             key={u.id}
             className="glass-card flex items-center justify-between gap-3 p-3"

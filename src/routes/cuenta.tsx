@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { LifeBuoy, LogIn, LogOut, ShieldCheck, UserPlus } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 import { APP_VERSION } from '#/lib/version'
+import { Skeleton } from '#/components/ui/skeleton'
 import {
   getMyProfessional,
   amIAdmin,
@@ -12,7 +13,7 @@ import {
 export const Route = createFileRoute('/cuenta')({ component: CuentaPage })
 
 function CuentaPage() {
-  const { data: me } = useQuery({
+  const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ['me'],
     queryFn: () => getCurrentUser(),
   })
@@ -43,7 +44,7 @@ function CuentaPage() {
       </h1>
       <div className="section-underline mt-2" />
 
-      {!me && (
+      {!meLoading && !me && (
         <div className="mt-6 flex flex-col gap-4">
           <p className="text-sm text-[var(--medi-text-secondary)]">
             Inicia sesión para gestionar tu perfil profesional o tu
@@ -61,6 +62,22 @@ function CuentaPage() {
           >
             <UserPlus className="size-5" /> Crear cuenta
           </Link>
+        </div>
+      )}
+
+      {meLoading && (
+        <div className="mt-6 flex flex-col gap-4" aria-busy="true">
+          <div className="glass-card p-4">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="mt-2 h-4 w-56" />
+          </div>
+          <div className="glass-card flex items-center gap-3 p-4">
+            <Skeleton className="size-6 shrink-0 rounded-full" />
+            <div className="flex flex-col gap-2">
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-44" />
+            </div>
+          </div>
         </div>
       )}
 
