@@ -200,22 +200,59 @@ work without edits. New code should prefer the `--medi-*` tokens.
 
 ## Helper classes
 
-| Class                | Purpose                                                 |
-| -------------------- | ------------------------------------------------------- |
-| `.page-wrap`         | Centered content container (`min(1080px, 100% - 2rem)`) |
-| `.section-underline` | The 100×6px blue gradient bar                           |
-| `.section-kicker`    | Small capitalized blue label above headings             |
-| `.glass-card`        | Primary translucent surface (blur + specular edge)      |
-| `.glass-card-soft`   | Recessed surface (inputs, dropzones, callouts)          |
-| `.glass-pill`        | Tight pill (badges, chips, switch track)                |
-| `.glass-bar`         | Sticky header/footer (stronger tint, 1.2× blur)         |
-| `.glass-input`       | Translucent input with focus ring                       |
-| `.glass-primary`     | Saturated deep-blue CTA with specular top highlight     |
-| `.island-shell`      | Legacy alias → `.glass-card` material                   |
-| `.feature-card`      | Legacy alias → glass material + hover translate         |
-| `.nav-link`          | Nav item with animated gradient underline               |
-| `.island-kicker`     | Tiny uppercase tracked label                            |
-| `.rise-in`           | Entrance animation (translateY + fade)                  |
+| Class                            | Purpose                                                                                                                                                         |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `.page-wrap`                     | Centered content container. Mobile: `min(1080px, 100% - 2rem)`; **desktop (≥640px): capped to `32rem`** centered (mobile-first single-column fallback).         |
+| `.page-wrap--wide`               | Opts out of the 32rem desktop cap — use on multi-column pages (directory grid).                                                                                 |
+| `.section-underline`             | The 100×6px blue gradient bar                                                                                                                                   |
+| `.section-kicker`                | Small capitalized blue label above headings                                                                                                                     |
+| `.glass-card`                    | Primary translucent surface (blur + specular edge)                                                                                                              |
+| `.glass-card-soft`               | Recessed surface (inputs, dropzones, callouts)                                                                                                                  |
+| `.glass-pill`                    | Tight pill (badges, chips, switch track)                                                                                                                        |
+| `.glass-bar`                     | Sticky header/footer (stronger tint, 1.2× blur)                                                                                                                 |
+| `.glass-input`                   | Translucent input with focus ring                                                                                                                               |
+| `.glass-primary`                 | Saturated deep-blue CTA with specular top highlight                                                                                                             |
+| `.island-shell`                  | Legacy alias → `.glass-card` material                                                                                                                           |
+| `.feature-card`                  | Legacy alias → glass material + hover translate                                                                                                                 |
+| `.nav-link`                      | Nav item with animated gradient underline (desktop top nav)                                                                                                     |
+| `.bottom-tabs`                   | Mobile bottom tab bar (`flex md:hidden`; `display` owned by utilities — see layering rule)                                                                      |
+| `.bottom-tab`                    | Single mobile tab (column: icon + label, active pill indicator)                                                                                                 |
+| `.top-nav`                       | Desktop sticky glass-pill top nav (`hidden md:flex`; no `display` in CSS)                                                                                       |
+| `.notif-stack` / `.notif-banner` | iOS-style fire-and-forget notifications. Banner uses a **near-opaque (94% white) fill** so text reads over any background — do not drop its opacity below ~90%. |
+| `.island-kicker`                 | Tiny uppercase tracked label                                                                                                                                    |
+| `.rise-in`                       | Entrance animation (translateY + fade)                                                                                                                          |
+
+## Tailwind v4 layering rule (read before editing styles.css)
+
+All custom classes in `src/styles.css` live **outside** `@layer`. In Tailwind
+v4, **unlayered CSS beats layered utilities**. This is the single most
+dangerous gotcha in the stylesheet:
+
+- An unlayered `display: flex` on `.bottom-tabs` silently overrode the
+  component's `md:hidden` utility — the mobile bar stayed visible on desktop
+  for two deploys before anyone noticed.
+- The WhatsApp button uses `!text-white` because the unlayered `a { color }`
+  rule otherwise wins over the layered `text-white` utility.
+
+**Rule:** never set `display` (or any property the component also sets with a
+utility) inside a custom surface class. Let the utility classes own
+visibility/responsive toggles. If a utility seems to do nothing on an element
+with a custom class, check whether the class sets that property unlayered —
+remove it from the class, or force the utility with `!` (e.g. `!hidden`).
+
+## Responsive navigation
+
+Two nav surfaces, mutually exclusive by breakpoint, sharing one tab list
+(`src/components/bottom-tabs.tsx`):
+
+| Surface    | Breakpoint         | Class combo                      | Notes                                                   |
+| ---------- | ------------------ | -------------------------------- | ------------------------------------------------------- |
+| Bottom bar | mobile (`<768px`)  | `bottom-tabs flex md:hidden`     | Fixed, above home indicator, icons + labels             |
+| Top nav    | desktop (`≥768px`) | `top-nav mx-auto hidden md:flex` | Sticky glass pill, brand + horizontal `.nav-link` items |
+
+Both hide on chromeless auth routes (`/signup`, `/profesional/{login,registro,completar}`).
+The `display` property for each is set by the utility classes (`flex` /
+`md:hidden` / `hidden` / `md:flex`), **never** in the CSS rule.
 
 ## Verification
 
