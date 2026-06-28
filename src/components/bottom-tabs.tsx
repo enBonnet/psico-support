@@ -50,7 +50,7 @@ export function BottomTabs({ pathname }: { pathname: string }) {
   if (!tabs) return null
   return (
     <nav
-      className="glass-bar bottom-tabs md:hidden"
+      className="glass-bar bottom-tabs flex md:hidden"
       aria-label="Navegación principal"
     >
       {tabs.map((t) => {

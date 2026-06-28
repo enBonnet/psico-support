@@ -791,7 +791,10 @@ a {
   inset-inline: 0;
   bottom: 0;
   z-index: 40;
-  display: flex;
+  /* ponytail: display is intentionally NOT set here — the component toggles
+     it with `flex md:hidden` utilities. An unlayered `display: flex` here
+     would beat Tailwind's layered `md:hidden` in tw v4 and keep the bar
+     visible on desktop (same unlayered-beats-layered gotcha as !text-white). */
   justify-content: stretch;
   gap: 0.25rem;
   padding: 0.375rem 0.5rem calc(env(safe-area-inset-bottom, 0px) + 0.375rem);
