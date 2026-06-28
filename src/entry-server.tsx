@@ -6,11 +6,10 @@ import {
 import { setCloudflareEnv } from '#/db'
 
 // ponytail: custom server entry captures the worker (request, env, ctx)
-// signature so we can stash the D1/R2 bindings where getDb()/getR2()
-// reach them. The default entry drops env on the floor.
+// signature so we can stash the D1 binding where getDb() reaches it. The
+// default entry drops env on the floor.
 type CloudflareEnv = {
   DB: D1Database
-  CREDENTIAL_FILES: R2Bucket
 }
 
 const handler = createStartHandler(defaultStreamHandler)

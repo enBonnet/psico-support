@@ -4,7 +4,6 @@ import * as schema from './schema.ts'
 
 type CloudflareEnv = {
   DB: D1Database
-  CREDENTIAL_FILES: R2Bucket
 }
 
 let _env: CloudflareEnv | null = null
@@ -33,8 +32,4 @@ export function getDb(): Db {
   }
   cached = drizzle(env.DB, { schema })
   return cached
-}
-
-export function getR2(): R2Bucket | null {
-  return getCloudflareEnv()?.CREDENTIAL_FILES ?? null
 }

@@ -15,10 +15,4 @@
       "migrations_dir": "./drizzle",
     },
   ],
-  "r2_buckets": [
-    {
-      "binding": "CREDENTIAL_FILES",
-      "bucket_name": "psico-support-credentials",
-    },
-  ],
 }

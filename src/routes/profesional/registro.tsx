@@ -2,14 +2,13 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation } from '@tanstack/react-query'
-import { Camera } from 'lucide-react'
 
 import {
   registerProfessional,
   registerSchema,
   registerStep1Schema,
   registerStep2Schema,
-  COLEGIO_OPTIONS,
+  POPULATION_OPTIONS,
   VENEZUELA_ESTADOS,
   PAIS_OPTIONS,
 } from '#/server/professionals'
@@ -49,20 +48,6 @@ const DIAL_CODE: Record<string, string> = {
   'República Dominicana': '+1',
   Uruguay: '+598',
   Otro: '',
-}
-
-// Cédula: V/E + optional dash + up to 8 digits. "v12345678" -> "V-12345678".
-function formatCedula(raw: string): string {
-  const clean = raw.toUpperCase().replace(/[^VE\d]/g, '')
-  const letter = clean[0] ?? ''
-  const digits = clean.slice(1).replace(/\D/g, '').slice(0, 8)
-  if (!letter) return digits
-  return digits ? `${letter}-${digits}` : letter
-}
-
-// FPV: digits only, max 12.
-function formatFpv(raw: string): string {
-  return raw.replace(/\D/g, '').slice(0, 12)
 }
 
 // WhatsApp: keep the country's dial code + digits, grouped for readability.
@@ -140,9 +125,9 @@ function RegisterPage() {
       name: '',
       email: '',
       password: '',
-      cedula: '',
-      fpvNumber: '',
-      colegioRegional: '',
+      certificationNumber: '',
+      certifyingSchool: '',
+      population: [] as string[],
       modality: '',
       country: '',
       estado: '',
@@ -150,7 +135,6 @@ function RegisterPage() {
       credentialCountry: '',
       whatsappCountry: '',
       whatsapp: '',
-      credentialFileR2Key: '',
     },
     validators: {
       onChange: ({ value }) => {
@@ -393,25 +377,21 @@ function RegisterPage() {
 
             {/* ── Credencial profesional ── */}
             <SectionHeader>Credencial profesional</SectionHeader>
+            <p className="text-sm text-[var(--medi-text-secondary)]">
+                No subas fotos ni documentos. Solo tu <strong>número de
+                colegiación</strong>: lo verificamos directamente en el registro
+                público del colegio o universidad que te certificó.
+              </p>
             <form.Field name="credentialCountry">
               {(field) => (
                 <FieldShell
-                  label="País de tu credencial"
+                  label="País del colegio o certificación"
                   errors={field.state.meta.errors}
                 >
                   <select
                     className={inputCls}
                     value={field.state.value}
-                    onChange={(e) => {
-                      field.handleChange(e.target.value)
-                      // ponytail: reset Venezuelan credential fields when
-                      // the credential country changes away from Venezuela.
-                      if (e.target.value !== VENEZUELA) {
-                        form.setFieldValue('cedula', '')
-                        form.setFieldValue('fpvNumber', '')
-                        form.setFieldValue('colegioRegional', '')
-                      }
-                    }}
+                    onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   >
                     <option value="" disabled>
@@ -427,84 +407,81 @@ function RegisterPage() {
               )}
             </form.Field>
 
-            <form.Subscribe selector={(s) => s.values.credentialCountry}>
-              {(credentialCountry) =>
-                credentialCountry === VENEZUELA ? (
-                  <>
-                    <form.Field name="cedula">
-                      {(field) => (
-                        <FieldShell
-                          label="Cédula (V-12345678)"
-                          errors={field.state.meta.errors}
-                        >
-                          <input
-                            type="text"
-                            autoCapitalize="none"
-                            className={inputCls}
-                            value={field.state.value}
-                            onChange={(e) =>
-                              field.handleChange(formatCedula(e.target.value))
-                            }
-                            onBlur={field.handleBlur}
-                          />
-                        </FieldShell>
-                      )}
-                    </form.Field>
+            <form.Field name="certificationNumber">
+              {(field) => (
+                <FieldShell
+                  label="Número de colegiación"
+                  errors={field.state.meta.errors}
+                >
+                  <input
+                    type="text"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    className={inputCls}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="Ej. 12345"
+                  />
+                </FieldShell>
+              )}
+            </form.Field>
 
-                    <form.Field name="fpvNumber">
-                      {(field) => (
-                        <FieldShell
-                          label="Número FPV"
-                          errors={field.state.meta.errors}
-                        >
-                          <input
-                            type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
-                            autoCapitalize="none"
-                            className={inputCls}
-                            value={field.state.value}
-                            onChange={(e) =>
-                              field.handleChange(formatFpv(e.target.value))
-                            }
-                            onBlur={field.handleBlur}
-                          />
-                        </FieldShell>
-                      )}
-                    </form.Field>
+            <form.Field name="certifyingSchool">
+              {(field) => (
+                <FieldShell
+                  label="Colegio / institución (opcional)"
+                  errors={field.state.meta.errors}
+                >
+                  <input
+                    type="text"
+                    autoCapitalize="words"
+                    className={inputCls}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="Ej. Colegio de Psicólogos de Venezuela"
+                  />
+                </FieldShell>
+              )}
+            </form.Field>
 
-                    <form.Field name="colegioRegional">
-                      {(field) => (
-                        <FieldShell
-                          label="Colegio regional"
-                          errors={field.state.meta.errors}
+            <form.Field name="population">
+              {(field) => (
+                <FieldShell
+                  label="¿Con quién trabajas?"
+                  errors={field.state.meta.errors}
+                >
+                  <div className="flex flex-wrap gap-2">
+                    {POPULATION_OPTIONS.map((opt) => {
+                      const selected = field.state.value.includes(opt)
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          aria-pressed={selected}
+                          onClick={() =>
+                            field.handleChange(
+                              selected
+                                ? field.state.value.filter((v: string) => v !== opt)
+                                : [...field.state.value, opt],
+                            )
+                          }
+                          className={
+                            'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
+                            (selected
+                              ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
+                              : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
+                          }
                         >
-                          <select
-                            className={inputCls}
-                            value={field.state.value}
-                            onChange={(e) =>
-                              field.handleChange(e.target.value)
-                            }
-                            onBlur={field.handleBlur}
-                          >
-                            <option value="" disabled>
-                              Selecciona…
-                            </option>
-                            {COLEGIO_OPTIONS.map((c) => (
-                              <option key={c} value={c}>
-                                {c}
-                              </option>
-                            ))}
-                          </select>
-                        </FieldShell>
-                      )}
-                    </form.Field>
-                  </>
-                ) : null
-              }
-            </form.Subscribe>
-
-            <CredentialUpload form={form} />
+                          {opt}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </FieldShell>
+              )}
+            </form.Field>
 
             {/* ── Contacto & modalidad ── */}
             <SectionHeader>Contacto &amp; modalidad</SectionHeader>
@@ -673,77 +650,5 @@ function FieldShell({
         </span>
       )}
     </label>
-  )
-}
-
-function CredentialUpload<TForm extends { Field: React.FC<any> }>({
-  form,
-}: {
-  // ponytail: form type inferred loosely; field access is duck-typed here.
-  form: TForm
-}) {
-  const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  return (
-    <form.Field name="credentialFileR2Key">
-      {(field: {
-        state: { value: string; meta: { errors: unknown[] } }
-        handleChange: (v: string) => void
-      }) => {
-        async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
-          const file = e.target.files?.[0]
-          if (!file) return
-          setUploading(true)
-          setError(null)
-          try {
-            const fd = new FormData()
-            fd.append('file', file)
-            const res = await fetch('/api/credential/upload', {
-              method: 'POST',
-              body: fd,
-            })
-            if (!res.ok) {
-              const body = (await res
-                .json()
-                .catch(() => ({ error: 'upload_failed' }))) as { error: string }
-              throw new Error(
-                body.error === 'too_large'
-                  ? 'La imagen supera 8MB.'
-                  : 'No se pudo subir la imagen.',
-              )
-            }
-            const json: { key: string } = await res.json()
-            const { key } = json
-            field.handleChange(key)
-          } catch (err) {
-            setError((err as Error).message)
-          } finally {
-            setUploading(false)
-          }
-        }
-        const errors = field.state.meta.errors
-        return (
-          <FieldShell label="Credencial (foto)" errors={errors}>
-            <span className="glass-card-soft flex min-h-16 cursor-pointer items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] px-4 py-4 text-base text-[var(--medi-text-secondary)]">
-              <Camera className="size-5" />
-              {uploading
-                ? 'Subiendo…'
-                : field.state.value
-                  ? '✓ Foto subida'
-                  : 'Toca para tomar o elegir una foto'}
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                className="sr-only"
-                onChange={onFile}
-              />
-            </span>
-            {error && <span className="text-sm text-red-600">{error}</span>}
-          </FieldShell>
-        )
-      }}
-    </form.Field>
   )
 }

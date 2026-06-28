@@ -57,18 +57,30 @@ export const listProfessionals = createServerFn({ method: 'GET' })
     return rows
   })
 
-const COLEGIOS = [
-  'Distrito Capital',
-  'La Guaira',
-  'Miranda',
-  'Zulia',
-  'Carabobo',
-  'Aragua',
-  'Lara',
-  'Anzoátegui',
-  'Bolívar',
-  'Otro',
+// ponytail: target demographics a professional serves. Multi-select, stored
+// as a JSON text array. Spanish labels are the stored keys (single-language app).
+export const POPULATION_OPTIONS = [
+  'Niños',
+  'Adolescentes',
+  'Adultos',
+  'Adultos mayores',
 ] as const
+export type Population = (typeof POPULATION_OPTIONS)[number]
+
+// ponytail: parse the JSON population column; never throw on bad data.
+function parsePopulation(raw: string | null | undefined): Population[] {
+  if (!raw) return []
+  try {
+    const v = JSON.parse(raw)
+    return Array.isArray(v)
+      ? v.filter((x): x is Population =>
+          (POPULATION_OPTIONS as readonly string[]).includes(x as string),
+        )
+      : []
+  } catch {
+    return []
+  }
+}
 
 // ponytail: location is conditional. When country=Venezuela, estado and
 // ciudad must come from the fixed maps. Abroad, only country is required
@@ -80,44 +92,32 @@ export const registerStep1Schema = z.object({
   password: z.string().min(8, 'Mínimo 8 caracteres'),
 })
 
-// ponytail: shared superRefine. credentialCountry drives the Venezuelan
-// credential fields (cedula/fpv/colegio); country drives location
-// (estado/ciudad). They're independent — a Venezuelan-credentialed
-// psychologist living abroad keeps cédula/FPV/colegio but skips
-// estado/ciudad, and vice versa.
+// ponytail: shared superRefine. credentialCountry + certificationNumber are
+// the country-agnostic credential (validate via the board's registry).
+// country drives location (estado/ciudad) — the two are independent: a pro
+// may live in Chile but hold a Venezuelan board registration.
 function refineProfessional(val: {
   credentialCountry?: string | null
   country: string
-  cedula?: string | null
-  fpvNumber?: string | null
-  colegioRegional?: string | null
+  certificationNumber?: string
   estado?: string | null
   ciudad?: string | null
   whatsappCountry?: string | null
   whatsapp: string
 }, ctx: z.RefinementCtx) {
-  if (val.credentialCountry === VENEZUELA) {
-    if (!val.cedula || !/^[VE]-?\d{4,9}$/i.test(val.cedula)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['cedula'],
-        message: 'Formato: V-12345678 o E-12345678',
-      })
-    }
-    if (!val.fpvNumber || !/^\d{4,12}$/.test(val.fpvNumber)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['fpvNumber'],
-        message: 'Solo dígitos',
-      })
-    }
-    if (!val.colegioRegional) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['colegioRegional'],
-        message: 'Selecciona el colegio',
-      })
-    }
+  if (!val.credentialCountry) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['credentialCountry'],
+      message: 'Selecciona el país del colegio o certificación',
+    })
+  }
+  if (!val.certificationNumber || val.certificationNumber.trim().length < 2) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['certificationNumber'],
+      message: 'Ingresa tu número de colegiación',
+    })
   }
   if (val.country === VENEZUELA) {
     if (!val.estado) {
@@ -149,9 +149,11 @@ const nullableWhenEmptyEstado = z.preprocess(
 // ponytail: step 2 schema validates only step-2 fields.
 export const registerStep2Schema = z
   .object({
-    cedula: z.string().optional().nullable(),
-    fpvNumber: z.string().optional().nullable(),
-    colegioRegional: z.string().optional().nullable(),
+    certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
+    certifyingSchool: z.string().max(120).optional().nullable(),
+    population: z
+      .array(z.enum(POPULATION_OPTIONS))
+      .min(1, 'Selecciona al menos uno'),
     modality: z.enum(['in_person', 'remote', 'both']),
     country: z.enum(PAIS_OPTIONS),
     estado: nullableWhenEmptyEstado,
@@ -162,7 +164,6 @@ export const registerStep2Schema = z
       .string()
       .min(8, 'WhatsApp inválido')
       .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
-    credentialFileR2Key: z.string().min(1, 'Sube tu credencial'),
   })
   .superRefine(refineProfessional)
 
@@ -171,9 +172,11 @@ export const registerSchema = z
     name: z.string().min(2, 'Tu nombre es obligatorio'),
     email: z.string().email('Correo inválido'),
     password: z.string().min(8, 'Mínimo 8 caracteres'),
-    cedula: z.string().optional().nullable(),
-    fpvNumber: z.string().optional().nullable(),
-    colegioRegional: z.string().optional().nullable(),
+    certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
+    certifyingSchool: z.string().max(120).optional().nullable(),
+    population: z
+      .array(z.enum(POPULATION_OPTIONS))
+      .min(1, 'Selecciona al menos uno'),
     modality: z.enum(['in_person', 'remote', 'both']),
     country: z.enum(PAIS_OPTIONS),
     estado: nullableWhenEmptyEstado,
@@ -184,22 +187,18 @@ export const registerSchema = z
       .string()
       .min(8, 'WhatsApp inválido')
       .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
-    credentialFileR2Key: z.string().min(1, 'Sube tu credencial'),
   })
   .superRefine(refineProfessional)
 
 export type RegisterInput = z.infer<typeof registerSchema>
-export const COLEGIO_OPTIONS = COLEGIOS
 export { PAIS_OPTIONS, VENEZUELA_ESTADOS }
 
 export const registerProfessional = createServerFn({ method: 'POST' })
   .validator(registerSchema)
   .handler(async ({ data }) => {
     // ponytail: single server fn creates the auth user + professional row.
-    // The credential file is uploaded separately to /api/upload first,
-    // which returns the R2 key included here. All errors thrown here are
-    // user-facing Spanish messages; raw DB/SQL details are logged, never
-    // returned to the client.
+    // All errors thrown here are user-facing Spanish messages; raw DB/SQL
+    // details are logged, never returned to the client.
     const db = getDb()
 
     const existing = await db
@@ -246,11 +245,10 @@ export const registerProfessional = createServerFn({ method: 'POST' })
       await db.insert(professionals).values({
         userId,
         name: data.name,
-        cedula: data.cedula ?? null,
-        rif: null,
-        fpvNumber: data.fpvNumber ?? null,
-        colegioRegional: data.colegioRegional ?? null,
-        credentialFileR2Key: data.credentialFileR2Key,
+        certificationNumber: data.certificationNumber.trim(),
+        certifyingSchool: data.certifyingSchool?.trim() || null,
+        // ponytail: population stored as a JSON text array for later filtering.
+        population: JSON.stringify(data.population),
         modality: data.modality,
         country: data.country,
         estado: data.country === VENEZUELA ? (data.estado ?? null) : null,
@@ -273,15 +271,11 @@ export const registerProfessional = createServerFn({ method: 'POST' })
           'Ya existe un registro profesional para este usuario. Si ya tienes cuenta, inicia sesión.',
         )
       }
-      // ponytail: NOT NULL on cedula/rif/fpv/colegio means the schema
-      // migration (0002) hasn't been applied — tell the admin to run it
-      // instead of confusing the user with a generic "try again".
-      if (
-        err instanceof DrizzleError &&
-        /NOT NULL/i.test(err.message)
-      ) {
+      // ponytail: NOT NULL on a column means a migration isn't applied —
+      // tell the admin instead of confusing the user with "try again".
+      if (err instanceof DrizzleError && /NOT NULL/i.test(err.message)) {
         console.error(
-          '[registerProfessional] insert failed (NOT NULL): likely migration 0002 not applied.',
+          '[registerProfessional] insert failed (NOT NULL): a migration is likely not applied.',
           err,
         )
         throw new Error(
@@ -386,13 +380,13 @@ export const listPending = createServerFn({ method: 'GET' }).handler(
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
-    return db
+    const rows = await db
       .select({
         id: professionals.id,
         name: professionals.name,
-        cedula: professionals.cedula,
-        fpvNumber: professionals.fpvNumber,
-        colegioRegional: professionals.colegioRegional,
+        certificationNumber: professionals.certificationNumber,
+        certifyingSchool: professionals.certifyingSchool,
+        populationRaw: professionals.population,
         country: professionals.country,
         estado: professionals.estado,
         ciudad: professionals.ciudad,
@@ -400,12 +394,17 @@ export const listPending = createServerFn({ method: 'GET' }).handler(
         whatsappCountry: professionals.whatsappCountry,
         modality: professionals.modality,
         whatsapp: professionals.whatsapp,
-        credentialFileR2Key: professionals.credentialFileR2Key,
         userEmail: userTable.email,
       })
       .from(professionals)
       .innerJoin(userTable, eq(userTable.id, professionals.userId))
       .where(eq(professionals.verifiedStatus, 'pending'))
+    // ponytail: parse the JSON population column once, server-side, so the
+    // admin client gets a clean array.
+    return rows.map((r) => ({
+      ...r,
+      population: parsePopulation(r.populationRaw),
+    }))
   },
 )
 
@@ -416,8 +415,6 @@ export const listVerified = createServerFn({ method: 'GET' }).handler(
       .select({
         id: professionals.id,
         name: professionals.name,
-        cedula: professionals.cedula,
-        fpvNumber: professionals.fpvNumber,
         verifiedStatus: professionals.verifiedStatus,
         available: professionals.available,
       })

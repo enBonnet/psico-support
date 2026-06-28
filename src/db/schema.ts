@@ -97,11 +97,16 @@ export const professionals = sqliteTable('professionals', {
     .notNull()
     .references(() => user.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
-  cedula: text('cedula'),
-  rif: text('rif'),
-  fpvNumber: text('fpv_number'),
-  colegioRegional: text('colegio_regional'),
-  credentialFileR2Key: text('credential_file_r2_key').notNull(),
+  // ponytail: credential capture collapsed from cédula/FPV/colegio/photo into
+  // a single country-agnostic registration number at the certifying psychology
+  // board, plus the board name (free text — boards vary per country). The
+  // certifying country lives in credentialCountry (decoupled from residence:
+  // a pro may live in Chile but hold a Venezuelan board registration).
+  certificationNumber: text('certification_number').notNull(),
+  certifyingSchool: text('certifying_school'),
+  // ponytail: JSON array of population tags (e.g. '["Niños","Adultos"]').
+  // Stored as text; filter later via LIKE on the serialized string.
+  population: text('population').notNull(),
   modality: text('modality', {
     enum: ['in_person', 'remote', 'both'],
   }).notNull(),

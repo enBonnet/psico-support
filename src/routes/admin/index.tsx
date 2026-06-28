@@ -92,31 +92,29 @@ function AdminPage() {
                       Credencial
                     </dt>
                     <dt className="text-[var(--medi-text-secondary)]">
+                      Nº colegiación
+                    </dt>
+                    <dd className="font-semibold text-[var(--medi-text-primary)]">
+                      {p.certificationNumber}
+                    </dd>
+                    <dt className="text-[var(--medi-text-secondary)]">
                       País cred.
                     </dt>
                     <dd>{p.credentialCountry ?? '—'}</dd>
-                    {p.cedula && (
-                      <>
-                        <dt className="text-[var(--medi-text-secondary)]">
-                          Cédula
-                        </dt>
-                        <dd>{p.cedula}</dd>
-                      </>
-                    )}
-                    {p.fpvNumber && (
-                      <>
-                        <dt className="text-[var(--medi-text-secondary)]">
-                          FPV
-                        </dt>
-                        <dd>{p.fpvNumber}</dd>
-                      </>
-                    )}
-                    {p.colegioRegional && (
+                    {p.certifyingSchool && (
                       <>
                         <dt className="text-[var(--medi-text-secondary)]">
                           Colegio
                         </dt>
-                        <dd>{p.colegioRegional}</dd>
+                        <dd>{p.certifyingSchool}</dd>
+                      </>
+                    )}
+                    {p.population.length > 0 && (
+                      <>
+                        <dt className="text-[var(--medi-text-secondary)]">
+                          Atiende a
+                        </dt>
+                        <dd>{p.population.join(', ')}</dd>
                       </>
                     )}
 

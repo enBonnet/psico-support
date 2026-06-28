@@ -16,7 +16,6 @@ import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/re
 import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
-import { Route as ApiCredentialUploadRouteImport } from './routes/api/credential/upload'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -54,11 +53,6 @@ const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   path: '/ayuda/profesionales/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCredentialUploadRoute = ApiCredentialUploadRouteImport.update({
-  id: '/api/credential/upload',
-  path: '/api/credential/upload',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -73,7 +67,6 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AdminIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/credential/upload': typeof ApiCredentialUploadRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -84,7 +77,6 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminIndexRoute
   '/ayuda': typeof AyudaIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/credential/upload': typeof ApiCredentialUploadRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesById {
@@ -96,7 +88,6 @@ export interface FileRoutesById {
   '/admin/': typeof AdminIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/api/credential/upload': typeof ApiCredentialUploadRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRouteTypes {
@@ -109,7 +100,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/ayuda/'
     | '/api/auth/$'
-    | '/api/credential/upload'
     | '/ayuda/profesionales/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -120,7 +110,6 @@ export interface FileRouteTypes {
     | '/admin'
     | '/ayuda'
     | '/api/auth/$'
-    | '/api/credential/upload'
     | '/ayuda/profesionales'
   id:
     | '__root__'
@@ -131,7 +120,6 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/ayuda/'
     | '/api/auth/$'
-    | '/api/credential/upload'
     | '/ayuda/profesionales/'
   fileRoutesById: FileRoutesById
 }
@@ -143,7 +131,6 @@ export interface RootRouteChildren {
   AdminIndexRoute: typeof AdminIndexRoute
   AyudaIndexRoute: typeof AyudaIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
-  ApiCredentialUploadRoute: typeof ApiCredentialUploadRoute
   AyudaProfesionalesIndexRoute: typeof AyudaProfesionalesIndexRoute
 }
 
@@ -198,13 +185,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/credential/upload': {
-      id: '/api/credential/upload'
-      path: '/api/credential/upload'
-      fullPath: '/api/credential/upload'
-      preLoaderRoute: typeof ApiCredentialUploadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/auth/$': {
       id: '/api/auth/$'
       path: '/api/auth/$'
@@ -223,7 +203,6 @@ const rootRouteChildren: RootRouteChildren = {
   AdminIndexRoute: AdminIndexRoute,
   AyudaIndexRoute: AyudaIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiCredentialUploadRoute: ApiCredentialUploadRoute,
   AyudaProfesionalesIndexRoute: AyudaProfesionalesIndexRoute,
 }
 export const routeTree = rootRouteImport
