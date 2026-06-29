@@ -41,9 +41,16 @@ function Landing() {
         </Link>
       </nav>
 
-      <footer className="glass-card-soft mt-10 rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)]">
-        Servicio gratuito y confidencial.
-      </footer>
+      <Link
+        to="/acerca-de"
+        aria-label="Acerca de Psicoayudaven"
+        className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        Servicio gratuito y confidencial.{' '}
+        <span className="font-medium text-[var(--medi-secondary)]">
+          Acerca de Psicoayudaven
+        </span>
+      </Link>
     </main>
   )
 }

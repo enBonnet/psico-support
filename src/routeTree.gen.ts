@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as CuentaRouteImport } from './routes/cuenta'
+import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
@@ -30,6 +31,11 @@ const SignupRoute = SignupRouteImport.update({
 const CuentaRoute = CuentaRouteImport.update({
   id: '/cuenta',
   path: '/cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AcercaDeRoute = AcercaDeRouteImport.update({
+  id: '/acerca-de',
+  path: '/acerca-de',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -85,6 +91,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -114,6 +122,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -130,6 +139,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/acerca-de'
     | '/cuenta'
     | '/signup'
     | '/profesional/completar'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/acerca-de'
     | '/cuenta'
     | '/signup'
     | '/profesional/completar'
@@ -158,6 +169,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/acerca-de'
     | '/cuenta'
     | '/signup'
     | '/profesional/completar'
@@ -173,6 +185,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AcercaDeRoute: typeof AcercaDeRoute
   CuentaRoute: typeof CuentaRoute
   SignupRoute: typeof SignupRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
@@ -200,6 +213,13 @@ declare module '@tanstack/react-router' {
       path: '/cuenta'
       fullPath: '/cuenta'
       preLoaderRoute: typeof CuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/acerca-de': {
+      id: '/acerca-de'
+      path: '/acerca-de'
+      fullPath: '/acerca-de'
+      preLoaderRoute: typeof AcercaDeRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -277,6 +297,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AcercaDeRoute: AcercaDeRoute,
   CuentaRoute: CuentaRoute,
   SignupRoute: SignupRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
