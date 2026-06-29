@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-06-29
+
+### Fixed
+- Después de registrarse, los usuarios (cuenta básica y profesionales) rebotaban de vuelta al login. Causa: el `beforeLoad` del panel llamaba a `getCurrentUser()` antes de que la cookie de sesión se propagara (la misma carrera que ya se arregló en el login en 1.3.3), o —en el caso del profesional— el flujo nunca iniciaba sesión en absoluto (lo mandaba al login a hacerlo a mano). Fix: ambos registros ahora hacen un `await authClient.getSession()` real (garantiza la cookie) e invalidan el caché `['me']` antes de navegar. El registro básico lleva a `/cuenta`. El registro profesional inicia sesión en el cliente, notifica que la cuenta queda "en revisión" hasta que un administrador la active, y lleva al `/profesional/panel` (si el inicio de sesión fallara por una carrera transitoria, cae al login como red de seguridad — la cuenta ya está creada).
+
 ## [1.4.0] - 2026-06-29
 
 ### Added

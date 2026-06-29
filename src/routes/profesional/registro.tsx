@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import {
   registerProfessional,
@@ -23,6 +23,8 @@ import {
   formatWhatsapp,
   inputCls,
 } from '#/components/professional-form'
+import { authClient } from '#/lib/auth-client'
+import { notify } from '#/lib/notifications'
 
 export const Route = createFileRoute('/profesional/registro')({
   // ponytail: CSR-only — multi-step professional registration form, no
@@ -69,6 +71,7 @@ function collectStepErrors(
 
 function RegisterPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [step, setStep] = useState<1 | 2>(1)
   const stepRef = useRef(step)
@@ -77,7 +80,39 @@ function RegisterPage() {
 
   const mutation = useMutation({
     mutationFn: (vars: RegisterInput) => registerProfessional({ data: vars }),
-    onSuccess: () => navigate({ to: '/profesional/login' }),
+    onSuccess: async (_data, vars) => {
+      // ponytail: registerProfessional creates the account + pro row but does
+      // NOT establish a session. Sign in on the client so the pro lands on
+      // their panel instead of getting bounced to login. The form already
+      // holds validated email/password in vars (same race-fix as login,
+      // CHANGELOG 1.3.3: getSession round-trip + ['me'] invalidation).
+      try {
+        const { error: signInErr } = await authClient.signIn.email({
+          email: vars.email,
+          password: vars.password,
+        })
+        if (signInErr) throw signInErr
+        await authClient.getSession()
+        qc.invalidateQueries({ queryKey: ['me'] })
+        qc.invalidateQueries({ queryKey: ['my-professional'] })
+        notify({
+          type: 'info',
+          title: 'Cuenta creada — en revisión',
+          body: 'Un administrador activará tu perfil. Te avisaremos cuando esté aprobado.',
+        })
+        await navigate({ to: '/profesional/panel' })
+      } catch {
+        // ponytail: account was created successfully, so login always works.
+        // If the client sign-in races (transient / D1 read lag on the fresh
+        // row), fall back to the login page — never strand the user.
+        notify({
+          type: 'warning',
+          title: 'Cuenta creada — inicia sesión',
+          body: 'Tu registro se guardó. Inicia sesión para entrar a tu panel.',
+        })
+        await navigate({ to: '/profesional/login' })
+      }
+    },
     onError: (err: Error) => setSubmitError(err.message),
   })
 

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 
@@ -12,6 +13,7 @@ export const Route = createFileRoute('/signup')({
 
 function SignupPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,24 +24,38 @@ function SignupPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { error: err } = await authClient.signUp.email({
-      name,
-      email,
-      password,
-    })
-    setLoading(false)
-    if (err) {
-      const msg = err.message ?? ''
-      if (/exist|already|registered|duplicat/i.test(msg)) {
-        setError('Ya existe una cuenta con ese correo. Inicia sesión.')
-      } else if (/password|weak|common/i.test(msg)) {
-        setError('La contraseña no cumple los requisitos. Usa al menos 8 caracteres.')
-      } else {
-        setError(err.message ?? 'No se pudo crear la cuenta.')
+    try {
+      const { error: err } = await authClient.signUp.email({
+        name,
+        email,
+        password,
+      })
+      if (err) {
+        const msg = err.message ?? ''
+        if (/exist|already|registered|duplicat/i.test(msg)) {
+          setError('Ya existe una cuenta con ese correo. Inicia sesión.')
+        } else if (/password|weak|common/i.test(msg)) {
+          setError(
+            'La contraseña no cumple los requisitos. Usa al menos 8 caracteres.',
+          )
+        } else {
+          setError(err.message ?? 'No se pudo crear la cuenta.')
+        }
+        return
       }
-      return
+      // ponytail: same session-cookie race as login (see CHANGELOG 1.3.3).
+      // signUp.email sets the cookie in its response, but cuenta reads the
+      // session via the ['me'] query; without a forced getSession round-trip
+      // + cache invalidation it could briefly read the anonymous state.
+      // Forcing the round-trip commits the cookie; invalidating ['me'] makes
+      // cuenta render the authenticated view. A bare account (no professional
+      // row) belongs on /cuenta, not the panel.
+      await authClient.getSession()
+      qc.invalidateQueries({ queryKey: ['me'] })
+      await navigate({ to: '/cuenta' })
+    } finally {
+      setLoading(false)
     }
-    navigate({ to: '/profesional/panel' })
   }
 
   return (
