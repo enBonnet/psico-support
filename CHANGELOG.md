@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.5] - 2026-06-29
+
+### Changed
+- Nombre de la PWA unificado: `name` también es ahora `Psicoayudaven` (era `Red de Apoyo Psicológico Venezuela`). Android usa `name` para el prompt de instalación, el app drawer y la etiqueta del icono; ahora coincide con iOS (`short_name`). El nombre descriptivo se conserva en el `<title>` del navegador y los metadatos SEO no cambian.
+
 ## [1.3.4] - 2026-06-29
 
 ### Changed
