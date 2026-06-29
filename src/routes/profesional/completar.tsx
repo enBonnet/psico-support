@@ -8,6 +8,8 @@ import {
   createProfessionalProfile,
   getCurrentUser,
   POPULATION_OPTIONS,
+  FOCUS_GROUP_OPTIONS,
+  PRACTICE_AREA_OPTIONS,
   VENEZUELA_ESTADOS,
   PAIS_OPTIONS,
 } from '#/server/professionals'
@@ -53,6 +55,8 @@ function CompletarPage() {
       certificationNumber: '',
       certifyingSchool: '',
       population: [] as string[],
+      focusGroups: [] as string[],
+      practiceAreas: [] as string[],
       modality: '',
       country: '',
       estado: '',
@@ -285,6 +289,84 @@ function CompletarPage() {
                         field.handleChange(
                           selected
                             ? field.state.value.filter((v: string) => v !== opt)
+                            : [...field.state.value, opt],
+                        )
+                      }
+                      className={
+                        'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
+                        (selected
+                          ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
+                          : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
+                      }
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
+              </div>
+            </FieldShell>
+          )}
+        </form.Field>
+
+        <form.Field name="focusGroups">
+          {(field) => (
+            <FieldShell
+              label="¿Con qué poblaciones específicas trabajas? (opcional)"
+              errors={field.state.meta.errors}
+            >
+              <div className="flex flex-wrap gap-2">
+                {FOCUS_GROUP_OPTIONS.map((opt) => {
+                  const selected = field.state.value.includes(opt)
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        field.handleChange(
+                          selected
+                            ? field.state.value.filter(
+                                (v: string) => v !== opt,
+                              )
+                            : [...field.state.value, opt],
+                        )
+                      }
+                      className={
+                        'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
+                        (selected
+                          ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
+                          : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
+                      }
+                    >
+                      {opt}
+                    </button>
+                  )
+                })}
+              </div>
+            </FieldShell>
+          )}
+        </form.Field>
+
+        <form.Field name="practiceAreas">
+          {(field) => (
+            <FieldShell
+              label="¿En qué áreas intervienes? (opcional)"
+              errors={field.state.meta.errors}
+            >
+              <div className="flex flex-wrap gap-2">
+                {PRACTICE_AREA_OPTIONS.map((opt) => {
+                  const selected = field.state.value.includes(opt)
+                  return (
+                    <button
+                      key={opt}
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() =>
+                        field.handleChange(
+                          selected
+                            ? field.state.value.filter(
+                                (v: string) => v !== opt,
+                              )
                             : [...field.state.value, opt],
                         )
                       }

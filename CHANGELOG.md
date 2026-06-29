@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-06-29
+
+### Added
+- Dos ejes de especialización nuevos en el registro profesional, ortogonales a la edad (`population`): **poblaciones específicas** (`focusGroups`: Oncológica, Neurodivergentes, Cuidadores, Comunidad LGBTQ+) y **áreas de intervención** (`practiceAreas`: Duelo, Violencia (género/intrafamiliar), Adicciones, Intervención en crisis, Ansiedad y depresión). Ambas opcionales. Se muestran en el directorio, el perfil público (incluyendo OG/JSON-LD `knowsAbout`) y el panel de administración, y se pueden filtrar (dos `<select>` nuevos en el directorio). Migración `0007` con `DEFAULT '[]'` (backfill de filas existentes).
+
 ## [1.3.5] - 2026-06-29
 
 ### Changed

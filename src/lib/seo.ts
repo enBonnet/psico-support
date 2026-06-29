@@ -65,7 +65,16 @@ export function profileJsonLd(p: {
   locality?: string | null
   country?: string | null
   populations?: readonly string[]
+  focusGroups?: readonly string[]
+  practiceAreas?: readonly string[]
 }) {
+  // ponytail: knowsAbout folds all three specialization axes (age population +
+  // focus groups + practice areas) into one schema.org field.
+  const knowsAbout = [
+    ...(p.populations ?? []),
+    ...(p.focusGroups ?? []),
+    ...(p.practiceAreas ?? []),
+  ]
   return {
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -81,6 +90,6 @@ export function profileJsonLd(p: {
           },
         }
       : {}),
-    ...(p.populations?.length ? { knowsAbout: [...p.populations] } : {}),
+    ...(knowsAbout.length ? { knowsAbout } : {}),
   }
 }

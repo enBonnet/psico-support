@@ -31,19 +31,54 @@ export const POPULATION_OPTIONS = [
 ] as const
 export type Population = (typeof POPULATION_OPTIONS)[number]
 
-// ponytail: parse the JSON population column; never throw on bad data.
-export function parsePopulation(raw: string | null | undefined): Population[] {
+// ponytail: specialized populations (orthogonal to age). Optional — most pros
+// hold none of these. Same JSON-array pattern + LIKE filter as population.
+export const FOCUS_GROUP_OPTIONS = [
+  'Oncológica',
+  'Neurodivergentes',
+  'Cuidadores',
+  'Comunidad LGBTQ+',
+] as const
+export type FocusGroup = (typeof FOCUS_GROUP_OPTIONS)[number]
+
+// ponytail: intervention areas (problem-type axis). Optional, JSON array.
+export const PRACTICE_AREA_OPTIONS = [
+  'Duelo',
+  'Violencia (género/intrafamiliar)',
+  'Adicciones',
+  'Intervención en crisis',
+  'Ansiedad y depresión',
+] as const
+export type PracticeArea = (typeof PRACTICE_AREA_OPTIONS)[number]
+
+// ponytail: parse a JSON text-array column against a known option set; never
+// throw on bad data. Shared by the three axes (population/focusGroups/
+// practiceAreas) so unknown stored values are silently dropped on read.
+function parseJsonTagArray<T extends string>(
+  raw: string | null | undefined,
+  options: readonly T[],
+): T[] {
   if (!raw) return []
   try {
     const v = JSON.parse(raw)
     return Array.isArray(v)
-      ? v.filter((x): x is Population =>
-          (POPULATION_OPTIONS as readonly string[]).includes(x as string),
-        )
+      ? v.filter((x): x is T => (options as readonly string[]).includes(x as string))
       : []
   } catch {
     return []
   }
+}
+
+export function parsePopulation(raw: string | null | undefined): Population[] {
+  return parseJsonTagArray(raw, POPULATION_OPTIONS)
+}
+export function parseFocusGroups(raw: string | null | undefined): FocusGroup[] {
+  return parseJsonTagArray(raw, FOCUS_GROUP_OPTIONS)
+}
+export function parsePracticeAreas(
+  raw: string | null | undefined,
+): PracticeArea[] {
+  return parseJsonTagArray(raw, PRACTICE_AREA_OPTIONS)
 }
 
 export type PublicProfessional = {
@@ -56,6 +91,8 @@ export type PublicProfessional = {
   whatsapp: string
   available: boolean
   population: Population[]
+  focusGroups: FocusGroup[]
+  practiceAreas: PracticeArea[]
 }
 
 // ponytail: filter shape shared by the list route (search params) and the
@@ -69,6 +106,8 @@ export const listSchema = z.object({
   estado: z.string().trim().optional(),
   ciudad: z.string().trim().optional(),
   population: z.string().trim().optional(),
+  focusGroups: z.string().trim().optional(),
+  practiceAreas: z.string().trim().optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(48).default(12),
 })
@@ -83,7 +122,13 @@ export const PAGE_SIZE_DEFAULT = 12
 function buildProfessionalWhere(
   data: Pick<
     z.infer<typeof listSchema>,
-    'modality' | 'q' | 'estado' | 'ciudad' | 'population'
+    | 'modality'
+    | 'q'
+    | 'estado'
+    | 'ciudad'
+    | 'population'
+    | 'focusGroups'
+    | 'practiceAreas'
   >,
 ) {
   return and(
@@ -99,6 +144,12 @@ function buildProfessionalWhere(
     // LIKE '%"Niños"%' matches the tag anywhere in the serialized string.
     data.population
       ? like(professionals.population, `%"${data.population}"%`)
+      : undefined,
+    data.focusGroups
+      ? like(professionals.focusGroups, `%"${data.focusGroups}"%`)
+      : undefined,
+    data.practiceAreas
+      ? like(professionals.practiceAreas, `%"${data.practiceAreas}"%`)
       : undefined,
   )
 }
@@ -122,6 +173,8 @@ export const listProfessionals = createServerFn({ method: 'GET' })
           whatsapp: professionals.whatsapp,
           available: professionals.available,
           populationRaw: professionals.population,
+          focusGroupsRaw: professionals.focusGroups,
+          practiceAreasRaw: professionals.practiceAreas,
         })
         .from(professionals)
         .where(where)
@@ -147,6 +200,8 @@ export const listProfessionals = createServerFn({ method: 'GET' })
         whatsapp: r.whatsapp,
         available: r.available,
         population: parsePopulation(r.populationRaw),
+        focusGroups: parseFocusGroups(r.focusGroupsRaw),
+        practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
       })),
       total: totalRows.at(0)?.n ?? 0,
     }
@@ -172,6 +227,8 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
         whatsapp: professionals.whatsapp,
         available: professionals.available,
         populationRaw: professionals.population,
+        focusGroupsRaw: professionals.focusGroups,
+        practiceAreasRaw: professionals.practiceAreas,
         verifiedStatus: professionals.verifiedStatus,
       })
       .from(professionals)
@@ -191,6 +248,8 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
       whatsapp: r.whatsapp,
       available: r.available,
       population: parsePopulation(r.populationRaw),
+      focusGroups: parseFocusGroups(r.focusGroupsRaw),
+      practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
     }
   })
 
@@ -206,6 +265,8 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
       estado: z.string().trim().optional(),
       ciudad: z.string().trim().optional(),
       population: z.string().trim().optional(),
+      focusGroups: z.string().trim().optional(),
+      practiceAreas: z.string().trim().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -297,6 +358,8 @@ export const registerStep2Schema = z
     population: z
       .array(z.enum(POPULATION_OPTIONS))
       .min(1, 'Selecciona al menos uno'),
+    focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
+    practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
     modality: z.enum(['in_person', 'remote', 'both']),
     country: z.enum(PAIS_OPTIONS),
     estado: nullableWhenEmptyEstado,
@@ -320,6 +383,8 @@ export const registerSchema = z
     population: z
       .array(z.enum(POPULATION_OPTIONS))
       .min(1, 'Selecciona al menos uno'),
+    focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
+    practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
     modality: z.enum(['in_person', 'remote', 'both']),
     country: z.enum(PAIS_OPTIONS),
     estado: nullableWhenEmptyEstado,
@@ -345,6 +410,8 @@ type ProInsertData = {
   certificationNumber: string
   certifyingSchool?: string | null
   population: string[]
+  focusGroups: string[]
+  practiceAreas: string[]
   modality: 'in_person' | 'remote' | 'both'
   country: string
   estado?: string | null
@@ -361,6 +428,8 @@ function buildProValues(data: ProInsertData, userId: string) {
     certificationNumber: data.certificationNumber.trim(),
     certifyingSchool: data.certifyingSchool?.trim() || null,
     population: JSON.stringify(data.population),
+    focusGroups: JSON.stringify(data.focusGroups),
+    practiceAreas: JSON.stringify(data.practiceAreas),
     modality: data.modality,
     country: data.country,
     estado: data.country === VENEZUELA ? (data.estado ?? null) : null,
@@ -592,6 +661,8 @@ export const listPending = createServerFn({ method: 'GET' }).handler(
         certificationNumber: professionals.certificationNumber,
         certifyingSchool: professionals.certifyingSchool,
         populationRaw: professionals.population,
+        focusGroupsRaw: professionals.focusGroups,
+        practiceAreasRaw: professionals.practiceAreas,
         country: professionals.country,
         estado: professionals.estado,
         ciudad: professionals.ciudad,
@@ -604,11 +675,13 @@ export const listPending = createServerFn({ method: 'GET' }).handler(
       .from(professionals)
       .innerJoin(userTable, eq(userTable.id, professionals.userId))
       .where(eq(professionals.verifiedStatus, 'pending'))
-    // ponytail: parse the JSON population column once, server-side, so the
-    // admin client gets a clean array.
+    // ponytail: parse the JSON tag columns once, server-side, so the admin
+    // client gets clean arrays.
     return rows.map((r) => ({
       ...r,
       population: parsePopulation(r.populationRaw),
+      focusGroups: parseFocusGroups(r.focusGroupsRaw),
+      practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
     }))
   },
 )

@@ -50,6 +50,13 @@
       "when": 1782611888648,
       "tag": "0006_silent_metal_master",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1782770536215,
+      "tag": "0007_amazing_tempest",
+      "breakpoints": true
     }
   ]
 }

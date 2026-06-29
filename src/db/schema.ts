@@ -110,6 +110,12 @@ export const professionals = sqliteTable(
     // Stored as text; filter via LIKE on the serialized string (no index —
     // LIKE-leading-wildcard can't use one anyway).
     population: text('population').notNull(),
+    // ponytail: JSON array of specialized-population tags (e.g. '["Oncológica"]').
+    // Orthogonal to population (age) — a pro may serve "Adultos" AND "Oncológica".
+    focusGroups: text('focus_groups').notNull(),
+    // ponytail: JSON array of intervention-area tags (e.g. '["Duelo","Adicciones"]').
+    // Also orthogonal to population/focusGroups.
+    practiceAreas: text('practice_areas').notNull(),
     modality: text('modality', {
       enum: ['in_person', 'remote', 'both'],
     }).notNull(),

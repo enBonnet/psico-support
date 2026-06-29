@@ -176,6 +176,22 @@ function AdminPage() {
                         <dd>{p.population.join(', ')}</dd>
                       </>
                     )}
+                    {p.focusGroups.length > 0 && (
+                      <>
+                        <dt className="text-[var(--medi-text-secondary)]">
+                          Población esp.
+                        </dt>
+                        <dd>{p.focusGroups.join(', ')}</dd>
+                      </>
+                    )}
+                    {p.practiceAreas.length > 0 && (
+                      <>
+                        <dt className="text-[var(--medi-text-secondary)]">
+                          Área de interv.
+                        </dt>
+                        <dd>{p.practiceAreas.join(', ')}</dd>
+                      </>
+                    )}
 
                     <dt className="col-span-2 mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
                       Contacto

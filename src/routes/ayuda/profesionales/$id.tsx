@@ -39,9 +39,13 @@ export const Route = createFileRoute('/ayuda/profesionales/$id')({
       pro.population.length > 0
         ? `Atiende a: ${pro.population.join(', ')}.`
         : ''
+    // ponytail: combine the two optional specialization axes (focus groups +
+    // practice areas) into one SEO-friendly clause when either is present.
+    const focusText = [...pro.focusGroups, ...pro.practiceAreas]
+    const focusClause = focusText.length > 0 ? ` Enfoque: ${focusText.join(', ')}.` : ''
     const description = `${pro.name}, psicólogo verificado${
       locationText ? ` en ${locationText}` : ''
-    }. ${modalityText}. ${popText} Contacto directo por WhatsApp.`.replace(
+    }. ${modalityText}. ${popText}${focusClause} Contacto directo por WhatsApp.`.replace(
       '  ',
       ' ',
     )
@@ -125,6 +129,8 @@ function ProfilePage() {
               locality: pro.ciudad ?? pro.estado,
               country: pro.country,
               populations: pro.population,
+              focusGroups: pro.focusGroups,
+              practiceAreas: pro.practiceAreas,
             }),
           ),
         }}
@@ -177,6 +183,18 @@ function ProfilePage() {
             <div className="flex items-center gap-2">
               <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
               <dd>Atiende a: {pro.population.join(', ')}</dd>
+            </div>
+          )}
+          {pro.focusGroups.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
+              <dd>Población específica: {pro.focusGroups.join(', ')}</dd>
+            </div>
+          )}
+          {pro.practiceAreas.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
+              <dd>Área de intervención: {pro.practiceAreas.join(', ')}</dd>
             </div>
           )}
         </dl>

@@ -8,6 +8,8 @@ import {
   listProfessionals,
   pickRandomProfessional,
   POPULATION_OPTIONS,
+  FOCUS_GROUP_OPTIONS,
+  PRACTICE_AREA_OPTIONS,
   PAGE_SIZE_DEFAULT,
 } from '#/server/professionals'
 import type { PublicProfessional } from '#/server/professionals'
@@ -28,6 +30,8 @@ const searchSchema = z.object({
   estado: z.string().optional().default(''),
   ciudad: z.string().optional().default(''),
   population: z.string().optional().default(''),
+  focusGroups: z.string().optional().default(''),
+  practiceAreas: z.string().optional().default(''),
   page: z.number().int().min(1).default(1),
 })
 
@@ -37,6 +41,8 @@ type Filters = {
   estado: string
   ciudad: string
   population: string
+  focusGroups: string
+  practiceAreas: string
   page: number
 }
 
@@ -55,6 +61,8 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
     estado: search.estado,
     ciudad: search.ciudad,
     population: search.population,
+    focusGroups: search.focusGroups,
+    practiceAreas: search.practiceAreas,
     page: search.page,
   }),
   loader: async ({ deps }) => {
@@ -65,6 +73,8 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
         estado: deps.estado,
         ciudad: deps.ciudad,
         population: deps.population,
+        focusGroups: deps.focusGroups,
+        practiceAreas: deps.practiceAreas,
         page: deps.page,
         pageSize: PAGE_SIZE_DEFAULT,
       },
@@ -108,6 +118,8 @@ function ProfessionalsList() {
       filters.estado,
       filters.ciudad,
       filters.population,
+      filters.focusGroups,
+      filters.practiceAreas,
       filters.page,
     ],
     queryFn: () =>
@@ -118,6 +130,8 @@ function ProfessionalsList() {
           estado: filters.estado,
           ciudad: filters.ciudad,
           population: filters.population,
+          focusGroups: filters.focusGroups,
+          practiceAreas: filters.practiceAreas,
           page: filters.page,
           pageSize: PAGE_SIZE_DEFAULT,
         },
@@ -129,7 +143,12 @@ function ProfessionalsList() {
 
   const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE_DEFAULT))
   const hasActiveFilters =
-    filters.q || filters.estado || filters.ciudad || filters.population
+    filters.q ||
+    filters.estado ||
+    filters.ciudad ||
+    filters.population ||
+    filters.focusGroups ||
+    filters.practiceAreas
 
   // ponytail: human-readable list of the active filters for the collapsed
   // summary. Quoted term for the name search, plain labels for the rest.
@@ -138,6 +157,8 @@ function ProfessionalsList() {
   if (filters.estado) activeFilterParts.push(filters.estado)
   if (filters.ciudad) activeFilterParts.push(filters.ciudad)
   if (filters.population) activeFilterParts.push(filters.population)
+  if (filters.focusGroups) activeFilterParts.push(filters.focusGroups)
+  if (filters.practiceAreas) activeFilterParts.push(filters.practiceAreas)
   const filterSummary = activeFilterParts.join(' · ')
 
   // ponytail: every filter change writes through the URL via navigate();
@@ -156,6 +177,8 @@ function ProfessionalsList() {
         estado: '',
         ciudad: '',
         population: '',
+        focusGroups: '',
+        practiceAreas: '',
         page: 1,
       }),
     })
@@ -171,6 +194,8 @@ function ProfessionalsList() {
           estado: filters.estado,
           ciudad: filters.ciudad,
           population: filters.population,
+          focusGroups: filters.focusGroups,
+          practiceAreas: filters.practiceAreas,
         },
       })
       if (!picked) {
@@ -268,7 +293,7 @@ function ProfessionalsList() {
               <span className="block truncate text-xs text-[var(--medi-text-secondary)]">
                 {hasActiveFilters
                   ? filterSummary
-                  : 'Buscar, estado, ciudad o edad'}
+                  : 'Buscar, estado, ciudad, edad, población o área'}
               </span>
             </span>
           </button>
@@ -324,7 +349,7 @@ function ProfessionalsList() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <select
                 value={filters.estado}
                 onChange={(e) =>
@@ -363,13 +388,41 @@ function ProfessionalsList() {
               <select
                 value={filters.population}
                 onChange={(e) => setFilter({ population: e.target.value })}
-                aria-label="Filtrar por población"
+                aria-label="Filtrar por edad"
                 className="glass-input h-12 w-full px-3 text-base"
               >
                 <option value="">Todas las edades</option>
                 {POPULATION_OPTIONS.map((p) => (
                   <option key={p} value={p}>
                     {p}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filters.focusGroups}
+                onChange={(e) => setFilter({ focusGroups: e.target.value })}
+                aria-label="Filtrar por población específica"
+                className="glass-input h-12 w-full px-3 text-base"
+              >
+                <option value="">Cualquier población</option>
+                {FOCUS_GROUP_OPTIONS.map((g) => (
+                  <option key={g} value={g}>
+                    {g}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filters.practiceAreas}
+                onChange={(e) => setFilter({ practiceAreas: e.target.value })}
+                aria-label="Filtrar por área de intervención"
+                className="glass-input h-12 w-full px-3 text-base"
+              >
+                <option value="">Cualquier área</option>
+                {PRACTICE_AREA_OPTIONS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
                   </option>
                 ))}
               </select>
@@ -455,6 +508,12 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
           {p.population.length > 0 && (
             <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
               Atiende: {p.population.join(', ')}
+            </p>
+          )}
+          {[...p.focusGroups, ...p.practiceAreas].length > 0 && (
+            <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
+              Enfoque:{' '}
+              {[...p.focusGroups, ...p.practiceAreas].join(' · ')}
             </p>
           )}
         </div>
