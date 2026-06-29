@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.2] - 2026-06-29
+
+### Fixed
+- Redirección HTTP → HTTPS faltante: `http://psicoayudaven.com` se servía directamente (200) sin redirigir a HTTPS. Ahora el worker responde 301 al equivalente `https://` (preserva ruta + query). Detecta el esquema real vía `CF-Visitor` / `X-Forwarded-Proto`; solo redirige cuando detecta explícitamente `http`, así `wrangler dev` y el prerender del shell en build siguen funcionando (no tienen esos headers y antes el redirect rompía la generación del `_shell.html`).
+
 ## [1.3.1] - 2026-06-29
 
 ### Added

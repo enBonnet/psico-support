@@ -187,6 +187,19 @@ PROD (`import.meta.env.PROD` in `__root.tsx`) — **test the PWA with
 `npm run build && npx wrangler dev`, never `npm run dev`** (no SW, dev HMR
 fights the cache).
 
+### 8. HTTP→HTTPS redirect lives in the Worker
+
+`http://psicoayudaven.com` must 301 to `https://`. This is done in
+`entry-server.tsx` `httpsRedirect()` (not the Cloudflare "Always Use HTTPS"
+dashboard toggle — keeping it in-repo avoids config drift). The logic redirects
+**only when it positively detects scheme `http`** via `CF-Visitor` /
+`X-Forwarded-Proto`. If neither header is present, it passes through — this is
+load-bearing: the build-time `spa` prerender crawls `/` over plain HTTP without
+those headers, and redirecting it would follow to `https://localhost` → SSL
+handshake error → **the offline `_shell.html` stops generating**. Don't
+"tighten" this to also redirect headerless requests; you'll silently break the
+PWA shell build.
+
 ## Project layout
 
 ```
