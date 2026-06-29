@@ -3,6 +3,7 @@ import { routeTree } from './routeTree.gen'
 
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { getContext } from './integrations/tanstack-query/root-provider'
+import { RoutePending } from './components/route-pending'
 
 export function getRouter() {
   const context = getContext()
@@ -13,6 +14,11 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: 'intent',
     defaultPreloadStaleTime: 0,
+    // ponytail: CSR routes (ssr:false) resolve beforeLoad/loader client-side,
+    // so first paint is delayed by a server-fn round-trip. This pending shell
+    // covers that gap for every CSR route from one place. SSR routes (the
+    // profile page) resolve loaders before paint, so they never show it.
+    defaultPendingComponent: RoutePending,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient })

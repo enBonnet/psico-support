@@ -17,6 +17,8 @@ export const Route = createFileRoute('/admin/')({
     // ponytail: use a server fn (reads request headers via __TSS_REQUEST__)
     // instead of authClient.getSession() — the client call does a cookieless
     // fetch during SSR, which always returned null and bounced to login.
+    // Under CSR both calls are client→worker RPC; cookies flow on the real
+    // browser request.
     const user = await getCurrentUser()
     if (!user) {
       throw redirect({ to: '/profesional/login' })
@@ -26,6 +28,10 @@ export const Route = createFileRoute('/admin/')({
       throw redirect({ to: '/profesional/panel' })
     }
   },
+  // ponytail: CSR-only — auth+admin-gated dashboard, no crawler value.
+  // beforeLoad runs client-side (two server-fn round-trips); the pending
+  // skeleton covers the gap instead of an SSR'd first paint.
+  ssr: false,
   component: AdminPage,
 })
 

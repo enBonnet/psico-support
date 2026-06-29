@@ -67,6 +67,9 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         href: '/favicon-32.png',
       },
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
+      // ponytail: explicit manifest link. VitePWA emits manifest.webmanifest
+      // but didn't link it; without this browsers only found it by auto-probing.
+      { rel: 'manifest', href: '/manifest.webmanifest' },
     ],
   }),
   shellComponent: RootDocument,

@@ -29,6 +29,10 @@ export const Route = createFileRoute('/profesional/completar')({
       throw redirect({ to: '/profesional/login' })
     }
   },
+  // ponytail: CSR-only — auth-gated form, no crawler value. beforeLoad runs
+  // client-side here (one getCurrentUser() round-trip); the pending skeleton
+  // covers the gap instead of an SSR'd first paint.
+  ssr: false,
   component: CompletarPage,
 })
 

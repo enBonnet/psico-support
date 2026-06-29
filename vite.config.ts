@@ -33,7 +33,15 @@ const config = defineConfig({
     }),
     cloudflare({ viteEnvironment: { name: 'ssr' } }),
     tailwindcss(),
-    tanstackStart(),
+    // ponytail: SPA shell generation. spa.enabled triggers a post-build
+    // prerender of the maskPath (/) with header X-TSS_SHELL, which the SSR
+    // handler renders as an EMPTY shell (isShell=true, no route loaders run)
+    // and writes to dist/client/index.html. This gives the service worker a
+    // cacheable static shell to serve on cold-open offline. It is independent
+    // of per-route ssr:false/selective SSR — the profile route still SSRs for
+    // crawlers (verified post-build). Upgrade: crawlLinks/precache hashed
+    // assets if you want build-time precaching instead of runtime SWR.
+    tanstackStart({ spa: { enabled: true } }),
     viteReact(),
     // ponytail: precache the app shell so a 3G user who loaded once gets
     // instant subsequent loads. Live data still flows via TanStack Query

@@ -3,6 +3,10 @@ import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 
 export const Route = createFileRoute('/signup')({
+  // ponytail: CSR-only — interactive form, no crawler value. Selective SSR
+  // (ssr:false) instead of global spa.enabled so the profile route keeps its
+  // SSR link previews. Server fns + auth still work via the worker RPC.
+  ssr: false,
   component: SignupPage,
 })
 

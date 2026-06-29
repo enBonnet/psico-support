@@ -3,6 +3,9 @@ import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 
 export const Route = createFileRoute('/profesional/login')({
+  // ponytail: CSR-only — interactive auth form, no crawler value. Server
+  // fns + Better Auth still work via the worker RPC.
+  ssr: false,
   component: LoginPage,
 })
 

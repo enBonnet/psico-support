@@ -23,6 +23,9 @@ import {
 } from '#/components/professional-form'
 
 export const Route = createFileRoute('/profesional/registro')({
+  // ponytail: CSR-only — multi-step professional registration form, no
+  // crawler value. Server fns + auth still work via the worker RPC.
+  ssr: false,
   component: RegisterPage,
 })
 

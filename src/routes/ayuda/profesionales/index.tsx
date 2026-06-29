@@ -42,7 +42,12 @@ type Filters = {
 
 export const Route = createFileRoute('/ayuda/profesionales/')({
   validateSearch: searchSchema,
-  // ponytail: loaderDeps drive both the SSR loader and the suspense query
+  // ponytail: CSR-only — interactive directory that polls via TanStack Query
+  // (refetchInterval). No crawler value (the per-pro profile route is the
+  // shareable/SEO surface, and it stays SSR). The loader still runs client-
+  // side to seed the suspense query's initialData, so no flash on mount.
+  ssr: false,
+  // ponytail: loaderDeps drive both the loader and the suspense query
   // key — including every filter here means a filter change refetches.
   loaderDeps: ({ search }) => ({
     modality: search.modality,

@@ -18,6 +18,10 @@ export const Route = createFileRoute('/profesional/panel')({
       throw redirect({ to: '/profesional/login' })
     }
   },
+  // ponytail: CSR-only — auth-gated dashboard, no crawler value. beforeLoad
+  // runs client-side (one getCurrentUser() round-trip); the pending skeleton
+  // covers the gap instead of an SSR'd first paint.
+  ssr: false,
   component: PanelPage,
 })
 

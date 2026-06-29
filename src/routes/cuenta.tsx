@@ -12,7 +12,13 @@ import {
   getCurrentUser,
 } from '#/server/professionals'
 
-export const Route = createFileRoute('/cuenta')({ component: CuentaPage })
+export const Route = createFileRoute('/cuenta')({
+  // ponytail: CSR-only — auth-aware hub, no crawler value. Data loads via
+  // React Query → server fns on the client; first paint shows the loading
+  // skeleton until getCurrentUser() resolves.
+  ssr: false,
+  component: CuentaPage,
+})
 
 function CuentaPage() {
   const [signingOut, setSigningOut] = useState(false)
