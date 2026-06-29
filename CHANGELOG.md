@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.4] - 2026-06-29
+
+### Changed
+- Nombre corto de la PWA: `short_name` ahora es `Psicoayudaven` (era `Apoyo Psicológico`, que iOS mostraba colapsado como "ApoyoPsicologico" en la etiqueta del icono). El `name` completo se mantiene para la splash screen.
+
 ## [1.3.3] - 2026-06-29
 
 ### Fixed

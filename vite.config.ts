@@ -51,7 +51,10 @@ const config = defineConfig({
       includeAssets: ['favicon.ico'],
       manifest: {
         name: 'Red de Apoyo Psicológico Venezuela',
-        short_name: 'Apoyo Psicológico',
+        // ponytail: iOS uses short_name for the home-screen icon label. Keep it
+        // the brand handle "Psicoayudaven" — the full name shows on the
+        // splash screen, the short_name is the persistent icon label.
+        short_name: 'Psicoayudaven',
         description:
           'Conecta a personas afectadas con psicólogos verificados en Venezuela.',
         theme_color: '#13297e',
