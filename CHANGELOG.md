@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.3] - 2026-06-29
+
+### Fixed
+- Error "Ups, algo salió mal" justo después de iniciar sesión (se arreglaba al refrescar). Causa: condición de carrera entre `signIn.email` (que setea la cookie de sesión en su respuesta) y el `beforeLoad` del panel, que llama a `getCurrentUser()` antes de que la cookie se propagara por completo → el guardia leía `null` y rebotaba, o un server-fn transitorio disparaba el error boundary del router. Fix: tras un login exitoso, se hace `await authClient.getSession()` (round-trip real que garantiza la cookie) y se invalida el caché `['me']` antes de `navigate`, para que el guardia del panel y `cuenta` lean la sesión autenticada.
+
 ## [1.3.2] - 2026-06-29
 
 ### Fixed

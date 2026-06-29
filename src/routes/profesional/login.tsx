@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 
@@ -11,6 +12,7 @@ export const Route = createFileRoute('/profesional/login')({
 
 function LoginPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -31,6 +33,17 @@ function LoginPage() {
       // button while the panel's beforeLoad/loaders (2 D1 server fns) were
       // still pending — the idle button looked like the first click failed,
       // prompting a second submit.
+      //
+      // CRITICAL: refresh the session + invalidate the cached anonymous
+      // ['me'] BEFORE navigating. signIn.email sets the session cookie in its
+      // response, but the panel's beforeLoad → getCurrentUser() races against
+      // cookie propagation and could read a stale null → redirect back to
+      // login (or hit a transient server-fn error → router error boundary,
+      // the "Ups, algo salió mal" that only clears on refresh). Forcing a
+      // fresh getSession round-trip guarantees the cookie is committed in the
+      // browser, and invalidating ['me'] means cuenta/panel re-read it.
+      await authClient.getSession()
+      qc.invalidateQueries({ queryKey: ['me'] })
       await navigate({ to: '/profesional/panel' })
     } finally {
       setLoading(false)
