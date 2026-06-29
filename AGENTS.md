@@ -10,27 +10,32 @@ time on this project.
 
 ## Stack
 
-- **TanStack Start** (React 19, SSR) + TanStack Router / Query / Form
+- **TanStack Start** (React 19, selective SSR — most routes CSR, profile SSR) + TanStack Router / Query / Form
 - **Cloudflare Workers** + **D1** (SQLite) via `@cloudflare/vite-plugin`
 - **Better Auth** (email/password; admin via DB `user.role`, not env)
 - **Drizzle ORM** + drizzle-kit (migrations in `drizzle/`)
 - **Tailwind CSS v4** + custom glass components (no shadcn registry pulls)
 - **Zod** validation; user-facing copy is **Spanish**
+- **PWA**: offline app shell + service worker (see gotcha #7)
 
 ## Commands
 
 ```bash
-npm run dev          # http://localhost:3000 (reads .env.local)
-npm run build        # vite production build (SSR + client)
+npm run dev          # http://localhost:3000 (reads .env.local) — NO service worker (dev)
+npm run build        # vite production build (SSR shell + client; generates /_shell)
 npm run lint         # eslint
 npm test             # vitest run
 npm run db:generate  # create a new migration SQL from src/db/schema.ts edits
 npm run deploy       # build + wrangler deploy (DOES NOT apply D1 migrations — see below)
+
+# Test the PWA locally (the SW + shell are PROD-only — dev has no SW):
+npm run build && npx wrangler dev --port 3000
 ```
 
 Typecheck (no script defined): `npx tsc --noEmit`.
 A pre-existing `drizzle.config.ts` env-typing error is expected and unrelated
-to app code.
+to app code. `npm test` also has a pre-existing Vitest/Cloudflare-plugin
+startup failure (no test files exist); verify against `wrangler dev` instead.
 
 ### Database (D1)
 
@@ -120,12 +125,67 @@ recurred multiple times — always run `migrations list --remote` post-deploy.
 shared link to an unverified pro **404s** (`throw notFound()`), never leaks
 state.
 
-### 5. Auth in SSR route guards
+### 5. Auth in route guards (CSR now, was SSR)
 
-`authClient.getSession()` in `beforeLoad` does **not** forward the cookie
-during SSR — every protected route bounced to login. Use the
-`getCurrentUser` / `amIAdmin` server functions (`src/server/professionals.ts`)
-in `beforeLoad`; they read the request via the global `__TSS_REQUEST__`.
+Interactive/auth-gated routes are `ssr: false` (CSR — see gotcha #6). Their
+`beforeLoad` therefore runs **client-side**, not during SSR. The mechanism is
+unchanged: use the `getCurrentUser` / `amIAdmin` server functions
+(`src/server/professionals.ts`) in `beforeLoad` — **never** `authClient.getSession()`,
+which does a cookieless fetch and always returned null.
+
+In CSR these server functions are plain HTTP RPC to the worker: cookies flow
+on the real browser request, and the `RoutePending` spinner
+(`defaultPendingComponent`) covers the round-trip gap on first paint.
+
+### 6. Selective SSR: `ssr: false` vs `spa.enabled`
+
+Global `spa: { enabled: true }` rewrites **every** route to CSR and would break
+the profile route's SSR (which feeds OG/JSON-LD for share previews). Instead
+this app uses **per-route `ssr: false`** (the `ssr` route option):
+
+- **CSR (`ssr: false`)**: `signup`, `cuenta`, `profesional/{login,registro,
+  completar,panel}`, `admin/`, `ayuda/profesionales/` (directory).
+- **SSR (default)**: `ayuda/profesionales/$id` (profile — SEO/link previews).
+  Its `head()` reads `loaderData`; the loader must run server-side.
+
+**Do NOT** enable `spa.enabled` to "make it a SPA" — it is only used as a
+build-time shell generator (gotcha #7) and the profile route must stay SSR.
+A child can only be *more* restrictive than its parent (selective SSR rule);
+luckily the profile and directory are **siblings** (both parented to root,
+no shared layout route), so the directory being CSR cannot force the profile.
+
+Note: a CSR route still returns 200 HTML (the app shell) from the worker on
+first load — `ssr: false` only controls whether the route's loaders run
+server-side, not whether HTML is emitted. The route's component content is
+absent from server HTML (renders on hydrate). Verify with `view-source`.
+
+### 7. PWA: app shell + service worker
+
+`tanstackStart({ spa: { enabled: true } })` (`vite.config.ts`) is **not** for
+CSR — it's a build-time shell generator. It prerenders `/` with the
+`X-TSS_SHELL` header, the SSR handler renders an **empty shell** (no route
+loaders), and writes it to `dist/client/_shell.html`. This gives the service
+worker a cacheable static shell for offline cold-open. It does **not** conflict
+with selective SSR (gotcha #6) — the shell and runtime route SSR are independent.
+
+`public/sw.js` is **hand-rolled** (vite-plugin-pwa's Workbox generation does
+not fire under Vite 8 + the named `ssr` env; VitePWA is kept only to emit the
+manifest). It does three things:
+
+1. **Precache** the shell (`/_shell`), manifest, and icons at `install`.
+2. **Navigation fallback** — `request.mode === 'navigate'` falls back to the
+   cached shell when offline, so the app boots instead of showing the browser
+   error page. **Canonical shell URL is `/_shell`** (the `.html` form 307-
+   redirects to it; point the SW at `/_shell` to avoid caching a redirect).
+3. **Runtime SWR** for same-origin GETs, including the GET server-fn RPC
+   responses (directory list, session) — so last-known data serves offline.
+   Mutations are POST and never cached.
+
+The `<link rel="manifest">` must be in `__root.tsx` `head()` (it was missing;
+browsers only found the manifest by auto-probing). The SW registers only in
+PROD (`import.meta.env.PROD` in `__root.tsx`) — **test the PWA with
+`npm run build && npx wrangler dev`, never `npm run dev`** (no SW, dev HMR
+fights the cache).
 
 ## Project layout
 
@@ -134,22 +194,25 @@ src/
   routes/
     __root.tsx           # shell: <DesktopNav> + children + <BottomTabs> + <NotificationStack>
     index.tsx            # landing triage
-    cuenta.tsx           # role-aware account hub (login, panel, admin, sign-out)
+    cuenta.tsx           # role-aware account hub (login, panel, admin, sign-out) — CSR
     ayuda/
       index.tsx          # modality selection (in-person vs remote)
       profesionales/
-        index.tsx        # directory: filter/search/paginate, 2-col grid on desktop
-        $id.tsx          # per-pro profile (SEO + share)
+        index.tsx        # directory: filter/search/paginate, 2-col grid — CSR
+        $id.tsx          # per-pro profile (SEO + share) — SSR (keeps OG/JSON-LD)
     profesional/
-      login.tsx, registro.tsx, completar.tsx, panel.tsx
-    admin/index.tsx
-    api/auth/$.ts        # Better Auth handler
+      login.tsx, registro.tsx, completar.tsx, panel.tsx   # all CSR
+    admin/index.tsx      # CSR
+    api/auth/$.ts        # Better Auth handler (server route)
   server/
     professionals.ts     # all server fns (list, get, register, availability, admin)
     locations.ts         # Venezuela estado/ciudad maps
   components/
     bottom-tabs.tsx      # BottomTabs (mobile, md:hidden) + DesktopNav (desktop, hidden md:flex)
+    route-pending.tsx    # router defaultPendingComponent — covers CSR beforeLoad/loader gaps
+    not-found.tsx        # router defaultNotFoundComponent — Spanish 404
     ui/                  # button, card, badge, input, switch, label
+  router.tsx             # createRouter + default{Pending,NotFound}Component + ssr-query integration
   lib/
     auth.ts              # Better Auth config (server)
     auth-client.ts       # Better Auth client
@@ -158,6 +221,8 @@ src/
   db/                    # Drizzle schema + D1 client
   styles.css             # design tokens + glass + nav + notifications
 drizzle/                 # migration SQL (applied via wrangler, not drizzle-kit)
+public/
+  sw.js                  # hand-rolled SW: navigation fallback + precache shell + runtime SWR
 ```
 
 ## Conventions

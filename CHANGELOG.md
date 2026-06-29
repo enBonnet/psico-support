@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-06-29
+
+### Added
+- Página 404 en español (`NotFound`) como `defaultNotFoundComponent` del router. Cierra el warning de dev del perfil (lanza `notFound()` para ids desconocidos/no verificados) que caía al `<p>Not Found</p>` genérico de TanStack Router.
+
+### Changed
+- Documentación: `AGENTS.md` y `README.md` actualizados para reflejar el SSR selectivo (mayoría CSR, perfil SSR), la PWA con _shell_ offline y el flujo de prueba local (`npm run build && npx wrangler dev`). Nuevas notas de gotchas sobre `ssr:false` vs `spa.enabled`, el _shell_ generado por build y el service worker hand-rolled.
+
 ## [1.3.0] - 2026-06-29
 
 ### Added

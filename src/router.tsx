@@ -4,6 +4,7 @@ import { routeTree } from './routeTree.gen'
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
 import { getContext } from './integrations/tanstack-query/root-provider'
 import { RoutePending } from './components/route-pending'
+import { NotFound } from './components/not-found'
 
 export function getRouter() {
   const context = getContext()
@@ -19,6 +20,10 @@ export function getRouter() {
     // covers that gap for every CSR route from one place. SSR routes (the
     // profile page) resolve loaders before paint, so they never show it.
     defaultPendingComponent: RoutePending,
+    // ponytail: the profile route throws notFound() for unknown/unverified ids
+    // (verified-only public data). Without a default this fell to TanStack
+    // Router's generic <p>Not Found</p> + a dev warning. Spanish 404 page.
+    defaultNotFoundComponent: NotFound,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient })

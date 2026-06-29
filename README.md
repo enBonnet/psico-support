@@ -19,12 +19,13 @@ Plataforma de apoyo psicológico para respuesta a emergencias en Venezuela. Cone
 
 ## Stack técnico
 
-- [TanStack Start](https://tanstack.com/start) (React 19, SSR) + TanStack Router / Query / Form
+- [TanStack Start](https://tanstack.com/start) (React 19, SSR selectivo — la mayoría CSR, perfil SSR) + TanStack Router / Query / Form
 - [Cloudflare Workers](https://workers.cloudflare.com/) + [D1](https://developers.cloudflare.com/d1/) (SQLite)
 - [Better Auth](https://www.better-auth.com/) — email/contraseña, admin basado en BD
 - [Drizzle ORM](https://orm.drizzle.team/) + drizzle-kit (migraciones)
 - [Tailwind CSS v4](https://tailwindcss.com/) + componentes UI propios
 - [Zod](https://zod.dev/) para validación
+- **PWA** instalable con _shell_ offline + service worker
 - [Sentry](https://sentry.io) (opcional)
 
 ## Desarrollo local
@@ -37,6 +38,20 @@ npm run dev                          # http://localhost:3000
 ```
 
 La BD local se guarda en `dev.db` (ignorado por git).
+
+### Probar la PWA localmente
+
+El service worker y el _shell_ offline solo se activan en build de producción
+(en `npm run dev` no hay SW, a propósito). Para probar la PWA (instalabilidad,
+modo offline, _cold open_ sin conexión):
+
+```bash
+npm run build && npx wrangler dev --port 3000
+```
+
+Abre `http://localhost:3000`, recarga fuerte y revisa DevTools → Application
+→ Manifest / Service Workers. localhost se trata como contexto seguro, así
+que la instalación funciona igual que en producción.
 
 ### Variables de entorno
 
