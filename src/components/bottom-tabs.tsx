@@ -86,8 +86,9 @@ export function DesktopNav({ pathname }: { pathname: string }) {
     >
       <Link
         to="/"
-        className="text-base font-bold text-[var(--medi-primary)] no-underline hover:text-[var(--medi-primary)]"
+        className="flex items-center gap-2 text-base font-bold text-[var(--medi-primary)] no-underline hover:text-[var(--medi-primary)]"
       >
+        <img src="/favicon.svg" alt="" width={24} height={24} aria-hidden="true" />
         psicoayudaven
       </Link>
       <div className="flex items-center gap-1">
