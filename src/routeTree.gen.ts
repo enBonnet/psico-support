@@ -32,6 +32,8 @@ import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
+import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
+import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
 import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
 import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -153,6 +155,16 @@ const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   path: '/ayuda/profesionales/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MediaCertificateSplatRoute = MediaCertificateSplatRouteImport.update({
+  id: '/media/certificate/$',
+  path: '/media/certificate/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaAvatarSplatRoute = MediaAvatarSplatRouteImport.update({
+  id: '/media/avatar/$',
+  path: '/media/avatar/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaAudioSplatRoute = MediaAudioSplatRouteImport.update({
   id: '/media/audio/$',
   path: '/media/audio/$',
@@ -195,6 +207,8 @@ export interface FileRoutesByFullPath {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/media/audio/$': typeof MediaAudioSplatRoute
+  '/media/avatar/$': typeof MediaAvatarSplatRoute
+  '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -223,6 +237,8 @@ export interface FileRoutesByTo {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/media/audio/$': typeof MediaAudioSplatRoute
+  '/media/avatar/$': typeof MediaAvatarSplatRoute
+  '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesById {
@@ -252,6 +268,8 @@ export interface FileRoutesById {
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/media/audio/$': typeof MediaAudioSplatRoute
+  '/media/avatar/$': typeof MediaAvatarSplatRoute
+  '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRouteTypes {
@@ -282,6 +300,8 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/media/audio/$'
+    | '/media/avatar/$'
+    | '/media/certificate/$'
     | '/ayuda/profesionales/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -310,6 +330,8 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/media/audio/$'
+    | '/media/avatar/$'
+    | '/media/certificate/$'
     | '/ayuda/profesionales'
   id:
     | '__root__'
@@ -338,6 +360,8 @@ export interface FileRouteTypes {
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/media/audio/$'
+    | '/media/avatar/$'
+    | '/media/certificate/$'
     | '/ayuda/profesionales/'
   fileRoutesById: FileRoutesById
 }
@@ -367,6 +391,8 @@ export interface RootRouteChildren {
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   AyudaProfesionalesIdRoute: typeof AyudaProfesionalesIdRoute
   MediaAudioSplatRoute: typeof MediaAudioSplatRoute
+  MediaAvatarSplatRoute: typeof MediaAvatarSplatRoute
+  MediaCertificateSplatRoute: typeof MediaCertificateSplatRoute
   AyudaProfesionalesIndexRoute: typeof AyudaProfesionalesIndexRoute
 }
 
@@ -533,6 +559,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/media/certificate/$': {
+      id: '/media/certificate/$'
+      path: '/media/certificate/$'
+      fullPath: '/media/certificate/$'
+      preLoaderRoute: typeof MediaCertificateSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/avatar/$': {
+      id: '/media/avatar/$'
+      path: '/media/avatar/$'
+      fullPath: '/media/avatar/$'
+      preLoaderRoute: typeof MediaAvatarSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media/audio/$': {
       id: '/media/audio/$'
       path: '/media/audio/$'
@@ -583,6 +623,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   AyudaProfesionalesIdRoute: AyudaProfesionalesIdRoute,
   MediaAudioSplatRoute: MediaAudioSplatRoute,
+  MediaAvatarSplatRoute: MediaAvatarSplatRoute,
+  MediaCertificateSplatRoute: MediaCertificateSplatRoute,
   AyudaProfesionalesIndexRoute: AyudaProfesionalesIndexRoute,
 }
 export const routeTree = rootRouteImport

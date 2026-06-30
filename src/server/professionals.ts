@@ -9,7 +9,7 @@ import {
   like,
   count,
   sql,
-  inArray,
+  ne,
   DrizzleError,
 } from 'drizzle-orm'
 
@@ -105,6 +105,92 @@ async function uploadCertificate(
   return key
 }
 
+// ── Avatar ──────────────────────────────────────────────────────────────────
+// ponytail: optional profile photo, uploaded POST-signup from the panel
+// (never in registration — keeps signup frictionless). Same base64 + R2 transport
+// as certificates but images-only + a tighter 2MB cap (avatars don't need 5MB).
+// Public-by-intent (shown on the profile), so the /media/avatar/$ route is
+// unauthed (like audio), relying on UUID-key unguessability — NOT admin-authed
+// like the certificate route.
+export const AVATAR_MIME = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const
+export type AvatarMime = (typeof AVATAR_MIME)[number]
+export const AVATAR_MAX_BYTES = 2 * 1024 * 1024
+export const AVATAR_ACCEPT = '.jpg,.jpeg,image/jpeg,image/png,image/webp'
+const AVATAR_EXT: Record<AvatarMime, string> = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+export const AVATAR_KEY_PREFIX = 'avatars/'
+
+export const avatarSchema = z.object({
+  data: z
+    .string()
+    // base64 chars; 2MB binary ≈ 2.7M chars, pad for the data: prefix.
+    .max(Math.ceil((AVATAR_MAX_BYTES * 4) / 3) + 1024),
+  type: z.enum(AVATAR_MIME),
+})
+
+// ponytail: pure helper — builds the public playback URL from a stored R2 key.
+// Imported by client routes (profile + panel). Mirrors publicCertificateUrl.
+export function publicAvatarUrl(avatarKey: string): string {
+  const suffix = avatarKey.startsWith(AVATAR_KEY_PREFIX)
+    ? avatarKey.slice(AVATAR_KEY_PREFIX.length)
+    : avatarKey
+  return `/media/avatar/${suffix}`
+}
+
+// ── Social handles ──────────────────────────────────────────────────────────
+// ponytail: bare-handle storage. Users paste "@foo", "https://x.com/foo", or
+// "x.com/foo" — normalize all to "foo". Not a full URL parser (names the
+// ceiling): strips scheme+domain, leading @, and trailing path/query/hash.
+// TikTok URLs carry "@", so the URL is re-built with @ on display (socialUrls).
+export function normalizeHandle(
+  raw: string | null | undefined,
+): string | null {
+  if (!raw) return null
+  let h = raw.trim()
+  h = h.replace(/^https?:\/\/[^/]*\//i, '') // scheme + domain + slash
+  h = h.replace(/^[a-z0-9.-]+\.[a-z]{2,}\//i, '') // bare domain (x.com/)
+  h = h.replace(/^@+/, '') // leading @
+  h = h.replace(/[/?#].*$/, '') // path / query / hash
+  return h.trim() || null
+}
+
+// ponytail: pure helper — builds absolute profile links from bare handles.
+// Single source of truth for the URL shape, consumed by the profile route for
+// BOTH the visible <a> links AND the schema.org sameAs array (SEO) — so the two
+// can't drift. TikTok URLs use "@" (tiktok.com/@handle); X + Instagram don't.
+export type SocialName = 'x' | 'instagram' | 'tiktok'
+
+export function socialLinks(s: {
+  x: string | null
+  instagram: string | null
+  tikTok: string | null
+}): { name: SocialName; href: string }[] {
+  const out: { name: SocialName; href: string }[] = []
+  if (s.x) out.push({ name: 'x', href: `https://x.com/${s.x}` })
+  if (s.instagram)
+    out.push({ name: 'instagram', href: `https://instagram.com/${s.instagram}` })
+  if (s.tikTok)
+    out.push({
+      name: 'tiktok',
+      href: `https://www.tiktok.com/@${s.tikTok}`,
+    })
+  return out
+}
+
+export const socialsSchema = z.object({
+  x: z.string().trim().max(50).optional().nullable(),
+  instagram: z.string().trim().max(50).optional().nullable(),
+  tiktok: z.string().trim().max(50).optional().nullable(),
+})
+export type SocialsInput = z.infer<typeof socialsSchema>
+
 // ponytail: parse a JSON text-array column against a known option set; never
 // throw on bad data. Shared by the three axes (population/focusGroups/
 // practiceAreas) so unknown stored values are silently dropped on read.
@@ -187,6 +273,10 @@ function buildProfessionalWhere(
 ) {
   return and(
     eq(professionals.verifiedStatus, 'verified'),
+    // ponytail: content-only pros (providesService=false) are excluded from the
+    // service directory + random pick — they contribute audios, not direct
+    // service. Audio eligibility is governed separately by verifiedStatus.
+    eq(professionals.providesService, true),
     or(
       eq(professionals.modality, data.modality),
       eq(professionals.modality, 'both'),
@@ -284,6 +374,11 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
         focusGroupsRaw: professionals.focusGroups,
         practiceAreasRaw: professionals.practiceAreas,
         verifiedStatus: professionals.verifiedStatus,
+        providesService: professionals.providesService,
+        avatarKey: professionals.avatarKey,
+        socialX: professionals.socialX,
+        socialInstagram: professionals.socialInstagram,
+        socialTikTok: professionals.socialTikTok,
       })
       .from(professionals)
       .where(eq(professionals.id, data.id))
@@ -291,7 +386,9 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
     // ponytail: .at(0) is type-honest (T | undefined) without needing
     // noUncheckedIndexedAccess; rows[0] would type as always-present.
     const r = rows.at(0)
-    if (!r || r.verifiedStatus !== 'verified') return null
+    // Content-only pros don't provide service → no public profile (404), even
+    // though they're verified. They only surface via the audio tray.
+    if (!r || r.verifiedStatus !== 'verified' || !r.providesService) return null
     return {
       id: r.id,
       name: r.name,
@@ -304,6 +401,10 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
       population: parsePopulation(r.populationRaw),
       focusGroups: parseFocusGroups(r.focusGroupsRaw),
       practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+      avatarKey: r.avatarKey,
+      socialX: r.socialX,
+      socialInstagram: r.socialInstagram,
+      socialTikTok: r.socialTikTok,
     }
   })
 
@@ -742,7 +843,12 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
         name: professionals.name,
         verifiedStatus: professionals.verifiedStatus,
         available: professionals.available,
+        providesService: professionals.providesService,
         modality: professionals.modality,
+        avatarKey: professionals.avatarKey,
+        socialX: professionals.socialX,
+        socialInstagram: professionals.socialInstagram,
+        socialTikTok: professionals.socialTikTok,
       })
       .from(professionals)
       .where(eq(professionals.userId, session.user.id))
@@ -757,9 +863,101 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
   },
 )
 
+// ponytail: pro's own avatar upload (replace) + remove. Keyed by professionalId
+// (not userId) so the R2 path is stable across auth-user changes. On replace,
+// the previous object is deleted best-effort (a dangling jpg costs cents/year,
+// not worth failing the user-facing op). Ownership is enforced by selecting on
+// userId — never trust the client to pass its own pro id.
+async function findMyPro(userId: string) {
+  const db = getDb()
+  const rows = await db
+    .select({ id: professionals.id, avatarKey: professionals.avatarKey })
+    .from(professionals)
+    .where(eq(professionals.userId, userId))
+    .limit(1)
+  return rows.at(0)
+}
+
+export const uploadMyAvatar = createServerFn({ method: 'POST' })
+  .validator(avatarSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const pro = await findMyPro(session.user.id)
+    if (!pro) {
+      throw new Error('Completa tu perfil profesional primero.')
+    }
+    const ext = AVATAR_EXT[data.type]
+    const key = `${AVATAR_KEY_PREFIX}${pro.id}/${crypto.randomUUID()}.${ext}`
+    await getR2().put(key, base64ToBytes(data.data), {
+      httpMetadata: { contentType: data.type },
+    })
+    await getDb()
+      .update(professionals)
+      .set({ avatarKey: key })
+      .where(eq(professionals.id, pro.id))
+    // ponytail: best-effort delete of the previous avatar object so a replace
+    // doesn't orphan the old file in R2. A failure here must not fail the upload.
+    if (pro.avatarKey) {
+      try {
+        await getR2().delete(pro.avatarKey)
+      } catch (err) {
+        console.error('[uploadMyAvatar] old avatar delete failed:', err)
+      }
+    }
+    return { ok: true, avatarKey: key }
+  })
+
+export const removeMyAvatar = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const pro = await findMyPro(session.user.id)
+    if (!pro) return { ok: true }
+    if (pro.avatarKey) {
+      await getDb()
+        .update(professionals)
+        .set({ avatarKey: null })
+        .where(eq(professionals.id, pro.id))
+      try {
+        await getR2().delete(pro.avatarKey)
+      } catch (err) {
+        console.error('[removeMyAvatar] avatar delete failed:', err)
+      }
+    }
+    return { ok: true }
+  },
+)
+
+// ponytail: pro edits their own social handles. Normalize server-side so the
+// stored form is always bare handles (no @, no URL) regardless of what the
+// client sent; empty → null so a cleared field is cleanly absent, not "".
+export const updateMySocials = createServerFn({ method: 'POST' })
+  .validator(socialsSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const db = getDb()
+    await db
+      .update(professionals)
+      .set({
+        socialX: normalizeHandle(data.x),
+        socialInstagram: normalizeHandle(data.instagram),
+        socialTikTok: normalizeHandle(data.tiktok),
+      })
+      .where(eq(professionals.userId, session.user.id))
+    return { ok: true }
+  })
+
 const decisionSchema = z.object({
   professionalId: z.number(),
-  status: z.enum(['verified', 'rejected', 'disabled']),
+  status: z.enum(['verified', 'rejected', 'disabled', 'deleted']),
 })
 
 export const reviewProfessional = createServerFn({ method: 'POST' })
@@ -770,15 +968,15 @@ export const reviewProfessional = createServerFn({ method: 'POST' })
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
-    // ponytail: disabling forces available=false so the row stays honest (it's
-    // already filtered out of public queries by verifiedStatus, but this keeps
-    // the flag consistent + matches the soft-delete pattern). Re-enabling
-    // leaves available untouched — the pro must deliberately opt back in via
-    // the panel toggle, so a reactivated pro never auto-reappears as available.
+    // ponytail: disabling + deleting both force available=false so the row stays
+    // honest (already filtered out of public queries by verifiedStatus, but this
+    // matches the soft-delete pattern). Re-enabling (verified) leaves available
+    // untouched — the pro must deliberately opt back in via the panel toggle.
+    const dormant = data.status === 'disabled' || data.status === 'deleted'
     await db
       .update(professionals)
       .set(
-        data.status === 'disabled'
+        dormant
           ? { verifiedStatus: data.status, available: false }
           : { verifiedStatus: data.status },
       )
@@ -786,82 +984,172 @@ export const reviewProfessional = createServerFn({ method: 'POST' })
     return { ok: true }
   })
 
-export const listPending = createServerFn({ method: 'GET' }).handler(
-  async () => {
+// ponytail: R2 key prefix for certificates; stripped when building the
+// admin-only /media/certificate/... URL (the worker route at
+// src/routes/media/certificate/$.ts re-adds it). Mirrors the audio key-prefix
+// convention (STORY_KEY_PREFIX) in audio-stories.ts.
+export const CERT_KEY_PREFIX = 'certificates/'
+
+// ponytail: pure helper — builds the admin playback URL from a stored R2 key.
+// Imported by the admin route. The route is admin-authed, so the URL only
+// resolves for logged-in admins; a non-admin GET 404s at the route handler.
+export function publicCertificateUrl(certificateKey: string): string {
+  const suffix = certificateKey.startsWith(CERT_KEY_PREFIX)
+    ? certificateKey.slice(CERT_KEY_PREFIX.length)
+    : certificateKey
+  return `/media/certificate/${suffix}`
+}
+
+// ponytail: the admin's credential audit roster — every non-deleted pro with
+// full credential detail, paginated + searchable. One unified list replaces the
+// old split (pending queue + managed roster). The admin UI passes { q, status,
+// page, pageSize }; each card shows state-appropriate actions (accept/reject/
+// enable/disable/delete) + a content-only toggle + the cert link. Search hits
+// name / email / colegiación so the admin can find a pro by any of those.
+// Newest registration first so fresh signups surface. Mirrors the public
+// listProfessionals pagination shape ({ rows, total }) for client parity.
+export const adminListSchema = z.object({
+  q: z.string().trim().optional(),
+  status: z.enum(['pending', 'verified', 'disabled', 'rejected']).optional(),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(48).default(8),
+})
+
+export const listAllProfessionals = createServerFn({ method: 'GET' })
+  .validator(adminListSchema)
+  .handler(async ({ data }) => {
     const session = await getAuth().api.getSession({ headers: getHeaders() })
     if (!session?.user || !(await isAdminEmail(session.user.email))) {
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
-    const rows = await db
-      .select({
-        id: professionals.id,
-        name: professionals.name,
-        certificationNumber: professionals.certificationNumber,
-        certifyingSchool: professionals.certifyingSchool,
-        populationRaw: professionals.population,
-        focusGroupsRaw: professionals.focusGroups,
-        practiceAreasRaw: professionals.practiceAreas,
-        country: professionals.country,
-        estado: professionals.estado,
-        ciudad: professionals.ciudad,
-        credentialCountry: professionals.credentialCountry,
-        whatsappCountry: professionals.whatsappCountry,
-        modality: professionals.modality,
-        whatsapp: professionals.whatsapp,
-        certificateKey: professionals.certificateKey,
-        userEmail: userTable.email,
-      })
-      .from(professionals)
-      .innerJoin(userTable, eq(userTable.id, professionals.userId))
-      .where(eq(professionals.verifiedStatus, 'pending'))
+    // ponytail: a status filter pins to one state; otherwise exclude the
+    // 'deleted' tombstone (deleted rows are gone from every public surface and
+    // audit-relevant only via the DB directly).
+    const baseWhere = data.status
+      ? eq(professionals.verifiedStatus, data.status)
+      : ne(professionals.verifiedStatus, 'deleted')
+    const search = data.q
+      ? or(
+          like(professionals.name, `%${data.q}%`),
+          like(userTable.email, `%${data.q}%`),
+          like(professionals.certificationNumber, `%${data.q}%`),
+        )
+      : undefined
+    const where = and(baseWhere, search)
+    const offset = (data.page - 1) * data.pageSize
+
+    const [rows, totalRows] = await Promise.all([
+      db
+        .select({
+          id: professionals.id,
+          name: professionals.name,
+          verifiedStatus: professionals.verifiedStatus,
+          available: professionals.available,
+          providesService: professionals.providesService,
+          certificationNumber: professionals.certificationNumber,
+          certifyingSchool: professionals.certifyingSchool,
+          populationRaw: professionals.population,
+          focusGroupsRaw: professionals.focusGroups,
+          practiceAreasRaw: professionals.practiceAreas,
+          country: professionals.country,
+          estado: professionals.estado,
+          ciudad: professionals.ciudad,
+          credentialCountry: professionals.credentialCountry,
+          whatsappCountry: professionals.whatsappCountry,
+          modality: professionals.modality,
+          whatsapp: professionals.whatsapp,
+          certificateKey: professionals.certificateKey,
+          userEmail: userTable.email,
+          createdAt: professionals.createdAt,
+        })
+        .from(professionals)
+        .innerJoin(userTable, eq(userTable.id, professionals.userId))
+        .where(where)
+        .orderBy(desc(professionals.createdAt))
+        .limit(data.pageSize)
+        .offset(offset),
+      db
+        .select({ n: count() })
+        .from(professionals)
+        .innerJoin(userTable, eq(userTable.id, professionals.userId))
+        .where(where),
+    ])
     // ponytail: parse the JSON tag columns once, server-side, so the admin
     // client gets clean arrays.
-    return rows.map((r) => ({
-      ...r,
-      population: parsePopulation(r.populationRaw),
-      focusGroups: parseFocusGroups(r.focusGroupsRaw),
-      practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
-    }))
-  },
-)
+    return {
+      rows: rows.map((r) => ({
+        id: r.id,
+        name: r.name,
+        verifiedStatus: r.verifiedStatus,
+        available: r.available,
+        providesService: r.providesService,
+        certificationNumber: r.certificationNumber,
+        certifyingSchool: r.certifyingSchool,
+        population: parsePopulation(r.populationRaw),
+        focusGroups: parseFocusGroups(r.focusGroupsRaw),
+        practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+        country: r.country,
+        estado: r.estado,
+        ciudad: r.ciudad,
+        credentialCountry: r.credentialCountry,
+        whatsappCountry: r.whatsappCountry,
+        modality: r.modality,
+        whatsapp: r.whatsapp,
+        certificateKey: r.certificateKey,
+        userEmail: r.userEmail,
+        createdAt: r.createdAt,
+      })),
+      total: totalRows.at(0)?.n ?? 0,
+    }
+  })
 
-// ponytail: admin's managed-pro roster — verified + disabled. Verified pros
-// can be suspended (credential doubts); disabled pros can be reactivated. Now
-// auth-gated (the old listVerified returned public-ish columns with no check,
-// but this one reveals who's suspended, which is admin-sensitive). The public
-// verified count stays a separate fn (countVerifiedProfessionals) since it
-// powers the landing hero stat.
-export const listManagedProfessionals = createServerFn({ method: 'GET' }).handler(
-  async () => {
+const providesServiceSchema = z.object({
+  professionalId: z.number(),
+  providesService: z.boolean(),
+})
+
+// ponytail: admin toggles a pro's "content creator only" flag. Setting
+// content-only (false) forces available=false too — the row is honest (already
+// excluded from the directory by the providesService filter, but this keeps the
+// flag consistent). Re-enabling service (true) leaves available untouched: the
+// pro must opt back in via their panel toggle, mirroring reactivation.
+export const adminSetProvidesService = createServerFn({ method: 'POST' })
+  .validator(providesServiceSchema)
+  .handler(async ({ data }) => {
     const session = await getAuth().api.getSession({ headers: getHeaders() })
     if (!session?.user || !(await isAdminEmail(session.user.email))) {
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
-    return db
-      .select({
-        id: professionals.id,
-        name: professionals.name,
-        verifiedStatus: professionals.verifiedStatus,
-        available: professionals.available,
-      })
-      .from(professionals)
-      .where(inArray(professionals.verifiedStatus, ['verified', 'disabled']))
-      .orderBy(asc(professionals.name))
-  },
-)
+    await db
+      .update(professionals)
+      .set(
+        data.providesService
+          ? { providesService: true }
+          : { providesService: false, available: false },
+      )
+      .where(eq(professionals.id, data.professionalId))
+    return { ok: true }
+  })
 
 // ponytail: single-number count for the landing hero's social proof. Cheaper
-// than listVerified() (1 row, no per-row columns) and public/no-auth so the
-// SSR landing loader can call it freely. Caller hides the line when n === 0.
+// than a full list (1 row) and public/no-auth so the SSR landing loader can
+// call it freely. Excludes content-only pros — the stat implies "available to
+// provide service", so counting content creators would mislead. Caller hides
+// the line when n === 0.
 export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).handler(
   async () => {
     const db = getDb()
     const rows = await db
       .select({ n: count() })
       .from(professionals)
-      .where(eq(professionals.verifiedStatus, 'verified'))
+      .where(
+        and(
+          eq(professionals.verifiedStatus, 'verified'),
+          eq(professionals.providesService, true),
+        ),
+      )
     return rows.at(0)?.n ?? 0
   },
 )
@@ -870,25 +1158,45 @@ export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).hand
 // listUsers feeds the admin UI; promoteToAdmin sets role='admin'. There is
 // intentionally no demote action — promote-only means an admin can never
 // accidentally lock themselves (or the last admin) out.
-export const listUsers = createServerFn({ method: 'GET' }).handler(
-  async () => {
+export const adminUsersSchema = z.object({
+  q: z.string().trim().optional(),
+  page: z.number().int().min(1).default(1),
+  pageSize: z.number().int().min(1).max(48).default(8),
+})
+
+export const listUsers = createServerFn({ method: 'GET' })
+  .validator(adminUsersSchema)
+  .handler(async ({ data }) => {
     const session = await getAuth().api.getSession({ headers: getHeaders() })
     if (!session?.user || !(await isAdminEmail(session.user.email))) {
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
-    return db
-      .select({
-        id: userTable.id,
-        name: userTable.name,
-        email: userTable.email,
-        role: userTable.role,
-        createdAt: userTable.createdAt,
-      })
-      .from(userTable)
-      .orderBy(asc(userTable.createdAt))
-  },
-)
+    const where = data.q
+      ? or(
+          like(userTable.name, `%${data.q}%`),
+          like(userTable.email, `%${data.q}%`),
+        )
+      : undefined
+    const offset = (data.page - 1) * data.pageSize
+    const [rows, totalRows] = await Promise.all([
+      db
+        .select({
+          id: userTable.id,
+          name: userTable.name,
+          email: userTable.email,
+          role: userTable.role,
+          createdAt: userTable.createdAt,
+        })
+        .from(userTable)
+        .where(where)
+        .orderBy(asc(userTable.createdAt))
+        .limit(data.pageSize)
+        .offset(offset),
+      db.select({ n: count() }).from(userTable).where(where),
+    ])
+    return { rows, total: totalRows.at(0)?.n ?? 0 }
+  })
 
 const promoteSchema = z.object({ userId: z.string() })
 

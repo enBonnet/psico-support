@@ -1,8 +1,20 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { Share2, ArrowLeft, MapPin, Users } from 'lucide-react'
-import { getPublicProfessional } from '#/server/professionals'
+import {
+  getPublicProfessional,
+  socialLinks,
+} from '#/server/professionals'
 import { notify } from '#/lib/notifications'
 import { seoHead, profileJsonLd, SITE_URL } from '#/lib/seo'
+import { Avatar } from '#/components/avatar'
+import { SocialIcon } from '#/components/social-icons'
+
+// ponytail: aria-label per platform for the profile's social icon links.
+const SOCIAL_LABEL: Record<string, string> = {
+  x: 'X',
+  instagram: 'Instagram',
+  tiktok: 'TikTok',
+}
 
 export const Route = createFileRoute('/ayuda/profesionales/$id')({
   // ponytail: loader runs on SSR so crawlers + social scrapers get the pro's
@@ -68,6 +80,15 @@ function ProfilePage() {
   const text = encodeURIComponent('Hola, te escribo por medio de psicoayudaven.')
   const href = `https://wa.me/${digits}?text=${text}`
 
+  // ponytail: social profile links — bare handles → absolute URLs. One source
+  // of truth (socialLinks) feeds both the visible icon row AND the schema.org
+  // sameAs array in the JSON-LD below, so they can never drift.
+  const socials = socialLinks({
+    x: pro.socialX,
+    instagram: pro.socialInstagram,
+    tikTok: pro.socialTikTok,
+  })
+
   const locationText =
     pro.country === 'Venezuela'
       ? [pro.ciudad, pro.estado].filter(Boolean).join(', ')
@@ -131,6 +152,7 @@ function ProfilePage() {
               populations: pro.population,
               focusGroups: pro.focusGroups,
               practiceAreas: pro.practiceAreas,
+              sameAs: socials.map((s) => s.href),
             }),
           ),
         }}
@@ -145,28 +167,54 @@ function ProfilePage() {
       </Link>
 
       <div className="glass-card mt-2 p-5">
-        <div className="flex items-center gap-2">
-          <span className="glass-pill px-2.5 py-1 text-xs font-semibold text-[var(--medi-primary)]">
-            Confirmado
-          </span>
-          <span
-            className={`glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium ${
-              pro.available ? 'text-green-700' : 'text-amber-700'
-            }`}
-          >
-            <span
-              className={`size-2 rounded-full ${pro.available ? 'bg-green-500' : 'bg-amber-500'}`}
-            />
-            {pro.available ? 'En línea' : 'No conectado'}
-          </span>
+        <div className="flex items-start gap-4">
+          <Avatar
+            name={pro.name}
+            avatarKey={pro.avatarKey}
+            className="size-20 text-3xl"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="glass-pill px-2.5 py-1 text-xs font-semibold text-[var(--medi-primary)]">
+                Confirmado
+              </span>
+              <span
+                className={`glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium ${
+                  pro.available ? 'text-green-700' : 'text-amber-700'
+                }`}
+              >
+                <span
+                  className={`size-2 rounded-full ${pro.available ? 'bg-green-500' : 'bg-amber-500'}`}
+                />
+                {pro.available ? 'En línea' : 'No conectado'}
+              </span>
+            </div>
+
+            <h1 className="mt-2 text-2xl font-bold leading-tight text-[var(--medi-text-primary)]">
+              {pro.name}
+            </h1>
+            <p className="mt-1 text-sm font-medium text-[var(--medi-secondary)]">
+              Psicólogo verificado
+            </p>
+          </div>
         </div>
 
-        <h1 className="mt-3 text-2xl font-bold leading-tight text-[var(--medi-text-primary)]">
-          {pro.name}
-        </h1>
-        <p className="mt-1 text-sm font-medium text-[var(--medi-secondary)]">
-          Psicólogo verificado
-        </p>
+        {socials.length > 0 && (
+          <div className="mt-4 flex items-center gap-2">
+            {socials.map((s) => (
+              <a
+                key={s.name}
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${SOCIAL_LABEL[s.name] ?? s.name} de ${pro.name}`}
+                className="flex size-10 items-center justify-center rounded-full glass-card-soft text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+              >
+                <SocialIcon name={s.name} className="size-5" />
+              </a>
+            ))}
+          </div>
+        )}
 
         <dl className="mt-4 flex flex-col gap-2 text-sm text-[var(--medi-text-secondary)]">
           {locationText && (

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 // ponytail: shared, form-independent helpers used by BOTH the one-shot
@@ -158,6 +158,20 @@ export function CertificateInput({
   const inputRef = useRef<HTMLInputElement>(null)
   const [fileName, setFileName] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // ponytail: object URL for the just-selected file, used to render a live
+  // preview. Prefer this over a data: URL rebuilt from value.data — object
+  // URLs navigate/embed reliably in <img>/<object>/<a target=_blank> across
+  // browsers, whereas Chrome blocks top-level navigation to data: URLs (a PDF
+  // "Abrir" link built from a data URL would download instead of open). The
+  // base64 in `value` still drives the transport to the server; the object URL
+  // is a view-only side-state. Revoked on clear + unmount to avoid leaks.
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+    }
+  }, [previewUrl])
 
   async function handleFile(file: File | undefined) {
     if (!file) return
@@ -170,6 +184,9 @@ export function CertificateInput({
       return
     }
     try {
+      const next = URL.createObjectURL(file)
+      if (previewUrl) URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(next)
       onChange(await readFileAsCertificate(file))
       setFileName(file.name)
       setError(null)
@@ -179,6 +196,8 @@ export function CertificateInput({
   }
 
   function clear() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl)
+    setPreviewUrl(null)
     onChange(null)
     setFileName(null)
     setError(null)
@@ -188,18 +207,21 @@ export function CertificateInput({
   return (
     <div className="flex flex-col gap-1">
       {value ? (
-        <div className="glass-input flex h-12 items-center justify-between gap-2 px-3">
-          <span className="truncate text-sm text-[var(--medi-text-primary)]">
-            ✓ {fileName ?? 'Certificado adjuntado'}
-          </span>
-          <button
-            type="button"
-            onClick={clear}
-            className="shrink-0 text-sm font-medium text-[var(--medi-secondary)]"
-          >
-            Quitar
-          </button>
-        </div>
+        <>
+          <div className="glass-input flex h-12 items-center justify-between gap-2 px-3">
+            <span className="truncate text-sm text-[var(--medi-text-primary)]">
+              ✓ {fileName ?? 'Certificado adjuntado'}
+            </span>
+            <button
+              type="button"
+              onClick={clear}
+              className="shrink-0 text-sm font-medium text-[var(--medi-secondary)]"
+            >
+              Quitar
+            </button>
+          </div>
+          {previewUrl && <CertificatePreview url={previewUrl} type={value.type} />}
+        </>
       ) : (
         <input
           ref={inputRef}
@@ -214,6 +236,50 @@ export function CertificateInput({
         PDF o imagen (JPG, PNG, WEBP). Máx. 5 MB. Acelera la verificación de tu
         perfil.
       </span>
+    </div>
+  )
+}
+
+// ponytail: live preview of the selected cert before submit. Images render
+// natively via <img>; PDFs via <object> with an "Abrir" <a> fallback for
+// browsers (esp. mobile) that can't embed PDF inline. Capped heights keep the
+// form scrollable on small screens.
+function CertificatePreview({
+  url,
+  type,
+}: {
+  url: string
+  type: string
+}) {
+  const isImage = type.startsWith('image/')
+  if (isImage) {
+    return (
+      <div className="overflow-hidden rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] bg-white/50">
+        <img
+          src={url}
+          alt="Vista previa del certificado"
+          className="mx-auto max-h-64 w-auto object-contain"
+        />
+      </div>
+    )
+  }
+  return (
+    <div className="overflow-hidden rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] bg-white/50">
+      <object
+        data={url}
+        type={type}
+        className="h-64 w-full"
+        aria-label="Vista previa del documento"
+      >
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block p-4 text-center text-sm font-semibold text-[var(--medi-secondary)] hover:underline"
+        >
+          Abrir documento
+        </a>
+      </object>
     </div>
   )
 }

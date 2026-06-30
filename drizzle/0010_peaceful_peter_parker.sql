@@ -1,0 +1,1 @@
+ALTER TABLE `professionals` ADD `provides_service` integer DEFAULT true NOT NULL;

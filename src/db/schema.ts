@@ -129,6 +129,18 @@ export const professionals = sqliteTable(
     // egreso upload. Null when none attached. The object lives in the MEDIA
     // bucket under certificates/{userId}/{uuid}.{ext}.
     certificateKey: text('certificate_key'),
+    // ponytail: optional R2 object key for the pro's avatar. Null when none
+    // uploaded (fallback to initials on the UI). The object lives in the MEDIA
+    // bucket under avatars/{professionalId}/{uuid}.{ext}. Uploaded post-signup
+    // from the panel (never in registration, to keep signup frictionless).
+    avatarKey: text('avatar_key'),
+    // ponytail: optional social handles, entered post-signup from the panel
+    // (never in registration) and shown only on the public profile. Stored as
+    // bare handles (no @, no URL); the profile builds x.com/<h>,
+    // instagram.com/<h>, tiktok.com/@<h>. Nullable = not provided.
+    socialX: text('social_x'),
+    socialInstagram: text('social_instagram'),
+    socialTikTok: text('social_tiktok'),
     // ponytail: 'deleted' is the soft-delete tombstone; 'disabled' is a
     // temporary admin suspension (credential doubts — the pro was verified but
     // is paused from providing service). No migration needed for either: the
@@ -146,6 +158,16 @@ export const professionals = sqliteTable(
     available: integer('available', { mode: 'boolean' })
       .notNull()
       .default(false),
+    // ponytail: "content creator only" flag. When false, the pro is verified
+    // (so their audios appear in Voces que acompañan, which filters on
+    // verifiedStatus) but is EXCLUDED from the service directory + random pick
+    // + verified count + public profile — they don't take patient contacts.
+    // Orthogonal to `available` (real-time on/off) and to verifiedStatus (trust):
+    // a content-only pro is trusted + always "off duty" for direct service.
+    // Admin-set only (no signup self-select) per product decision.
+    providesService: integer('provides_service', { mode: 'boolean' })
+      .notNull()
+      .default(true),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(
       sql`(unixepoch())`,
     ),

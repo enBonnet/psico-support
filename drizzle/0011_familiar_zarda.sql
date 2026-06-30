@@ -1,0 +1,1 @@
+ALTER TABLE `professionals` ADD `avatar_key` text;

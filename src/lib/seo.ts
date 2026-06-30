@@ -67,6 +67,11 @@ export function profileJsonLd(p: {
   populations?: readonly string[]
   focusGroups?: readonly string[]
   practiceAreas?: readonly string[]
+  /**
+   * Canonical profile URLs (social media etc.) — maps to schema.org Person.sameAs,
+   * which Google's Knowledge Graph reads to link an entity to its social profiles.
+   */
+  sameAs?: readonly string[]
 }) {
   // ponytail: knowsAbout folds all three specialization axes (age population +
   // focus groups + practice areas) into one schema.org field.
@@ -91,5 +96,8 @@ export function profileJsonLd(p: {
         }
       : {}),
     ...(knowsAbout.length ? { knowsAbout } : {}),
+    // ponytail: sameAs only when the pro actually provided socials — an empty
+    // array would be valid JSON-LD but useless, so omit it entirely.
+    ...(p.sameAs && p.sameAs.length ? { sameAs: [...p.sameAs] } : {}),
   }
 }
