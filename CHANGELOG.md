@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-06-30
+
+### Added
+- **Herramientas de autocuidado (ruta `/recursos`)**: nueva sección de la app con recursos gratuitos para el bienestar emocional propio o para acompañar a otras personas en crisis. Acceso desde una tercera tarjeta en el inicio (`/`) — "Herramientas de Autocuidado" — entre los CTA existentes, sin tocar la navegación global (las 3 pestañas Inicio/Ayuda/Cuenta se mantienen). Cuatro herramientas en esta primera versión, todas funcionando sin conexión una vez visitadas (el SW ya hace runtime SWR de los GET same-origin):
+
+  - **`/recursos/respirar`** (CSR): ejercicio interactivo de **respiración cuadrada 4-4-4-4** con un orbe animado que crece/mengua según la fase (inhala, sostén, exhala, sostén), contador por segundos y botón comenzar/detener. Pensado para pánico y ansiedad aguda.
+  - **`/recursos/enraizamiento`** (CSR): técnica **5-4-3-2-1** paso a paso (5 cosas que ves, 4 que tocas, 3 que escuchas, 2 que hueles, 1 que saboreas) con barra de progreso y navegación anterior/siguiente. Para volver al presente.
+  - **`/recursos/reacciones-normales`** (**SSR**): psicoeducación sobre qué reacciones son habituales tras una emergencia/desastre (insomnio, recuerdos intrusos, irritabilidad, etc.), qué suele ayudar y **cuándo conviene buscar ayuda profesional**. SSR para SEO y compartir (la gente busca "¿es normal sentir esto después de un desastre?").
+  - **`/recursos/primeros-auxilios`** (**SSR**): guía de **Primeros Auxilios Psicológicos** basada en el modelo de la OMS (Mirar, Escuchar, Conectar) para que personas sin formación clínica puedan acompañar a alguien en crisis; incluye una sección "Qué evitar". SSR por su alto valor de compartido (WhatsApp) y SEO.
+
+  Cada herramienta termina con un CTA "Hablar con un profesional ahora" → `/ayuda/profesionales` (nunca es un callejón sin salida) y un banner de emergencia que apunta a servicios de emergencia locales + el directorio. **No existe un número de crisis nacional en Venezuela**, así que el banner no inventa ninguno: solo añadir una línea concreta con fuente oficial verificada. Componentes compartidos `CrisisBanner` y `ProCta` extraídos para que el mensaje de seguridad (descargo "no sustituye atención profesional") no derive entre páginas. Sin cambios de base de datos ni de SW (release compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
 ## [1.8.0] - 2026-06-30
 
 ### Added

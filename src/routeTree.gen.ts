@@ -14,8 +14,13 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
 import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as RecursosRespirarRouteImport } from './routes/recursos/respirar'
+import { Route as RecursosReaccionesNormalesRouteImport } from './routes/recursos/reacciones-normales'
+import { Route as RecursosPrimerosAuxiliosRouteImport } from './routes/recursos/primeros-auxilios'
+import { Route as RecursosEnraizamientoRouteImport } from './routes/recursos/enraizamiento'
 import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
 import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
@@ -49,6 +54,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RecursosIndexRoute = RecursosIndexRouteImport.update({
+  id: '/recursos/',
+  path: '/recursos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AyudaIndexRoute = AyudaIndexRouteImport.update({
   id: '/ayuda/',
   path: '/ayuda/',
@@ -57,6 +67,28 @@ const AyudaIndexRoute = AyudaIndexRouteImport.update({
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/admin/',
   path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecursosRespirarRoute = RecursosRespirarRouteImport.update({
+  id: '/recursos/respirar',
+  path: '/recursos/respirar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecursosReaccionesNormalesRoute =
+  RecursosReaccionesNormalesRouteImport.update({
+    id: '/recursos/reacciones-normales',
+    path: '/recursos/reacciones-normales',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RecursosPrimerosAuxiliosRoute =
+  RecursosPrimerosAuxiliosRouteImport.update({
+    id: '/recursos/primeros-auxilios',
+    path: '/recursos/primeros-auxilios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RecursosEnraizamientoRoute = RecursosEnraizamientoRouteImport.update({
+  id: '/recursos/enraizamiento',
+  path: '/recursos/enraizamiento',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfesionalRegistroRoute = ProfesionalRegistroRouteImport.update({
@@ -105,8 +137,13 @@ export interface FileRoutesByFullPath {
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
+  '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
+  '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
+  '/recursos/reacciones-normales': typeof RecursosReaccionesNormalesRoute
+  '/recursos/respirar': typeof RecursosRespirarRoute
   '/admin/': typeof AdminIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
+  '/recursos/': typeof RecursosIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
@@ -121,8 +158,13 @@ export interface FileRoutesByTo {
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
+  '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
+  '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
+  '/recursos/reacciones-normales': typeof RecursosReaccionesNormalesRoute
+  '/recursos/respirar': typeof RecursosRespirarRoute
   '/admin': typeof AdminIndexRoute
   '/ayuda': typeof AyudaIndexRoute
+  '/recursos': typeof RecursosIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
@@ -138,8 +180,13 @@ export interface FileRoutesById {
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
+  '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
+  '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
+  '/recursos/reacciones-normales': typeof RecursosReaccionesNormalesRoute
+  '/recursos/respirar': typeof RecursosRespirarRoute
   '/admin/': typeof AdminIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
+  '/recursos/': typeof RecursosIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
@@ -156,8 +203,13 @@ export interface FileRouteTypes {
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
+    | '/recursos/enraizamiento'
+    | '/recursos/primeros-auxilios'
+    | '/recursos/reacciones-normales'
+    | '/recursos/respirar'
     | '/admin/'
     | '/ayuda/'
+    | '/recursos/'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/ayuda/profesionales/'
@@ -172,8 +224,13 @@ export interface FileRouteTypes {
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
+    | '/recursos/enraizamiento'
+    | '/recursos/primeros-auxilios'
+    | '/recursos/reacciones-normales'
+    | '/recursos/respirar'
     | '/admin'
     | '/ayuda'
+    | '/recursos'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/ayuda/profesionales'
@@ -188,8 +245,13 @@ export interface FileRouteTypes {
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
+    | '/recursos/enraizamiento'
+    | '/recursos/primeros-auxilios'
+    | '/recursos/reacciones-normales'
+    | '/recursos/respirar'
     | '/admin/'
     | '/ayuda/'
+    | '/recursos/'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/ayuda/profesionales/'
@@ -205,8 +267,13 @@ export interface RootRouteChildren {
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
   ProfesionalPanelRoute: typeof ProfesionalPanelRoute
   ProfesionalRegistroRoute: typeof ProfesionalRegistroRoute
+  RecursosEnraizamientoRoute: typeof RecursosEnraizamientoRoute
+  RecursosPrimerosAuxiliosRoute: typeof RecursosPrimerosAuxiliosRoute
+  RecursosReaccionesNormalesRoute: typeof RecursosReaccionesNormalesRoute
+  RecursosRespirarRoute: typeof RecursosRespirarRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AyudaIndexRoute: typeof AyudaIndexRoute
+  RecursosIndexRoute: typeof RecursosIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   AyudaProfesionalesIdRoute: typeof AyudaProfesionalesIdRoute
   AyudaProfesionalesIndexRoute: typeof AyudaProfesionalesIndexRoute
@@ -249,6 +316,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/recursos/': {
+      id: '/recursos/'
+      path: '/recursos'
+      fullPath: '/recursos/'
+      preLoaderRoute: typeof RecursosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ayuda/': {
       id: '/ayuda/'
       path: '/ayuda'
@@ -261,6 +335,34 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/respirar': {
+      id: '/recursos/respirar'
+      path: '/recursos/respirar'
+      fullPath: '/recursos/respirar'
+      preLoaderRoute: typeof RecursosRespirarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/reacciones-normales': {
+      id: '/recursos/reacciones-normales'
+      path: '/recursos/reacciones-normales'
+      fullPath: '/recursos/reacciones-normales'
+      preLoaderRoute: typeof RecursosReaccionesNormalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/primeros-auxilios': {
+      id: '/recursos/primeros-auxilios'
+      path: '/recursos/primeros-auxilios'
+      fullPath: '/recursos/primeros-auxilios'
+      preLoaderRoute: typeof RecursosPrimerosAuxiliosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/enraizamiento': {
+      id: '/recursos/enraizamiento'
+      path: '/recursos/enraizamiento'
+      fullPath: '/recursos/enraizamiento'
+      preLoaderRoute: typeof RecursosEnraizamientoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/profesional/registro': {
@@ -325,8 +427,13 @@ const rootRouteChildren: RootRouteChildren = {
   ProfesionalLoginRoute: ProfesionalLoginRoute,
   ProfesionalPanelRoute: ProfesionalPanelRoute,
   ProfesionalRegistroRoute: ProfesionalRegistroRoute,
+  RecursosEnraizamientoRoute: RecursosEnraizamientoRoute,
+  RecursosPrimerosAuxiliosRoute: RecursosPrimerosAuxiliosRoute,
+  RecursosReaccionesNormalesRoute: RecursosReaccionesNormalesRoute,
+  RecursosRespirarRoute: RecursosRespirarRoute,
   AdminIndexRoute: AdminIndexRoute,
   AyudaIndexRoute: AyudaIndexRoute,
+  RecursosIndexRoute: RecursosIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   AyudaProfesionalesIdRoute: AyudaProfesionalesIdRoute,
   AyudaProfesionalesIndexRoute: AyudaProfesionalesIndexRoute,
