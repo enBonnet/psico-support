@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
@@ -23,6 +24,11 @@ import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/prof
 import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const SocialRoute = SocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
+  '/social': typeof SocialRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
@@ -109,6 +116,7 @@ export interface FileRoutesByTo {
   '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
+  '/social': typeof SocialRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
@@ -125,6 +133,7 @@ export interface FileRoutesById {
   '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
   '/signup': typeof SignupRoute
+  '/social': typeof SocialRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
@@ -142,6 +151,7 @@ export interface FileRouteTypes {
     | '/acerca-de'
     | '/cuenta'
     | '/signup'
+    | '/social'
     | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
@@ -157,6 +167,7 @@ export interface FileRouteTypes {
     | '/acerca-de'
     | '/cuenta'
     | '/signup'
+    | '/social'
     | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
@@ -172,6 +183,7 @@ export interface FileRouteTypes {
     | '/acerca-de'
     | '/cuenta'
     | '/signup'
+    | '/social'
     | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
@@ -188,6 +200,7 @@ export interface RootRouteChildren {
   AcercaDeRoute: typeof AcercaDeRoute
   CuentaRoute: typeof CuentaRoute
   SignupRoute: typeof SignupRoute
+  SocialRoute: typeof SocialRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
   ProfesionalPanelRoute: typeof ProfesionalPanelRoute
@@ -201,6 +214,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/social': {
+      id: '/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof SocialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -300,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcercaDeRoute: AcercaDeRoute,
   CuentaRoute: CuentaRoute,
   SignupRoute: SignupRoute,
+  SocialRoute: SocialRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
   ProfesionalLoginRoute: ProfesionalLoginRoute,
   ProfesionalPanelRoute: ProfesionalPanelRoute,

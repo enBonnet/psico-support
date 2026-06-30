@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-06-30
+
+### Added
+- **Ruta `/social` para invitar profesionales**: nueva página pública pensada para compartir en redes sociales y sumar psicólogos a la red. SSR (no `ssr:false`) para que los metadatos OG/Twitter caigan en el HTML inicial y la vista previa del enlace se renderice al compartirla (WhatsApp, X, Facebook, etc.); reutiliza `seoHead()` con título/descripción orientados a profesionales. La página explica el valor de sumarse (verificación gratuita de la colegiatura, disponibilidad y modalidad a discreción del profesional, servicio gratuito y confidencial), con CTA directo a `/profesional/registro`. Incluye botones de compartir nativos: enlaces de intent de WhatsApp / X / Facebook, un botón "Copiar enlace" (con notificación iOS-style vía `notify()`), y el botón nativo `navigator.share()` (Web Share API) cuando el dispositivo lo soporta — en móviles abre la hoja de compartir del sistema en lugar de obligar a elegir plataforma. Sin cambios de base de datos ni de SW (compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
+### Fixed
+- Aprobar/rechazar un profesional desde el panel de admin a veces requería un segundo click para que la lista se actualizara. Causa: D1 es eventualmente consistente entre requests, y el `GET listPending` posterior al `POST reviewProfessional` podía leer una réplica *stale* que aún mostraba la fila como pendiente. Ahora se hace la actualización optimista en `onMutate` (se remueve/quita la fila de la UI al instante) para que el cambio se refleje en el primer click.
+
 ## [1.7.0] - 2026-06-30
 
 ### Added
