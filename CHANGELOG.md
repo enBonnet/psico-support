@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-06-29
+
+### Added
+- **Sugerencia de instalación de la PWA**: la página principal (`/`) ahora detecta cuando la app no está instalada y muestra una tarjeta sutil "Instalar app" junto a los CTA. En Chrome/Edge/Android/escritorio captura el evento `beforeinstallprompt` y ofrece un botón *Instalar* que dispara el prompt nativo del navegador; en iOS Safari (que no permite instalación programática) muestra la pista estática "Compartir → Agregar a pantalla de inicio". Se oculta si ya está instalada (`display-mode: standalone` / `navigator.standalone`) y la X de cerrar persiste en `localStorage` (no repregunta). Hook reutilizable `useInstallPrompt()` y componente `<InstallCard/>` en `src/lib/install-prompt.tsx`. Sin cambios de base de datos ni de SW (compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
 ## [1.5.1] - 2026-06-29
 
 ### Added

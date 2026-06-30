@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { seoHead } from '#/lib/seo'
+import { InstallCard } from '#/lib/install-prompt'
 
 export const Route = createFileRoute('/')({
   head: () =>
@@ -27,19 +28,21 @@ function Landing() {
       </header>
 
       <nav className="mt-10 flex flex-col gap-4">
-        <Link
-          to="/ayuda"
-          className="glass-primary flex min-h-16 items-center justify-center rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-        >
-          Necesito Ayuda Ahora
-        </Link>
-        <Link
-          to="/profesional/registro"
-          className="glass-card-soft flex min-h-16 items-center justify-center rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-        >
-          Ofrezco Ayuda (Soy Psicólogo)
-        </Link>
+      <Link
+        to="/ayuda"
+        className="glass-primary flex min-h-16 items-center justify-center rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        Necesito Ayuda Ahora
+      </Link>
+      <Link
+        to="/profesional/registro"
+        className="glass-card-soft flex min-h-16 items-center justify-center rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        Ofrezco Ayuda (Soy Psicólogo)
+      </Link>
       </nav>
+
+      <InstallCard />
 
       <Link
         to="/acerca-de"
