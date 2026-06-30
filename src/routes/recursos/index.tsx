@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Wind, HandHeart, Brain, LifeBuoy } from 'lucide-react'
+import { Wind, HandHeart, Brain, LifeBuoy, ClipboardCheck } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { seoHead } from '#/lib/seo'
 
@@ -27,6 +27,13 @@ interface Tool {
 }
 
 const TOOLS: readonly Tool[] = [
+  {
+    to: '/recursos/autochequeo',
+    title: 'Autochequeo emocional',
+    desc: 'Un breve cuestionario para identificar cómo estás y si podrías necesitar apoyo.',
+    audience: 'Para ti',
+    icon: ClipboardCheck,
+  },
   {
     to: '/recursos/respirar',
     title: 'Respiración calmante',

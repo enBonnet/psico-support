@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-06-30
+
+### Added
+- **Autochequeo emocional (ruta `/recursos/autochequeo`)**: nuevo cuestionario de autoevaluación para que cada persona identifique cómo está emocionalmente y si podría necesitar apoyo profesional. Es la primera herramienta basada en **protocolos validados**: una **puerta de riesgo agudo** (2 ítems derivados del **ASQ** — *Ask Suicide-Screening Questions*, NIMH, dominio público) seguida del **K6** (*Kessler-6*, escala de distress psicológico de la *WHO World Mental Health Survey*, 6 ítems, 0-24, dominio público, traducción validada al español). La puerta aguda se pregunta **primero**: cualquier "Sí" detiene el cuestionario y muestra de inmediato una pantalla de crisis con el CTA "Hablar con un profesional ahora" + el banner de emergencia. Si no hay riesgo agudo, el K6 produce una banda interpretativa (0-4 bienestar / 5-12 moderado / 13+ alto) con recomendaciones a medida (herramientas de autocuidado, considerar hablar con un profesional, o contacto directo con el directorio). Diseñado como **state machine CSR** (como `enraizamiento`), **efímero**: las respuestas se quedan en el dispositivo, no se guardan ni envían (almacenar puntajes de salud mental agregaría migración + manejo de PII sensible + acoplamiento a auth; la privacidad es una característica). Reutiliza `CrisisBanner` + `ProCta` en **cada fase** para que la red de seguridad esté siempre al alcance. Añadido como primera tarjeta del hub `/recursos` (icono `ClipboardCheck`, "Para ti"). Sin cambios de base de datos ni de SW (release compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
 ## [1.9.0] - 2026-06-30
 
 ### Added
