@@ -4,6 +4,7 @@ import * as schema from './schema.ts'
 
 type CloudflareEnv = {
   DB: D1Database
+  MEDIA: R2Bucket
 }
 
 let _env: CloudflareEnv | null = null
@@ -32,4 +33,17 @@ export function getDb(): Db {
   }
   cached = drizzle(env.DB, { schema })
   return cached
+}
+
+// ponytail: R2 binding for binary uploads (professional certificates).
+// Not cached — the binding is a stateless handle,getDb() caches the drizzle
+// wrapper, R2 has no such wrapper.
+export function getR2(): R2Bucket {
+  const env = getCloudflareEnv()
+  if (!env?.MEDIA) {
+    throw new Error(
+      'R2 binding (MEDIA) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+    )
+  }
+  return env.MEDIA
 }

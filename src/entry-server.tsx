@@ -10,6 +10,7 @@ import { setCloudflareEnv } from '#/db'
 // default entry drops env on the floor.
 type CloudflareEnv = {
   DB: D1Database
+  MEDIA: R2Bucket
 }
 
 const handler = createStartHandler(defaultStreamHandler)

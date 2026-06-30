@@ -12,7 +12,7 @@ import {
   DrizzleError,
 } from 'drizzle-orm'
 
-import { getDb } from '#/db'
+import { getDb, getR2 } from '#/db'
 import { professionals, user as userTable } from '#/db/schema'
 import { getAuth, isAdminEmail } from '#/lib/auth'
 import {
@@ -50,6 +50,59 @@ export const PRACTICE_AREA_OPTIONS = [
   'Ansiedad y depresión',
 ] as const
 export type PracticeArea = (typeof PRACTICE_AREA_OPTIONS)[number]
+
+// ponytail: optional certificate upload (título / certificado de egreso).
+// Transported through the server fn as base64 so the upload is atomic with
+// the registration insert — no anonymous orphan objects in R2 if the row
+// fails. Ceiling: base64 is ~33% larger than the binary; fine for ≤5MB
+// certificate PDFs/images. If files grow or volume rises, switch to a
+// presigned direct-to-R2 multipart route.
+export const CERTIFICATE_MIME = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+] as const
+export type CertificateMime = (typeof CERTIFICATE_MIME)[number]
+
+export const CERTIFICATE_MAX_BYTES = 5 * 1024 * 1024
+
+export const certificateSchema = z.object({
+  data: z
+    .string()
+    // base64 chars; 5MB binary ≈ 6.7M chars, pad for the prefix-free payload.
+    .max(Math.ceil((CERTIFICATE_MAX_BYTES * 4) / 3) + 1024),
+  type: z.enum(CERTIFICATE_MIME),
+})
+export type CertificateInput = z.infer<typeof certificateSchema>
+
+const CERT_EXT: Record<CertificateMime, string> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+  'image/webp': 'webp',
+}
+
+// ponytail: decode base64 → Uint8Array for R2.put. atob+charCodeAt loop is
+// the stdlib path; for 5MB this is negligible CPU.
+function base64ToBytes(b64: string): Uint8Array {
+  const bin = atob(b64)
+  const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return bytes
+}
+
+async function uploadCertificate(
+  userId: string,
+  cert: CertificateInput,
+): Promise<string> {
+  const ext = CERT_EXT[cert.type]
+  const key = `certificates/${userId}/${crypto.randomUUID()}.${ext}`
+  await getR2().put(key, base64ToBytes(cert.data), {
+    httpMetadata: { contentType: cert.type },
+  })
+  return key
+}
 
 // ponytail: parse a JSON text-array column against a known option set; never
 // throw on bad data. Shared by the three axes (population/focusGroups/
@@ -370,6 +423,7 @@ export const registerStep2Schema = z
       .string()
       .min(8, 'WhatsApp inválido')
       .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
+    certificate: certificateSchema.nullable().optional(),
   })
   .superRefine(refineProfessional)
 
@@ -395,6 +449,7 @@ export const registerSchema = z
       .string()
       .min(8, 'WhatsApp inválido')
       .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
+    certificate: certificateSchema.nullable().optional(),
   })
   .superRefine(refineProfessional)
 
@@ -521,6 +576,21 @@ export const registerProfessional = createServerFn({ method: 'POST' })
         'No pudimos guardar tu registro. Revisa los datos e inténtalo de nuevo. Si persiste, escríbenos.',
       )
     }
+    // ponytail: optional cert upload runs AFTER the row exists so a failed
+    // upload never blocks registration. Best-effort — log + carry on without
+    // the cert if R2 rejects (the pro still registers via their número de
+    // colegiación, which is the primary verification path).
+    if (data.certificate) {
+      try {
+        const key = await uploadCertificate(userId, data.certificate)
+        await db
+          .update(professionals)
+          .set({ certificateKey: key })
+          .where(eq(professionals.userId, userId))
+      } catch (err) {
+        console.error('[registerProfessional] certificate upload failed:', err)
+      }
+    }
     return { ok: true, userId }
   })
 
@@ -561,6 +631,21 @@ export const createProfessionalProfile = createServerFn({ method: 'POST' })
       throw new Error(
         'No pudimos guardar tu registro. Revisa los datos e inténtalo de nuevo.',
       )
+    }
+    // ponytail: same best-effort cert upload as registerProfessional (above).
+    if (data.certificate) {
+      try {
+        const key = await uploadCertificate(session.user.id, data.certificate)
+        await db
+          .update(professionals)
+          .set({ certificateKey: key })
+          .where(eq(professionals.userId, session.user.id))
+      } catch (err) {
+        console.error(
+          '[createProfessionalProfile] certificate upload failed:',
+          err,
+        )
+      }
     }
     return { ok: true }
   })
@@ -670,6 +755,7 @@ export const listPending = createServerFn({ method: 'GET' }).handler(
         whatsappCountry: professionals.whatsappCountry,
         modality: professionals.modality,
         whatsapp: professionals.whatsapp,
+        certificateKey: professionals.certificateKey,
         userEmail: userTable.email,
       })
       .from(professionals)

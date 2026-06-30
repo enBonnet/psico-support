@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 
 // ponytail: shared, form-independent helpers used by BOTH the one-shot
@@ -114,5 +115,105 @@ export function FieldShell({
         </span>
       )}
     </label>
+  )
+}
+
+// ponytail: optional título / certificado de egreso upload. Plain value +
+// onChange props (no TanStack Form generics) so it can be shared by both
+// registration routes without the `any` escape the form-consuming components
+// would need. base64 transport matches certificateSchema in the server fn.
+export const CERTIFICATE_ACCEPT = '.pdf,image/jpeg,image/png,image/webp'
+export const CERTIFICATE_MAX_BYTES = 5 * 1024 * 1024
+const CERT_ALLOWED = new Set([
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+])
+
+export type CertificateValue = { data: string; type: string }
+
+export function readFileAsCertificate(file: File): Promise<CertificateValue> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onerror = () => reject(new Error('No se pudo leer el archivo.'))
+    reader.onload = () => {
+      const result = String(reader.result ?? '')
+      const comma = result.indexOf(',')
+      // ponytail: strip the "data:<mime>;base64," prefix; server gets raw b64.
+      const data = comma >= 0 ? result.slice(comma + 1) : result
+      resolve({ data, type: file.type })
+    }
+    reader.readAsDataURL(file)
+  })
+}
+
+export function CertificateInput({
+  value,
+  onChange,
+}: {
+  value: CertificateValue | null
+  onChange: (v: CertificateValue | null) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [fileName, setFileName] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return
+    if (!CERT_ALLOWED.has(file.type)) {
+      setError('Solo PDF, JPG, PNG o WEBP.')
+      return
+    }
+    if (file.size > CERTIFICATE_MAX_BYTES) {
+      setError('El archivo supera los 5 MB.')
+      return
+    }
+    try {
+      onChange(await readFileAsCertificate(file))
+      setFileName(file.name)
+      setError(null)
+    } catch {
+      setError('No se pudo leer el archivo.')
+    }
+  }
+
+  function clear() {
+    onChange(null)
+    setFileName(null)
+    setError(null)
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {value ? (
+        <div className="glass-input flex h-12 items-center justify-between gap-2 px-3">
+          <span className="truncate text-sm text-[var(--medi-text-primary)]">
+            ✓ {fileName ?? 'Certificado adjuntado'}
+          </span>
+          <button
+            type="button"
+            onClick={clear}
+            className="shrink-0 text-sm font-medium text-[var(--medi-secondary)]"
+          >
+            Quitar
+          </button>
+        </div>
+      ) : (
+        <input
+          ref={inputRef}
+          type="file"
+          accept={CERTIFICATE_ACCEPT}
+          onChange={(e) => handleFile(e.target.files?.[0])}
+          className="glass-input h-12 w-full px-2 text-sm text-[var(--medi-text-secondary)]"
+        />
+      )}
+      {error && <span className="text-sm text-red-600">{error}</span>}
+      <span className="text-xs text-[var(--medi-text-secondary)]">
+        PDF o imagen (JPG, PNG, WEBP). Máx. 5 MB. Acelera la verificación de tu
+        perfil.
+      </span>
+    </div>
   )
 }

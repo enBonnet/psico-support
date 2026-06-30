@@ -1,0 +1,1 @@
+ALTER TABLE `professionals` ADD `certificate_key` text;

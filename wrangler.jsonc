@@ -1,18 +1,32 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "psico-support",
-  "compatibility_date": "2025-09-02",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "./src/entry-server.tsx",
-  "routes": [
-    { "pattern": "psicoayudaven.com", "custom_domain": true },
-  ],
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "psico-support-db",
-      "database_id": "17ebb29c-bb8f-4b08-af00-19230623fa1d",
-      "migrations_dir": "./drizzle",
-    },
-  ],
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "psico-support",
+	"compatibility_date": "2025-09-02",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "./src/entry-server.tsx",
+	"routes": [
+		{
+			"pattern": "psicoayudaven.com",
+			"custom_domain": true
+		},
+	],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "psico-support-db",
+			"database_id": "17ebb29c-bb8f-4b08-af00-19230623fa1d",
+			"migrations_dir": "./drizzle",
+		},
+	],
+	// ponytail: single R2 bucket for the app's binary uploads (professional
+	// certificates now; future media later). Bucket must exist — create with
+	// `npx wrangler r2 bucket create psico-support-media`.
+	"r2_buckets": [
+		{
+			"binding": "MEDIA",
+			"bucket_name": "psico-support-media",
+		},
+	],
 }

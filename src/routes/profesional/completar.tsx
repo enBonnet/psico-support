@@ -19,6 +19,7 @@ import {
   DIAL_CODE,
   FieldShell,
   SectionHeader,
+  CertificateInput,
   collectFormErrors,
   formatWhatsapp,
   inputCls,
@@ -64,6 +65,7 @@ function CompletarPage() {
       credentialCountry: '',
       whatsappCountry: '',
       whatsapp: '',
+      certificate: null as { data: string; type: string } | null,
     },
     validators: {
       onChange: ({ value }) => {
@@ -206,9 +208,10 @@ function CompletarPage() {
         {/* ── Credencial profesional ── */}
         <SectionHeader>Credencial profesional</SectionHeader>
         <p className="text-sm text-[var(--medi-text-secondary)]">
-          No subas fotos ni documentos. Solo tu <strong>número de
-          colegiación</strong>: lo verificamos directamente en el registro
-          público del colegio o universidad que te certificó.
+          Verificamos tu <strong>número de colegiación</strong> directamente en
+          el registro del colegio o universidad que te certificó. De forma
+          opcional, puedes adjuntar tu <strong>título universitario</strong> o{' '}
+          <strong>certificado de egreso</strong> para agilizar la revisión.
         </p>
         <form.Field name="credentialCountry">
           {(field) => (
@@ -269,6 +272,20 @@ function CompletarPage() {
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 placeholder="Ej. Colegio de Psicólogos de Venezuela"
+              />
+            </FieldShell>
+          )}
+        </form.Field>
+
+        <form.Field name="certificate">
+          {(field) => (
+            <FieldShell
+              label="Título o certificado de egreso (opcional)"
+              errors={field.state.meta.errors}
+            >
+              <CertificateInput
+                value={field.state.value}
+                onChange={(v) => field.handleChange(v)}
               />
             </FieldShell>
           )}

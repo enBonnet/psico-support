@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-06-29
+
+### Added
+- **Certificado opcional en el registro profesional**: en `/profesional/registro` y `/profesional/completar` (sección *Credencial profesional*), los profesionales pueden adjuntar de forma opcional su **título universitario** o **certificado de egreso** (PDF, JPG, PNG o WEBP, máx. 5 MB) para agilizar la verificación. El archivo se almacena en **R2** (binding `MEDIA`, bucket `psico-support-media`); en la base solo se guarda la clave del objeto (`certificate_key`, migración `0008`). La verificación principal sigue siendo el número de colegiación contra el registro público; el documento es complementario. El copiado de la sección se reescribió para dejar claro que el número es obligatorio y el documento opcional. `listPending` ahora expone `certificateKey` para futura visualización por administradores.
+
 ## [1.4.1] - 2026-06-29
 
 ### Fixed

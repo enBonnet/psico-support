@@ -125,6 +125,10 @@ export const professionals = sqliteTable(
     credentialCountry: text('credential_country'),
     whatsappCountry: text('whatsapp_country'),
     whatsapp: text('whatsapp').notNull(),
+    // ponytail: optional R2 object key for the pro's título/certificado de
+    // egreso upload. Null when none attached. The object lives in the MEDIA
+    // bucket under certificates/{userId}/{uuid}.{ext}.
+    certificateKey: text('certificate_key'),
     verifiedStatus: text('verified_status', {
       enum: ['pending', 'verified', 'rejected'],
     })
