@@ -13,10 +13,13 @@
 //      responses) — so last-known data (directory list, session, etc.) is
 //      served offline. Mutations are POST and never enter here.
 //
-// Ceiling: build-hashed JS/CSS chunks are NOT precached (would need a
-// build-time precache manifest injected into this file). Runtime SWR covers
-// them on first online visit. Upgrade path: emit a manifest + cache.addAll
-// the hashed assets at install for true offline-first on a never-seen build.
+// The shell's build-hashed CSS/JS are precached at install by parsing the
+// shell HTML for its own /assets/*.{css,js} URLs (see install below). Without
+// this, cache-first navigation served the shell instantly while CSS round-
+// tripped the network → a flash of unstyled (text-only) content on slow
+// connections. The shell is the source of truth for its own hashes, so no
+// build-time precache manifest is needed. Route chunks lazy-loaded after
+// hydration are still covered by runtime SWR.
 //
 // CACHE mirrors the app version in package.json. Bump BOTH together (here +
 // package.json `version`) when you must force-invalidate every installed PWA
@@ -44,10 +47,40 @@ self.addEventListener('install', (event) => {
       // best-effort: addAll rejects if any single fetch fails; cache each so
       // one missing icon doesn't block the shell.
       await Promise.allSettled(PRECACHE.map((url) => cache.add(url)))
+      // Precache the shell's own build-hashed CSS/JS. The shell HTML already
+      // references its exact asset hashes, so parse them out and cache.addAll
+      // them — no build-time manifest injection needed. This is what prevents
+      // the FOUC: without it, cache-first navigation paints the shell while
+      // CSS/JS round-trip the network (visible as unstyled text on slow links).
+      // cache.match returns a fresh clone, so consuming .text() here does NOT
+      // evict the cached shell entry.
+      try {
+        const shellRes = await cache.match(SHELL)
+        if (shellRes) {
+          const html = await shellRes.text()
+          await Promise.allSettled(
+            shellAssetUrls(html).map((url) => cache.add(url)),
+          )
+        }
+      } catch {
+        /* best-effort; runtime SWR still covers assets on later visits */
+      }
       self.skipWaiting()
     })(),
   )
 })
+
+// ponytail: extract the shell's hashed stylesheet + script URLs for precaching.
+// Matches root-relative /assets/*.{css,js} in href/src — covers the stylesheet
+// <link>, <script src>, and modulepreload <link href>. Ignores cross-origin
+// and non-/assets/ URLs (favicon etc. are already in PRECACHE).
+function shellAssetUrls(html) {
+  const urls = new Set()
+  const re = /(?:href|src)="(\/assets\/[^"]+\.(?:css|js))"/g
+  let m
+  while ((m = re.exec(html))) urls.add(m[1])
+  return [...urls]
+}
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(

@@ -1,12 +1,15 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
 import { Skeleton } from '#/components/ui/skeleton'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
 import {
   getMyProfessional,
   setAvailability,
+  deleteMyProfessional,
   amIAdmin,
   getCurrentUser,
 } from '#/server/professionals'
@@ -32,6 +35,8 @@ export const Route = createFileRoute('/profesional/panel')({
 function PanelPage() {
   const qc = useQueryClient()
   const [signingOut, setSigningOut] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteName, setDeleteName] = useState('')
   const { data: me, isLoading: meLoading } = useQuery({
     queryKey: ['my-professional'],
     queryFn: () => getMyProfessional(),
@@ -73,6 +78,28 @@ function PanelPage() {
 
   const available = me?.available ?? false
   const verified = me?.verifiedStatus === 'verified'
+
+  const del = useMutation({
+    mutationFn: () => deleteMyProfessional(),
+    onSuccess: async () => {
+      notify({
+        type: 'success',
+        title: 'Tu cuenta profesional fue eliminada',
+        body: 'Ya no apareces en el directorio.',
+      })
+      // ponytail: soft-delete only touches the pro row; the auth session is
+      // still valid, so sign out explicitly + bounce to home. Best-effort —
+      // even if signOut fails, the row is already tombstoned server-side.
+      await authClient.signOut()
+      window.location.href = '/'
+    },
+    onError: () =>
+      notify({
+        type: 'error',
+        title: 'No se pudo eliminar la cuenta',
+        body: 'Inténtalo de nuevo en unos segundos.',
+      }),
+  })
 
   async function signOut() {
     setSigningOut(true)
@@ -220,8 +247,139 @@ function PanelPage() {
               </section>
             )
           })()}
+
+          <section className="mt-6 rounded-[var(--glass-radius-sm)] border border-red-200/60 bg-red-50/40 p-4">
+            <h2 className="text-sm font-semibold text-red-800">
+              Eliminar cuenta
+            </h2>
+            <p className="mt-1 text-sm text-red-700/90">
+              Borra tu perfil del directorio. Dejarás de aparecer en la lista y
+              en la selección aleatoria de pacientes.
+            </p>
+            <button
+              type="button"
+              onClick={() => setDeleteOpen(true)}
+              className="mt-3 inline-flex min-h-11 items-center justify-center rounded-[var(--glass-radius-sm)] border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 transition-all hover:translate-y-[-1px] hover:bg-red-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-500"
+            >
+              Eliminar mi cuenta
+            </button>
+          </section>
+
+          {deleteOpen && (
+            <DeleteAccountModal
+              name={me.name}
+              pending={del.isPending}
+              typedName={deleteName}
+              onTypedNameChange={setDeleteName}
+              onCancel={() => {
+                setDeleteOpen(false)
+                setDeleteName('')
+              }}
+              onConfirm={() => del.mutate()}
+            />
+          )}
         </>
       )}
     </main>
+  )
+}
+
+// ponytail: minimal confirm-by-typing-name modal. Native <dialog>/focus-trap
+// libs are YAGNI here — a controlled fixed overlay matches the codebase's
+// notification overlay pattern (styles.css .notif-stack z-index:100; this
+// sits one layer above at 110). Escape + backdrop-click close it; the
+// confirm button is disabled until the typed name matches (case-insensitive
+// trim, so accents/capitalization don't lock a user out).
+function DeleteAccountModal({
+  name,
+  pending,
+  typedName,
+  onTypedNameChange,
+  onCancel,
+  onConfirm,
+}: {
+  name: string
+  pending: boolean
+  typedName: string
+  onTypedNameChange: (v: string) => void
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  // ponytail: focus the confirm input on open so the keyboard appears on
+  // mobile without an extra tap.
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
+  // ponytail: Escape closes; stops at the first open so a nested field's
+  // Escape (none today) wouldn't double-handle.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onCancel()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onCancel])
+
+  const matches =
+    typedName.trim().toLowerCase() === name.trim().toLowerCase()
+
+  return (
+    <div
+      className="fixed inset-0 z-[110] flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-account-title"
+      onClick={onCancel}
+    >
+      <div
+        className="glass-card w-full max-w-md rounded-[var(--glass-radius)] p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h2
+          id="delete-account-title"
+          className="text-lg font-bold text-red-800"
+        >
+          Eliminar cuenta
+        </h2>
+        <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
+          Esta acción elimina tu perfil del directorio y de la selección
+          aleatoria de pacientes. Para confirmar, escribe tu nombre tal como
+          aparece:
+        </p>
+        <p className="mt-2 text-sm font-semibold text-[var(--medi-text-primary)]">
+          {name}
+        </p>
+        <Input
+          ref={inputRef}
+          value={typedName}
+          onChange={(e) => onTypedNameChange(e.target.value)}
+          autoComplete="off"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          aria-label="Escribe tu nombre para confirmar"
+          className="mt-3"
+        />
+        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onCancel}
+            disabled={pending}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={onConfirm}
+            disabled={!matches || pending}
+          >
+            {pending ? 'Eliminando…' : 'Eliminar cuenta'}
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 }

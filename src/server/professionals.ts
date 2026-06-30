@@ -606,12 +606,26 @@ export const createProfessionalProfile = createServerFn({ method: 'POST' })
     }
     const db = getDb()
     const existing = await db
-      .select({ id: professionals.id })
+      .select({
+        id: professionals.id,
+        verifiedStatus: professionals.verifiedStatus,
+      })
       .from(professionals)
       .where(eq(professionals.userId, session.user.id))
       .limit(1)
     if (existing.length > 0) {
-      throw new Error('Ya tienes un registro profesional.')
+      const ex = existing[0]
+      if (ex.verifiedStatus === 'deleted') {
+        // ponytail: a previously deleted pro is re-registering — clear the
+        // tombstoned row so the insert below doesn't trip the UNIQUE/userId
+        // guard. Hard-delete + fresh insert is simpler than a partial UPDATE
+        // across all the JSON tag columns.
+        await db
+          .delete(professionals)
+          .where(eq(professionals.id, ex.id))
+      } else {
+        throw new Error('Ya tienes un registro profesional.')
+      }
     }
     try {
       await db.insert(professionals).values(
@@ -669,6 +683,30 @@ export const setAvailability = createServerFn({ method: 'POST' })
     return { ok: true, available: data.available }
   })
 
+// ponytail: self-serve account deletion = SOFT delete. We tombstone the pro
+// row (verifiedStatus='deleted') instead of hard-deleting it, so the admin
+// keeps an audit trail and the row can be resurrected on re-registration.
+// Because every public query filters verifiedStatus='verified', a deleted
+// pro immediately disappears from the directory, the random pick, and the
+// verified count — no extra WHERE clauses needed. We also force available=0
+// defensively (it's already filtered out, but keeps the row honest). The
+// auth user row is intentionally NOT removed, so the person can still log in
+// and re-register later if they change their mind.
+export const deleteMyProfessional = createServerFn({ method: 'POST' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const db = getDb()
+    await db
+      .update(professionals)
+      .set({ verifiedStatus: 'deleted', available: false })
+      .where(eq(professionals.userId, session.user.id))
+    return { ok: true }
+  },
+)
+
 export const amIAdmin = createServerFn({ method: 'GET' }).handler(
   async () => {
     const session = await getAuth().api.getSession({ headers: getHeaders() })
@@ -708,7 +746,13 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
       .from(professionals)
       .where(eq(professionals.userId, session.user.id))
       .limit(1)
-    return rows[0] ?? null
+    // ponytail: hide soft-deleted rows so a deleted user who logs back in
+    // sees the "complete your profile" CTA instead of a zombie panel (which
+    // would otherwise render the 'deleted' status as "Rechazado"). They can
+    // re-register via /profesional/completar, which resurrects the row.
+    // .at(0) is type-honest (T | undefined); rows[0] would type as always-present.
+    const r = rows.at(0)
+    return r && r.verifiedStatus !== 'deleted' ? r : null
   },
 )
 
