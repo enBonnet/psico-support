@@ -158,6 +158,52 @@ export const professionals = sqliteTable(
   ],
 )
 
+// ponytail: "Voces que acompañan" — short supportive audio clips recorded by
+// verified professionals, played back as an IG-stories-style tray. No expiry
+// (option B): clips live until the pro removes/replaces them. The cap is
+// enforced in app code (≤2 rows per pro where status IN pending,approved), not
+// by a CHECK — SQLite CHECK can't express "count per group". The status enum
+// mirrors professionals.verifiedStatus so the same review pattern applies.
+// 'rejected' rows are kept for audit (don't count toward the cap; pro can
+// delete them). Key prefix support-audio/ is stripped when building the public
+// /media/audio/... URL (see src/server/audio-stories.ts publicAudioUrl).
+export const audioStories = sqliteTable(
+  'audio_stories',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    professionalId: integer('professional_id')
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    audioKey: text('audio_key').notNull(),
+    // ponytail: stored for client <source> hints; the /media/audio/$ route
+    // also reads contentType from R2 httpMetadata (set at upload) so playback
+    // never needs a DB hit.
+    mime: text('mime').notNull(),
+    durationSec: integer('duration_sec').notNull(),
+    title: text('title'),
+    status: text('status', {
+      enum: ['pending', 'approved', 'rejected'],
+    })
+      .notNull()
+      .default('pending'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(
+      sql`(unixepoch())`,
+    ),
+  },
+  (table) => [
+    // ponytail: tray query filters status='approved'; the cap-count query
+    // filters by professionalId + status IN (pending, approved); the admin
+    // queue filters status='pending'. One composite covers all three hot paths
+    // (leading column professionalId serves the cap-count + per-pro tray
+    // fetches; status as second column still lets SQLite range-scan the
+    // approved/pending subsets efficiently for the admin + count queries).
+    index('audio_stories_pro_status_idx').on(
+      table.professionalId,
+      table.status,
+    ),
+  ],
+)
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),

@@ -6,6 +6,11 @@ import { AlertTriangle } from 'lucide-react'
 // phone number. NEVER invent a number here — only add a specific line with a
 // verified official source. Single safety message shared by every recursos
 // page so it cannot drift.
+//
+// The "Hablar con un profesional" link pins modality=remote: in a crisis the
+// person needs someone NOW, and only remote (WhatsApp) is on-demand —
+// in-person is brigades (location-based, not instantaneous). Pinning here
+// means a person in distress never lands on an empty in-person list.
 export function CrisisBanner() {
   return (
     <aside
@@ -24,6 +29,7 @@ export function CrisisBanner() {
         emergencias local.{' '}
         <Link
           to="/ayuda/profesionales"
+          search={{ modality: 'remote' }}
           className="font-medium text-[var(--medi-secondary)] underline"
         >
           Hablar con un profesional

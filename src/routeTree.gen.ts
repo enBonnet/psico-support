@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as PsicologosRouteImport } from './routes/psicologos'
 import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
 import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
+import { Route as ApoyoIndexRouteImport } from './routes/apoyo/index'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
 import { Route as RecursosRespirarRouteImport } from './routes/recursos/respirar'
 import { Route as RecursosReaccionesNormalesRouteImport } from './routes/recursos/reacciones-normales'
@@ -27,6 +29,7 @@ import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
+import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
 import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
@@ -38,6 +41,11 @@ const SocialRoute = SocialRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PsicologosRoute = PsicologosRouteImport.update({
+  id: '/psicologos',
+  path: '/psicologos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CuentaRoute = CuentaRouteImport.update({
@@ -63,6 +71,11 @@ const RecursosIndexRoute = RecursosIndexRouteImport.update({
 const AyudaIndexRoute = AyudaIndexRouteImport.update({
   id: '/ayuda/',
   path: '/ayuda/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApoyoIndexRoute = ApoyoIndexRouteImport.update({
+  id: '/apoyo/',
+  path: '/apoyo/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -122,6 +135,11 @@ const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   path: '/ayuda/profesionales/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MediaAudioSplatRoute = MediaAudioSplatRouteImport.update({
+  id: '/media/audio/$',
+  path: '/media/audio/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AyudaProfesionalesIdRoute = AyudaProfesionalesIdRouteImport.update({
   id: '/ayuda/profesionales/$id',
   path: '/ayuda/profesionales/$id',
@@ -137,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
+  '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -149,16 +168,19 @@ export interface FileRoutesByFullPath {
   '/recursos/reacciones-normales': typeof RecursosReaccionesNormalesRoute
   '/recursos/respirar': typeof RecursosRespirarRoute
   '/admin/': typeof AdminIndexRoute
+  '/apoyo/': typeof ApoyoIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
   '/recursos/': typeof RecursosIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
+  '/media/audio/$': typeof MediaAudioSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
+  '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -171,10 +193,12 @@ export interface FileRoutesByTo {
   '/recursos/reacciones-normales': typeof RecursosReaccionesNormalesRoute
   '/recursos/respirar': typeof RecursosRespirarRoute
   '/admin': typeof AdminIndexRoute
+  '/apoyo': typeof ApoyoIndexRoute
   '/ayuda': typeof AyudaIndexRoute
   '/recursos': typeof RecursosIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
+  '/media/audio/$': typeof MediaAudioSplatRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesById {
@@ -182,6 +206,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
   '/cuenta': typeof CuentaRoute
+  '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -194,10 +219,12 @@ export interface FileRoutesById {
   '/recursos/reacciones-normales': typeof RecursosReaccionesNormalesRoute
   '/recursos/respirar': typeof RecursosRespirarRoute
   '/admin/': typeof AdminIndexRoute
+  '/apoyo/': typeof ApoyoIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
   '/recursos/': typeof RecursosIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
+  '/media/audio/$': typeof MediaAudioSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRouteTypes {
@@ -206,6 +233,7 @@ export interface FileRouteTypes {
     | '/'
     | '/acerca-de'
     | '/cuenta'
+    | '/psicologos'
     | '/signup'
     | '/social'
     | '/profesional/completar'
@@ -218,16 +246,19 @@ export interface FileRouteTypes {
     | '/recursos/reacciones-normales'
     | '/recursos/respirar'
     | '/admin/'
+    | '/apoyo/'
     | '/ayuda/'
     | '/recursos/'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
+    | '/media/audio/$'
     | '/ayuda/profesionales/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/acerca-de'
     | '/cuenta'
+    | '/psicologos'
     | '/signup'
     | '/social'
     | '/profesional/completar'
@@ -240,16 +271,19 @@ export interface FileRouteTypes {
     | '/recursos/reacciones-normales'
     | '/recursos/respirar'
     | '/admin'
+    | '/apoyo'
     | '/ayuda'
     | '/recursos'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
+    | '/media/audio/$'
     | '/ayuda/profesionales'
   id:
     | '__root__'
     | '/'
     | '/acerca-de'
     | '/cuenta'
+    | '/psicologos'
     | '/signup'
     | '/social'
     | '/profesional/completar'
@@ -262,10 +296,12 @@ export interface FileRouteTypes {
     | '/recursos/reacciones-normales'
     | '/recursos/respirar'
     | '/admin/'
+    | '/apoyo/'
     | '/ayuda/'
     | '/recursos/'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
+    | '/media/audio/$'
     | '/ayuda/profesionales/'
   fileRoutesById: FileRoutesById
 }
@@ -273,6 +309,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcercaDeRoute: typeof AcercaDeRoute
   CuentaRoute: typeof CuentaRoute
+  PsicologosRoute: typeof PsicologosRoute
   SignupRoute: typeof SignupRoute
   SocialRoute: typeof SocialRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
@@ -285,10 +322,12 @@ export interface RootRouteChildren {
   RecursosReaccionesNormalesRoute: typeof RecursosReaccionesNormalesRoute
   RecursosRespirarRoute: typeof RecursosRespirarRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  ApoyoIndexRoute: typeof ApoyoIndexRoute
   AyudaIndexRoute: typeof AyudaIndexRoute
   RecursosIndexRoute: typeof RecursosIndexRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   AyudaProfesionalesIdRoute: typeof AyudaProfesionalesIdRoute
+  MediaAudioSplatRoute: typeof MediaAudioSplatRoute
   AyudaProfesionalesIndexRoute: typeof AyudaProfesionalesIndexRoute
 }
 
@@ -306,6 +345,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/psicologos': {
+      id: '/psicologos'
+      path: '/psicologos'
+      fullPath: '/psicologos'
+      preLoaderRoute: typeof PsicologosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cuenta': {
@@ -341,6 +387,13 @@ declare module '@tanstack/react-router' {
       path: '/ayuda'
       fullPath: '/ayuda/'
       preLoaderRoute: typeof AyudaIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/apoyo/': {
+      id: '/apoyo/'
+      path: '/apoyo'
+      fullPath: '/apoyo/'
+      preLoaderRoute: typeof ApoyoIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -420,6 +473,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/media/audio/$': {
+      id: '/media/audio/$'
+      path: '/media/audio/$'
+      fullPath: '/media/audio/$'
+      preLoaderRoute: typeof MediaAudioSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ayuda/profesionales/$id': {
       id: '/ayuda/profesionales/$id'
       path: '/ayuda/profesionales/$id'
@@ -441,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcercaDeRoute: AcercaDeRoute,
   CuentaRoute: CuentaRoute,
+  PsicologosRoute: PsicologosRoute,
   SignupRoute: SignupRoute,
   SocialRoute: SocialRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
@@ -453,10 +514,12 @@ const rootRouteChildren: RootRouteChildren = {
   RecursosReaccionesNormalesRoute: RecursosReaccionesNormalesRoute,
   RecursosRespirarRoute: RecursosRespirarRoute,
   AdminIndexRoute: AdminIndexRoute,
+  ApoyoIndexRoute: ApoyoIndexRoute,
   AyudaIndexRoute: AyudaIndexRoute,
   RecursosIndexRoute: RecursosIndexRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   AyudaProfesionalesIdRoute: AyudaProfesionalesIdRoute,
+  MediaAudioSplatRoute: MediaAudioSplatRoute,
   AyudaProfesionalesIndexRoute: AyudaProfesionalesIndexRoute,
 }
 export const routeTree = rootRouteImport

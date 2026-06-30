@@ -64,6 +64,13 @@
       "when": 1782775356238,
       "tag": "0008_right_swarm",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1782853958510,
+      "tag": "0009_slim_spencer_smythe",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { HeartPulse, LifeBuoy, Stethoscope } from 'lucide-react'
+import { HeartPulse, LifeBuoy, Stethoscope, Headphones } from 'lucide-react'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
 import { countVerifiedProfessionals } from '#/server/professionals'
@@ -47,12 +47,24 @@ function Landing() {
       </header>
 
       <nav className="mt-10 flex flex-col gap-4">
+      {/* ponytail: "Ahora" = immediate → straight to the remote directory
+          (WhatsApp is the only on-demand modality; in-person is brigades).
+          The modality-selection page (/ayuda) stays reachable via the Ayuda
+          nav tab for users who specifically want in-person brigades. */}
       <Link
-        to="/ayuda"
+        to="/ayuda/profesionales"
+        search={{ modality: 'remote' }}
         className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <LifeBuoy aria-hidden="true" className="size-5" />
         Necesito Ayuda Ahora
+      </Link>
+      <Link
+        to="/apoyo"
+        className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        <Headphones aria-hidden="true" className="size-5" />
+        Voces que acompañan
       </Link>
       <Link
         to="/recursos"

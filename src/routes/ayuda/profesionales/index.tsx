@@ -91,7 +91,7 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
     return seoHead({
       title:
         modality === 'remote'
-          ? 'Contención a Distancia — Psicólogos Verificados'
+          ? 'Asistencia a Distancia — Psicólogos Verificados'
           : 'Asistencia Presencial — Psicólogos Verificados',
       description:
         'Directorio de psicólogos verificados. Filtra por estado, ciudad o población y contacta directamente por WhatsApp.',
@@ -229,7 +229,7 @@ function ProfessionalsList() {
   const title =
     filters.modality === 'in_person'
       ? 'Asistencia Presencial'
-      : 'Contención a Distancia'
+      : 'Asistencia a Distancia'
 
   // ponytail: ciudades is estado-scoped. Cast the lookup to | undefined so
   // the ?? [] is type-honest — without noUncheckedIndexedAccess, TS thinks

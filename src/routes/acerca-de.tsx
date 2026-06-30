@@ -70,7 +70,7 @@ function AboutPage() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             Ofrecer apoyo presencial mediante brigadas en zonas críticas y
-            contención a distancia por WhatsApp, asegurando que quienes más lo
+            asistencia a distancia por WhatsApp, asegurando que quienes más lo
             necesitan encuentren ayuda de profesionales verificados.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
