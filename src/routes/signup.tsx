@@ -1,9 +1,22 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  redirect,
+  Link,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
+import { getCurrentUser } from '#/server/professionals'
 
 export const Route = createFileRoute('/signup')({
+  beforeLoad: async () => {
+    // ponytail: an authenticated user already has an account — creating
+    // another is pointless. Send them to the role-aware account hub. One
+    // server-fn round-trip; RoutePending covers the gap.
+    const user = await getCurrentUser()
+    if (user) throw redirect({ to: '/cuenta' })
+  },
   // ponytail: CSR-only — interactive form, no crawler value. Selective SSR
   // (ssr:false) instead of global spa.enabled so the profile route keeps its
   // SSR link previews. Server fns + auth still work via the worker RPC.

@@ -1,4 +1,9 @@
-import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import {
+  createFileRoute,
+  redirect,
+  Link,
+  useNavigate,
+} from '@tanstack/react-router'
 import { useRef, useState } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,6 +13,7 @@ import {
   registerSchema,
   registerStep1Schema,
   registerStep2Schema,
+  getCurrentUser,
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
@@ -28,6 +34,13 @@ import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
 
 export const Route = createFileRoute('/profesional/registro')({
+  beforeLoad: async () => {
+    // ponytail: an authenticated user already has an account, so the
+    // account-creation step of this form is redundant. Send them to the
+    // role-aware hub (a pro lands on their panel, a basic user on /cuenta).
+    const user = await getCurrentUser()
+    if (user) throw redirect({ to: '/cuenta' })
+  },
   // ponytail: CSR-only — multi-step professional registration form, no
   // crawler value. Server fns + auth still work via the worker RPC.
   ssr: false,

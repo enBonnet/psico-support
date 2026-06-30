@@ -7,6 +7,7 @@ import {
   registerStep2Schema,
   createProfessionalProfile,
   getCurrentUser,
+  getMyProfessional,
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
@@ -31,6 +32,12 @@ export const Route = createFileRoute('/profesional/completar')({
     if (!user) {
       throw redirect({ to: '/profesional/login' })
     }
+    // ponytail: the user already has a professional profile — the "complete
+    // your profile" form is redundant. Send them to their panel instead of
+    // letting them re-submit. getMyProfessional hides soft-deleted rows, so
+    // a deleted user still gets the form to re-register.
+    const existing = await getMyProfessional()
+    if (existing) throw redirect({ to: '/profesional/panel' })
   },
   // ponytail: CSR-only — auth-gated form, no crawler value. beforeLoad runs
   // client-side here (one getCurrentUser() round-trip); the pending skeleton
