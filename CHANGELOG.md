@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Cada herramienta termina con un CTA "Hablar con un profesional ahora" → `/ayuda/profesionales` (nunca es un callejón sin salida) y un banner de emergencia que apunta a servicios de emergencia locales + el directorio. **No existe un número de crisis nacional en Venezuela**, así que el banner no inventa ninguno: solo añadir una línea concreta con fuente oficial verificada. Componentes compartidos `CrisisBanner` y `ProCta` extraídos para que el mensaje de seguridad (descargo "no sustituye atención profesional") no derive entre páginas. Sin cambios de base de datos ni de SW (release compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
 
+### Changed
+- **Iconos en los CTA del inicio**: los botones "Necesito Ayuda Ahora" (LifeBuoy) y "Ofrezco Ayuda (Soy Psicólogo)" (Stethoscope) ahora llevan icono con el mismo espaciado (`gap-2`) que la nueva tarjeta "Herramientas de Autocuidado" (HeartPulse), unificando el lenguaje visual de las tres entradas del landing.
+
 ## [1.8.0] - 2026-06-30
 
 ### Added
