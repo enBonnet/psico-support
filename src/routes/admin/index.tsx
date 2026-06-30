@@ -13,6 +13,10 @@ import {
   countVerifiedProfessionals,
 } from '#/server/professionals'
 
+// ponytail: derived list type so the optimistic setQueryData stays typed
+// without exporting a DTO from the server module.
+type PendingList = Awaited<ReturnType<typeof listPending>>
+
 export const Route = createFileRoute('/admin/')({
   beforeLoad: async () => {
     // ponytail: use a server fn (reads request headers via __TSS_REQUEST__)
@@ -48,6 +52,28 @@ function AdminPage() {
       professionalId: number
       status: 'verified' | 'rejected'
     }) => reviewProfessional({ data: vars }),
+    onMutate: async (vars) => {
+      // ponytail: optimistic removal. D1 is eventually consistent across
+      // requests, so the post-mutation listPending refetch can still return
+      // the just-decided row as "pending" (the original "click twice" bug).
+      // Remove it from the cache now; onSuccess invalidates to reconcile.
+      await qc.cancelQueries({ queryKey: ['pending-professionals'] })
+      const prev = qc.getQueryData<PendingList>(['pending-professionals'])
+      qc.setQueryData<PendingList>(['pending-professionals'], (old) =>
+        old?.filter((p) => p.id !== vars.professionalId),
+      )
+      return { prev }
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prev) {
+        qc.setQueryData<PendingList>(['pending-professionals'], ctx.prev)
+      }
+      notify({
+        type: 'error',
+        title: 'No se pudo actualizar el estado',
+        body: 'Inténtalo de nuevo.',
+      })
+    },
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['pending-professionals'] })
       // ponytail: a verify/reject moves the verified pool size, so refresh the
@@ -68,12 +94,6 @@ function AdminPage() {
             : 'Quedó fuera de la lista pública.',
       })
     },
-    onError: () =>
-      notify({
-        type: 'error',
-        title: 'No se pudo actualizar el estado',
-        body: 'Inténtalo de nuevo.',
-      }),
   })
 
   const { data: users = [], isLoading: usersLoading } = useQuery({
