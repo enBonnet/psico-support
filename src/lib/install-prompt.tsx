@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from '@tanstack/react-router'
 import { Download, Share, X } from 'lucide-react'
 
 // ponytail: BeforeInstallPromptEvent isn't in the TS DOM lib (still
@@ -120,9 +121,12 @@ export function InstallCard() {
         <Download className="size-5 shrink-0 text-[var(--medi-secondary)]" />
       )}
       <div className="min-w-0 flex-1">
-        <p className="text-sm font-medium text-[var(--medi-primary)]">
+        <Link
+          to="/app"
+          className="text-sm font-medium text-[var(--medi-primary)] hover:underline"
+        >
           Instalar app
-        </p>
+        </Link>
         <p className="truncate text-xs text-[var(--medi-text-secondary)]">
           {ios
             ? 'Toca Compartir → Agregar a pantalla de inicio'

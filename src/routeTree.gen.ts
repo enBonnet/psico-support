@@ -9,10 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as YaRouteImport } from './routes/ya'
 import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
 import { Route as CuentaRouteImport } from './routes/cuenta'
+import { Route as AyudameRouteImport } from './routes/ayudame'
+import { Route as AppRouteImport } from './routes/app'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
@@ -33,6 +36,11 @@ import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
 import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
+const YaRoute = YaRouteImport.update({
+  id: '/ya',
+  path: '/ya',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SocialRoute = SocialRouteImport.update({
   id: '/social',
   path: '/social',
@@ -51,6 +59,16 @@ const PsicologosRoute = PsicologosRouteImport.update({
 const CuentaRoute = CuentaRouteImport.update({
   id: '/cuenta',
   path: '/cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AyudameRoute = AyudameRouteImport.update({
+  id: '/ayudame',
+  path: '/ayudame',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcercaDeRoute = AcercaDeRouteImport.update({
@@ -154,10 +172,13 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/app': typeof AppRoute
+  '/ayudame': typeof AyudameRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
+  '/ya': typeof YaRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
@@ -179,10 +200,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/app': typeof AppRoute
+  '/ayudame': typeof AyudameRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
+  '/ya': typeof YaRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
@@ -205,10 +229,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/app': typeof AppRoute
+  '/ayudame': typeof AyudameRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
+  '/ya': typeof YaRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
@@ -232,10 +259,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/acerca-de'
+    | '/app'
+    | '/ayudame'
     | '/cuenta'
     | '/psicologos'
     | '/signup'
     | '/social'
+    | '/ya'
     | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
@@ -257,10 +287,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/acerca-de'
+    | '/app'
+    | '/ayudame'
     | '/cuenta'
     | '/psicologos'
     | '/signup'
     | '/social'
+    | '/ya'
     | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
@@ -282,10 +315,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/acerca-de'
+    | '/app'
+    | '/ayudame'
     | '/cuenta'
     | '/psicologos'
     | '/signup'
     | '/social'
+    | '/ya'
     | '/profesional/completar'
     | '/profesional/login'
     | '/profesional/panel'
@@ -308,10 +344,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcercaDeRoute: typeof AcercaDeRoute
+  AppRoute: typeof AppRoute
+  AyudameRoute: typeof AyudameRoute
   CuentaRoute: typeof CuentaRoute
   PsicologosRoute: typeof PsicologosRoute
   SignupRoute: typeof SignupRoute
   SocialRoute: typeof SocialRoute
+  YaRoute: typeof YaRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
   ProfesionalPanelRoute: typeof ProfesionalPanelRoute
@@ -333,6 +372,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/ya': {
+      id: '/ya'
+      path: '/ya'
+      fullPath: '/ya'
+      preLoaderRoute: typeof YaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/social': {
       id: '/social'
       path: '/social'
@@ -359,6 +405,20 @@ declare module '@tanstack/react-router' {
       path: '/cuenta'
       fullPath: '/cuenta'
       preLoaderRoute: typeof CuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ayudame': {
+      id: '/ayudame'
+      path: '/ayudame'
+      fullPath: '/ayudame'
+      preLoaderRoute: typeof AyudameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/acerca-de': {
@@ -500,10 +560,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcercaDeRoute: AcercaDeRoute,
+  AppRoute: AppRoute,
+  AyudameRoute: AyudameRoute,
   CuentaRoute: CuentaRoute,
   PsicologosRoute: PsicologosRoute,
   SignupRoute: SignupRoute,
   SocialRoute: SocialRoute,
+  YaRoute: YaRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
   ProfesionalLoginRoute: ProfesionalLoginRoute,
   ProfesionalPanelRoute: ProfesionalPanelRoute,

@@ -9,6 +9,7 @@ import {
   like,
   count,
   sql,
+  inArray,
   DrizzleError,
 } from 'drizzle-orm'
 
@@ -758,7 +759,7 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
 
 const decisionSchema = z.object({
   professionalId: z.number(),
-  status: z.enum(['verified', 'rejected']),
+  status: z.enum(['verified', 'rejected', 'disabled']),
 })
 
 export const reviewProfessional = createServerFn({ method: 'POST' })
@@ -769,9 +770,18 @@ export const reviewProfessional = createServerFn({ method: 'POST' })
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
+    // ponytail: disabling forces available=false so the row stays honest (it's
+    // already filtered out of public queries by verifiedStatus, but this keeps
+    // the flag consistent + matches the soft-delete pattern). Re-enabling
+    // leaves available untouched — the pro must deliberately opt back in via
+    // the panel toggle, so a reactivated pro never auto-reappears as available.
     await db
       .update(professionals)
-      .set({ verifiedStatus: data.status })
+      .set(
+        data.status === 'disabled'
+          ? { verifiedStatus: data.status, available: false }
+          : { verifiedStatus: data.status },
+      )
       .where(eq(professionals.id, data.professionalId))
     return { ok: true }
   })
@@ -816,8 +826,18 @@ export const listPending = createServerFn({ method: 'GET' }).handler(
   },
 )
 
-export const listVerified = createServerFn({ method: 'GET' }).handler(
+// ponytail: admin's managed-pro roster — verified + disabled. Verified pros
+// can be suspended (credential doubts); disabled pros can be reactivated. Now
+// auth-gated (the old listVerified returned public-ish columns with no check,
+// but this one reveals who's suspended, which is admin-sensitive). The public
+// verified count stays a separate fn (countVerifiedProfessionals) since it
+// powers the landing hero stat.
+export const listManagedProfessionals = createServerFn({ method: 'GET' }).handler(
   async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
     const db = getDb()
     return db
       .select({
@@ -827,7 +847,8 @@ export const listVerified = createServerFn({ method: 'GET' }).handler(
         available: professionals.available,
       })
       .from(professionals)
-      .where(eq(professionals.verifiedStatus, 'verified'))
+      .where(inArray(professionals.verifiedStatus, ['verified', 'disabled']))
+      .orderBy(asc(professionals.name))
   },
 )
 

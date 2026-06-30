@@ -188,17 +188,25 @@ function PanelPage() {
               <span className="font-semibold text-green-700">Verificado</span>
             ) : me.verifiedStatus === 'pending' ? (
               <span className="font-semibold text-amber-700">En revisión</span>
+            ) : me.verifiedStatus === 'disabled' ? (
+              <span className="font-semibold text-red-700">Suspendido</span>
             ) : (
               <span className="font-semibold text-red-700">Rechazado</span>
             )}
           </p>
 
-          {!verified && (
-            <p className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] bg-amber-50/60 px-3 py-2 text-sm text-amber-800">
-              Tu credencial está en revisión. El interruptor se activará cuando
-              un administrador apruebe tu registro.
-            </p>
-          )}
+          {!verified &&
+            (me.verifiedStatus === 'disabled' ? (
+              <p className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] bg-red-50/60 px-3 py-2 text-sm text-red-800">
+                Tu cuenta está temporalmente suspendida mientras revisamos tu
+                información. Escríbenos a soporte para más detalle.
+              </p>
+            ) : (
+              <p className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] bg-amber-50/60 px-3 py-2 text-sm text-amber-800">
+                Tu credencial está en revisión. El interruptor se activará cuando
+                un administrador apruebe tu registro.
+              </p>
+            ))}
 
           <div
             className={`glass-card mt-10 p-8 text-center transition-colors ${

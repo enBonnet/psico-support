@@ -129,14 +129,17 @@ export const professionals = sqliteTable(
     // egreso upload. Null when none attached. The object lives in the MEDIA
     // bucket under certificates/{userId}/{uuid}.{ext}.
     certificateKey: text('certificate_key'),
-    // ponytail: 'deleted' is the soft-delete tombstone. No migration needed —
-    // the column is plain TEXT with no CHECK, and every public query filters
-    // verifiedStatus = 'verified', so a deleted pro auto-vanishes from the
-    // directory, random pick, and verified count. The auth user row is left
-    // intact (can re-register via /profesional/completar, which resurrects
-    // the tombstoned row).
+    // ponytail: 'deleted' is the soft-delete tombstone; 'disabled' is a
+    // temporary admin suspension (credential doubts — the pro was verified but
+    // is paused from providing service). No migration needed for either: the
+    // column is plain TEXT with no CHECK, and every public query filters
+    // verifiedStatus = 'verified', so a deleted OR disabled pro auto-vanishes
+    // from the directory, random pick, audio tray, and verified count. The auth
+    // user row is left intact in both cases (deleted can re-register via
+    // /profesional/completar, which resurrects the tombstoned row; disabled
+    // keeps their row and can be reactivated by an admin).
     verifiedStatus: text('verified_status', {
-      enum: ['pending', 'verified', 'rejected', 'deleted'],
+      enum: ['pending', 'verified', 'rejected', 'disabled', 'deleted'],
     })
       .notNull()
       .default('pending'),

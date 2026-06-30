@@ -11,6 +11,7 @@ import {
   listUsers,
   promoteToAdmin,
   countVerifiedProfessionals,
+  listManagedProfessionals,
 } from '#/server/professionals'
 import {
   listPendingStories,
@@ -21,6 +22,7 @@ import type { PendingStoryRow } from '#/server/audio-stories'
 // ponytail: derived list type so the optimistic setQueryData stays typed
 // without exporting a DTO from the server module.
 type PendingList = Awaited<ReturnType<typeof listPending>>
+type ManagedList = Awaited<ReturnType<typeof listManagedProfessionals>>
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: async () => {
@@ -112,6 +114,64 @@ function AdminPage() {
   const { data: verifiedCount } = useQuery({
     queryKey: ['verified-count'],
     queryFn: () => countVerifiedProfessionals(),
+  })
+
+  // ponytail: managed-pro roster (verified + disabled) for suspend/reactivate.
+  // Mirrors decide()'s optimistic pattern — D1 eventual consistency can briefly
+  // re-serve a pre-toggle status, so flip it in the cache now then invalidate.
+  const { data: managed = [], isLoading: managedLoading } = useQuery({
+    queryKey: ['managed-professionals'],
+    queryFn: () => listManagedProfessionals(),
+  })
+
+  const suspend = useMutation({
+    mutationFn: (vars: {
+      professionalId: number
+      status: 'verified' | 'disabled'
+    }) => reviewProfessional({ data: vars }),
+    onMutate: async (vars) => {
+      await qc.cancelQueries({ queryKey: ['managed-professionals'] })
+      const prev = qc.getQueryData<ManagedList>(['managed-professionals'])
+      qc.setQueryData<ManagedList>(['managed-professionals'], (old) =>
+        old?.map((p) =>
+          p.id === vars.professionalId
+            ? {
+                ...p,
+                verifiedStatus: vars.status,
+                // mirror the server: disable forces available=false
+                ...(vars.status === 'disabled' ? { available: false } : {}),
+              }
+            : p,
+        ),
+      )
+      return { prev }
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prev) {
+        qc.setQueryData<ManagedList>(['managed-professionals'], ctx.prev)
+      }
+      notify({
+        type: 'error',
+        title: 'No se pudo actualizar el estado',
+        body: 'Inténtalo de nuevo.',
+      })
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['managed-professionals'] })
+      // suspend/reactivate moves the verified pool size, refresh the stat.
+      qc.invalidateQueries({ queryKey: ['verified-count'] })
+      notify({
+        type: vars.status === 'disabled' ? 'warning' : 'success',
+        title:
+          vars.status === 'disabled'
+            ? 'Profesional suspendido'
+            : 'Profesional reactivado',
+        body:
+          vars.status === 'disabled'
+            ? 'Ya no aparece en la lista pública.'
+            : 'Vuelve a aparecer en la lista pública.',
+      })
+    },
   })
 
   const promote = useMutation({
@@ -329,6 +389,69 @@ function AdminPage() {
                   Rechazar
                 </button>
               </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* ── Profesionales (suspender / reactivar) ── */}
+      <h2 className="mt-10 border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
+        Profesionales
+      </h2>
+      <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
+        Suspende a un profesional verificado si tienes dudas con sus
+        credenciales. Queda fuera de la lista pública hasta que lo reactives.
+      </p>
+      {managedLoading ? (
+        <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
+          Cargando…
+        </p>
+      ) : managed.length === 0 ? (
+        <p className="glass-card-soft mt-2 p-4 text-center text-sm text-[var(--medi-text-secondary)]">
+          Sin profesionales para mostrar.
+        </p>
+      ) : (
+        <ul className="mt-3 flex flex-col gap-2 pb-6">
+          {managed.map((p) => (
+            <li
+              key={p.id}
+              className="glass-card flex flex-wrap items-center justify-between gap-3 p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-[var(--medi-text-primary)]">
+                  {p.name}
+                </p>
+                <p className="text-xs text-[var(--medi-text-secondary)]">
+                  {p.verifiedStatus === 'disabled'
+                    ? 'Suspendido'
+                    : p.available
+                      ? 'Disponible'
+                      : 'Verificado · fuera de turno'}
+                </p>
+              </div>
+              {p.verifiedStatus === 'disabled' ? (
+                <button
+                  type="button"
+                  disabled={suspend.isPending}
+                  onClick={() =>
+                    suspend.mutate({ professionalId: p.id, status: 'verified' })
+                  }
+                  className="min-h-10 shrink-0 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2 text-xs font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 disabled:opacity-60"
+                >
+                  Reactivar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={suspend.isPending}
+                  onClick={() =>
+                    suspend.mutate({ professionalId: p.id, status: 'disabled' })
+                  }
+                  className="glass-card-soft shrink-0 rounded-[var(--glass-radius-sm)] border border-amber-500 px-4 py-2 text-xs font-semibold text-amber-700 transition-all hover:translate-y-[-1px] disabled:opacity-60"
+                >
+                  Suspender
+                </button>
+              )}
             </li>
           ))}
         </ul>
