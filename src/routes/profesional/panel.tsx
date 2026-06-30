@@ -11,6 +11,10 @@ import {
   getCurrentUser,
 } from '#/server/professionals'
 
+// ponytail: direct support line to the admin. Constant, not env — mirrors the
+// SITE_URL convention in src/lib/seo.ts. wa.me wants digits only (no +).
+const SUPPORT_WHATSAPP = '56967024171'
+
 export const Route = createFileRoute('/profesional/panel')({
   beforeLoad: async () => {
     const user = await getCurrentUser()
@@ -185,6 +189,37 @@ function PanelPage() {
                 : 'Nadie te verá en la lista.'}
             </p>
           </div>
+
+          {(() => {
+            // ponytail: wa.me deep link with a pre-filled message that names
+            // the professional so the admin knows who's reaching out. Pure
+            // client-side — no server fn / DB column needed.
+            const supportText = encodeURIComponent(
+              `Hola, soy ${me.name} te escribo por medio de psicoayudaven.`,
+            )
+            const supportHref = `https://wa.me/${SUPPORT_WHATSAPP}?text=${supportText}`
+            return (
+              <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
+                <h2 className="text-sm font-semibold text-[var(--medi-text-primary)]">
+                  Soporte y sugerencias
+                </h2>
+                <p className="mt-1 text-sm text-[var(--medi-text-secondary)]">
+                  ¿Tienes una duda, sugerencia o problema? Escríbenos
+                  directamente.
+                </p>
+                <a
+                  href={supportHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  // ponytail: !text-white beats the unlayered `a { color }` in
+                  // styles.css (tw v4: unlayered beats layered utilities).
+                  className="mt-3 flex min-h-11 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+                >
+                  Escribir por WhatsApp
+                </a>
+              </section>
+            )
+          })()}
         </>
       )}
     </main>

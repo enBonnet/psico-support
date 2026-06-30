@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-06-29
+
+### Added
+- **Soporte y sugerencias para profesionales**: el panel del profesional (`/profesional/panel`) ahora incluye un acceso directo para contactar al equipo por WhatsApp con un mensaje pre-escrito (`Hola, soy {nombre} te escribo por medio de psicoayudaven.`). Aparece solo cuando el profesional tiene registro (usa su nombre guardado). Busca aumentar la transparencia y la confianza: canal directo para dudas, sugerencias o reportes de problemas. Sin cambios de base de datos ni de SW (compatible; se refresca con SWR + `skipWaiting`).
+
 ## [1.5.0] - 2026-06-29
 
 ### Added
