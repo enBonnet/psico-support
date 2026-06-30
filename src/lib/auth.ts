@@ -28,6 +28,23 @@ function buildAuth() {
       enabled: true,
     },
     plugins: [tanstackStartCookies()],
+    // ponytail: trust every loopback origin on any port. Dev servers roam
+    // across ports (vite :3000, wrangler :8787, proxies, tunnels) and Better
+    // Auth's CSRF check 403s any request whose Origin port differs from the
+    // Host it derives baseURL from — a constant source of local auth breakage.
+    // Wildcard patterns are matched by matchesOriginPattern via wildcardMatch.
+    // Safe unconditionally: a browser's Origin reflects the real initiating
+    // context, and localhost/127.0.0.1 are hardcoded to loopback, so a remote
+    // attacker cannot forge a loopback Origin against a public domain. No-op
+    // in prod (requests come from psicoayudaven.com). Works under both
+    // `npm run dev` and `wrangler dev` (no build-time DEV gate, which would
+    // mis-fire under the prod-bundle PWA test path).
+    trustedOrigins: [
+      'http://localhost:*',
+      'http://127.0.0.1:*',
+      'https://localhost:*',
+      'https://127.0.0.1:*',
+    ],
   })
 }
 
