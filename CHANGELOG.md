@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-06-30
+
+### Added
+- **Conteo de profesionales verificados en el inicio y el panel de admin**: la página principal (`/`) ahora muestra "Más de N profesionales verificados" debajo del subtítulo, como prueba social para quien llega al sitio. El número se redondea hacia abajo al múltiplo de 10 más cercano (p. ej. con 23 verificados dice "Más de 20") — es honesto (el pool sí es mayor que N) y estable frente a la variación de una unidad. La línea se oculta por completo cuando el claim redondeado es menor a 10 (pool pequeño o DB vacía/local sin datos), para no mostrar un hero "triste". El panel de administración (`/admin`) muestra el conteo exacto (sin redondear) debajo del título, junto a las validaciones pendientes; se actualiza al aprobar un profesional. Nueva función servidor pública `countVerifiedProfessionals` que hace un `COUNT(*) WHERE verifiedStatus = 'verified'` (1 fila, sin volcar la tabla). El landing lee la cuenta vía SSR (loader de la ruta, sin flash). Sin cambios de base de datos ni de SW (compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
 ## [1.6.0] - 2026-06-29
 
 ### Added

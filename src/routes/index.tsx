@@ -1,8 +1,13 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
+import { countVerifiedProfessionals } from '#/server/professionals'
 
 export const Route = createFileRoute('/')({
+  // ponytail: loader declared before head — declaring head first collapses
+  // the route's generic inference (gotcha #3). Landing stays SSR (default),
+  // so the count lands in the initial HTML: no flash, SEO-friendly.
+  loader: async () => ({ count: await countVerifiedProfessionals() }),
   head: () =>
     seoHead({
       title: 'Red de Apoyo Psicológico Venezuela',
@@ -14,6 +19,14 @@ export const Route = createFileRoute('/')({
 })
 
 function Landing() {
+  const { count } = Route.useLoaderData()
+  // ponytail: floor to nearest 10 for the "Más de N" marketing line — honest
+  // (the pool IS more than N) and stable across single-digit churn (adding one
+  // pro doesn't flip the hero text). Hide when the floored claim is < 10: a
+  // tiny pool reads worse than none, and "Más de 0" is nonsensical. Lower STEP
+  // to 5 for finer granularity once the directory grows.
+  const STEP = 10
+  const claim = Math.floor(count / STEP) * STEP
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col justify-between py-8">
       <header className="text-center">
@@ -25,6 +38,11 @@ function Landing() {
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
           Conectamos a personas afectadas con psicólogos verificados.
         </p>
+        {claim >= STEP && (
+          <p className="mt-1 text-sm font-medium text-[var(--medi-secondary)]">
+            Más de {claim} profesionales verificados
+          </p>
+        )}
       </header>
 
       <nav className="mt-10 flex flex-col gap-4">

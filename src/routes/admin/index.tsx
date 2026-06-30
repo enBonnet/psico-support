@@ -10,6 +10,7 @@ import {
   getCurrentUser,
   listUsers,
   promoteToAdmin,
+  countVerifiedProfessionals,
 } from '#/server/professionals'
 
 export const Route = createFileRoute('/admin/')({
@@ -49,6 +50,12 @@ function AdminPage() {
     }) => reviewProfessional({ data: vars }),
     onSuccess: (_data, vars) => {
       qc.invalidateQueries({ queryKey: ['pending-professionals'] })
+      // ponytail: a verify/reject moves the verified pool size, so refresh the
+      // stat too. Reject doesn't change it, but invalidating is idempotent and
+      // cheaper than branching on vars.status.
+      if (vars.status === 'verified') {
+        qc.invalidateQueries({ queryKey: ['verified-count'] })
+      }
       notify({
         type: vars.status === 'verified' ? 'success' : 'warning',
         title:
@@ -72,6 +79,14 @@ function AdminPage() {
   const { data: users = [], isLoading: usersLoading } = useQuery({
     queryKey: ['admin-users'],
     queryFn: () => listUsers(),
+  })
+
+  // ponytail: exact verified count for the admin (the landing shows a floored
+  // "Más de N" — admins need the precise number). Stale while the query loads;
+  // the em-dash placeholder avoids a jarring 0 flash.
+  const { data: verifiedCount } = useQuery({
+    queryKey: ['verified-count'],
+    queryFn: () => countVerifiedProfessionals(),
   })
 
   const promote = useMutation({
@@ -109,6 +124,13 @@ function AdminPage() {
         </button>
       </div>
       <div className="section-underline mt-2" />
+
+      <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
+        <span className="text-lg font-bold text-[var(--medi-primary)]">
+          {verifiedCount ?? '—'}
+        </span>{' '}
+        profesionales verificados
+      </p>
 
       {pendingLoading ? (
         <ul className="mt-6 flex flex-col gap-3 pb-6" aria-busy="true">

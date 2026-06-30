@@ -787,6 +787,20 @@ export const listVerified = createServerFn({ method: 'GET' }).handler(
   },
 )
 
+// ponytail: single-number count for the landing hero's social proof. Cheaper
+// than listVerified() (1 row, no per-row columns) and public/no-auth so the
+// SSR landing loader can call it freely. Caller hides the line when n === 0.
+export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const db = getDb()
+    const rows = await db
+      .select({ n: count() })
+      .from(professionals)
+      .where(eq(professionals.verifiedStatus, 'verified'))
+    return rows.at(0)?.n ?? 0
+  },
+)
+
 // ponytail: admin-gated user management for the "promote from panel" model.
 // listUsers feeds the admin UI; promoteToAdmin sets role='admin'. There is
 // intentionally no demote action — promote-only means an admin can never
