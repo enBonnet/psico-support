@@ -248,6 +248,39 @@ export const audioStories = sqliteTable(
   ],
 )
 
+// ponytail: optional additional support documents a pro attaches alongside
+// the main título/certificado de egreso (certificateKey) — extra certificates,
+// board credentials, specializations, anything that speeds verification. N per
+// pro (capped in app code, like audio_stories). Key prefix support-docs/ is
+// stripped when building the /media/document/... URL. Viewable by the owning
+// pro + admins (NOT public — personal credential docs, same trust as the main
+// certificate). ON DELETE CASCADE cleans up if a pro row is hard-deleted.
+export const professionalDocuments = sqliteTable(
+  'professional_documents',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    professionalId: integer('professional_id')
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    // ponytail: R2 object key: support-docs/{professionalId}/{uuid}.{ext}.
+    docKey: text('doc_key').notNull(),
+    // ponytail: stored for client <object>/<img> hints; the /media/document/$
+    // route also reads contentType from R2 httpMetadata (set at upload).
+    mime: text('mime').notNull(),
+    // ponytail: original filename, shown in the panel/admin list. Nullable
+    // because older rows / programmatic uploads may omit it.
+    name: text('name'),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(
+      sql`(unixepoch())`,
+    ),
+  },
+  (table) => [
+    // ponytail: the panel list + admin per-pro fetch both filter by
+    // professional_id; one index covers them.
+    index('professional_documents_pro_idx').on(table.professionalId),
+  ],
+)
+
 // ponytail: clinical follow-up (seguimiento) entries written by a professional
 // about a person who asked for support. PRIVATE to the owning pro: every query
 // scopes WHERE professional_id = <my pro id> derived from the session — there is

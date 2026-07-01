@@ -21,10 +21,12 @@ import {
   FieldShell,
   SectionHeader,
   CertificateInput,
+  SupportDocsInput,
   collectFormErrors,
   formatWhatsapp,
   inputCls,
 } from '#/components/professional-form'
+import type { SupportDocValue } from '#/components/professional-form'
 
 export const Route = createFileRoute('/profesional/completar')({
   beforeLoad: async () => {
@@ -73,6 +75,7 @@ function CompletarPage() {
       whatsappCountry: '',
       whatsapp: '',
       certificate: null as { data: string; type: string } | null,
+      supportDocs: [] as SupportDocValue[],
     },
     validators: {
       onChange: ({ value }) => {
@@ -291,6 +294,20 @@ function CompletarPage() {
               errors={field.state.meta.errors}
             >
               <CertificateInput
+                value={field.state.value}
+                onChange={(v) => field.handleChange(v)}
+              />
+            </FieldShell>
+          )}
+        </form.Field>
+
+        <form.Field name="supportDocs">
+          {(field) => (
+            <FieldShell
+              label="Documentos adicionales (opcional)"
+              errors={field.state.meta.errors}
+            >
+              <SupportDocsInput
                 value={field.state.value}
                 onChange={(v) => field.handleChange(v)}
               />

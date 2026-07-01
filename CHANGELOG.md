@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.14.0] - 2026-06-30
+
+### Added
+- **Documentos de apoyo (certificados adicionales)**: los profesionales pueden adjuntar **varios documentos adicionales** además del título/certificado de egreso — credenciales, especializaciones, constancias de colegiación, lo que acelere la verificación. Repetible (hasta 6), mismo PDF/imagen + 5 MB por archivo que el certificado principal.
+  - Disponible en el **registro** (`/profesional/registro` y `/profesional/completar`) y, como el resto de propiedades editables, se gestiona desde el **panel** (`/profesional/panel` → "Documentos de apoyo"): subir, ver y eliminar, con conteo `N/6`.
+  - El **admin** ve cada documento como un enlace en la ficha de revisión (junto al certificado principal).
+  - Nueva tabla `professional_documents` (migración `0015`, aditiva, no breaking). R2 bajo `support-docs/{professionalId}/{uuid}.{ext}`.
+  - Ruta `/media/document/$` **owner-or-admin**: el profesional ve los suyos desde el panel; el admin, desde la ficha. No públicos (son credenciales personales, como el certificado principal). `Cache-Control: private`.
+  - Subida **best-effort** en el registro (un fallo de almacenamiento nunca bloquea el alta, igual que el certificado principal).
+
+### Deploy (esta release incluye migración)
+- `npx wrangler d1 migrations apply psico-support-db --remote` **y** `--local` (gotcha #1 — `npm run deploy` **no** aplica migraciones). Migración `0015` (tabla `professional_documents`) — aditiva, **no breaking**.
+- `npx wrangler d1 migrations list psico-support-db --remote` para confirmar que no queda nada pendiente.
+- `npm version minor` ya aplicado (1.13.1 → 1.14.0). Sin bump del cache del SW (release compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
 ## [1.13.1] - 2026-06-30
 
 ### Added

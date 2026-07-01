@@ -20,6 +20,12 @@ import {
   removeMyAvatar,
   updateMySocials,
   updateMyProfile,
+  listMySupportDocs,
+  addMySupportDoc,
+  removeMySupportDoc,
+  SUPPORT_DOC_MAX,
+  CERTIFICATE_MIME,
+  CERTIFICATE_MAX_BYTES,
   COMMON_TIMEZONES,
   defaultTimezoneForCountry,
   WEEKDAY_LABEL_ES,
@@ -34,6 +40,7 @@ import {
 } from '#/server/professionals'
 import type {
   AvatarMime,
+  CertificateMime,
   ProfileEditInput,
   ScheduleSlot,
   AvailabilityMode,
@@ -220,6 +227,7 @@ function PanelPage() {
           <ProfileSection me={me} />
           <AvatarSection me={me} />
           <SocialsSection me={me} />
+          <MySupportDocsSection />
 
           {/* ── Seguimiento clínico ── */}
           <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
@@ -552,6 +560,156 @@ const AVAILABILITY_MODE_OPTIONS: { value: AvailabilityMode; label: string }[] = 
   { value: 'scheduled', label: 'Por horario' },
   { value: 'inactive', label: 'No disponible' },
 ]
+
+// ponytail: additional support docs manager (repeatable). Same base64 → R2 path
+// as the avatar upload; same PDF/image mimes + 5MB cap as the main certificate.
+// NOT gated on verified — pending pros attach these to speed verification. The
+// server re-checks the cap; a race just produces a friendly error.
+const SUPPORT_DOC_MIME_SET = new Set<string>(CERTIFICATE_MIME)
+const SUPPORT_DOC_ACCEPT = '.pdf,.jpg,.jpeg,image/jpeg,image/png,image/webp'
+
+function MySupportDocsSection() {
+  const qc = useQueryClient()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const { data: docs = [] } = useQuery({
+    queryKey: ['my-support-docs'],
+    queryFn: () => listMySupportDocs(),
+  })
+
+  const upload = useMutation({
+    mutationFn: (vars: { data: string; type: CertificateMime; name: string }) =>
+      addMySupportDoc({ data: vars }),
+    onSuccess: () => {
+      notify({ type: 'success', title: 'Documento guardado' })
+      qc.invalidateQueries({ queryKey: ['my-support-docs'] })
+    },
+    onError: (err: Error) =>
+      notify({
+        type: 'error',
+        title: 'No se pudo subir el documento',
+        body: err.message,
+      }),
+  })
+
+  const del = useMutation({
+    mutationFn: (id: number) => removeMySupportDoc({ data: { id } }),
+    onSuccess: () => {
+      notify({ type: 'success', title: 'Documento eliminado' })
+      qc.invalidateQueries({ queryKey: ['my-support-docs'] })
+    },
+    onError: () =>
+      notify({
+        type: 'error',
+        title: 'No se pudo eliminar',
+        body: 'Inténtalo de nuevo.',
+      }),
+  })
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return
+    if (!SUPPORT_DOC_MIME_SET.has(file.type)) {
+      notify({
+        type: 'error',
+        title: 'Formato no válido',
+        body: 'Solo PDF, JPG, PNG o WEBP.',
+      })
+      return
+    }
+    if (file.size > CERTIFICATE_MAX_BYTES) {
+      notify({ type: 'error', title: 'Archivo muy grande', body: 'Máximo 5 MB.' })
+      return
+    }
+    // ponytail: read as data URL, strip the "data:<mime>;base64," prefix so the
+    // server gets raw b64 (same as the avatar upload + readFileAsCertificate).
+    const data = await new Promise<string | null>((resolve) => {
+      const reader = new FileReader()
+      reader.onerror = () => resolve(null)
+      reader.onload = () => {
+        const result = String(reader.result ?? '')
+        const comma = result.indexOf(',')
+        resolve(comma >= 0 ? result.slice(comma + 1) : result)
+      }
+      reader.readAsDataURL(file)
+    })
+    if (!data) {
+      notify({ type: 'error', title: 'No se pudo leer el archivo.' })
+      return
+    }
+    upload.mutate({
+      data,
+      type: file.type as CertificateMime,
+      name: file.name,
+    })
+    if (inputRef.current) inputRef.current.value = ''
+  }
+
+  const atCap = docs.length >= SUPPORT_DOC_MAX
+
+  return (
+    <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-[var(--medi-text-primary)]">
+          Documentos de apoyo
+        </h2>
+        <span className="text-xs font-medium text-[var(--medi-text-secondary)]">
+          {docs.length}/{SUPPORT_DOC_MAX}
+        </span>
+      </div>
+      <p className="mt-1 text-sm text-[var(--medi-text-secondary)]">
+        Certificados o credenciales adicionales que aceleren tu verificación.
+      </p>
+
+      {docs.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-2">
+          {docs.map((d) => (
+            <li
+              key={d.id}
+              className="flex items-center justify-between gap-2 rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] bg-white/50 p-3"
+            >
+              <a
+                href={d.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-w-0 truncate text-sm font-medium text-[var(--medi-secondary)] hover:underline"
+              >
+                {d.name ?? 'Documento'}
+              </a>
+              <button
+                type="button"
+                onClick={() => del.mutate(d.id)}
+                disabled={del.isPending}
+                className="shrink-0 text-xs font-medium text-red-600 hover:underline disabled:opacity-60"
+              >
+                Quitar
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={SUPPORT_DOC_ACCEPT}
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0])}
+      />
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={atCap || upload.isPending}
+        className="glass-pill mt-3 rounded-[var(--glass-radius-pill)] px-3 py-1.5 text-xs font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] disabled:opacity-60"
+      >
+        {upload.isPending
+          ? 'Subiendo…'
+          : atCap
+            ? 'Límite alcanzado'
+            : 'Añadir documento'}
+      </button>
+    </section>
+  )
+}
 
 // ponytail: three-state availability (F1). Replaces the old ON/OFF toggle.
 // 'always'/'inactive' are one-tap; 'scheduled' reveals a weekly grid of

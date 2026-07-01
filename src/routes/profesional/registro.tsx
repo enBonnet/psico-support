@@ -27,9 +27,11 @@ import {
   FieldShell,
   SectionHeader,
   CertificateInput,
+  SupportDocsInput,
   formatWhatsapp,
   inputCls,
 } from '#/components/professional-form'
+import type { SupportDocValue } from '#/components/professional-form'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
 
@@ -148,6 +150,7 @@ function RegisterPage() {
       whatsappCountry: '',
       whatsapp: '',
       certificate: null as { data: string; type: string } | null,
+      supportDocs: [] as SupportDocValue[],
     },
     validators: {
       onChange: ({ value }) => {
@@ -467,6 +470,20 @@ function RegisterPage() {
                   errors={field.state.meta.errors}
                 >
                   <CertificateInput
+                    value={field.state.value}
+                    onChange={(v) => field.handleChange(v)}
+                  />
+                </FieldShell>
+              )}
+            </form.Field>
+
+            <form.Field name="supportDocs">
+              {(field) => (
+                <FieldShell
+                  label="Documentos adicionales (opcional)"
+                  errors={field.state.meta.errors}
+                >
+                  <SupportDocsInput
                     value={field.state.value}
                     onChange={(v) => field.handleChange(v)}
                   />

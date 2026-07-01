@@ -10,11 +10,16 @@ import {
   count,
   sql,
   ne,
+  inArray,
   DrizzleError,
 } from 'drizzle-orm'
 
 import { getDb, getR2 } from '#/db'
-import { professionals, user as userTable } from '#/db/schema'
+import {
+  professionals,
+  professionalDocuments,
+  user as userTable,
+} from '#/db/schema'
 import { getAuth, isAdminEmail } from '#/lib/auth'
 import {
   PAIS_OPTIONS,
@@ -103,6 +108,90 @@ async function uploadCertificate(
     httpMetadata: { contentType: cert.type },
   })
   return key
+}
+
+// ── Support documents (additional certificates / support docs) ──────────────
+// ponytail: extra optional docs a pro attaches beyond the single título
+// (certificateKey) — additional certificates, board credentials, specializations.
+// N per pro (capped), stored as their own table keyed by professionalId. Same
+// base64 → R2 transport + same PDF/image mimes as the main certificate. The cap
+// is enforced in app code (no SQLite CHECK for "count per group", like audios).
+export const SUPPORT_DOC_KEY_PREFIX = 'support-docs/'
+export const SUPPORT_DOC_MAX = 6
+
+// ponytail: reuse the certificate mime set + size cap — these are the same kind
+// of credential document, just additional ones.
+export const supportDocSchema = certificateSchema.extend({
+  name: z.string().trim().max(180).optional(),
+})
+export type SupportDocInput = z.infer<typeof supportDocSchema>
+
+// ponytail: pure helper — builds the playback URL from a stored R2 key. Mirrors
+// publicCertificateUrl. The /media/document/$ route re-adds the prefix and is
+// owner-or-admin gated (unlike the admin-only certificate route, the pro sees
+// their own docs from the panel).
+export function publicSupportDocUrl(docKey: string): string {
+  const suffix = docKey.startsWith(SUPPORT_DOC_KEY_PREFIX)
+    ? docKey.slice(SUPPORT_DOC_KEY_PREFIX.length)
+    : docKey
+  return `/media/document/${suffix}`
+}
+
+// ponytail: upload one support doc to R2. Keyed by professionalId (matches the
+// table FK + the audio-stories keying convention), not userId. Returns the row
+// fields the insert needs.
+async function uploadSupportDoc(
+  proId: number,
+  doc: SupportDocInput,
+): Promise<{ docKey: string; mime: string; name: string | null }> {
+  const ext = CERT_EXT[doc.type]
+  const key = `${SUPPORT_DOC_KEY_PREFIX}${proId}/${crypto.randomUUID()}.${ext}`
+  await getR2().put(key, base64ToBytes(doc.data), {
+    httpMetadata: { contentType: doc.type },
+  })
+  return { docKey: key, mime: doc.type, name: doc.name?.trim() || null }
+}
+
+// ponytail: upload + insert N support docs for a pro. Best-effort per doc (a
+// single R2/DB hiccup skips that doc, never blocks registration) — same
+// philosophy as the main certificate upload. Unused on the panel path (the
+// panel uploads one-at-a-time via addMySupportDoc).
+async function persistSupportDocs(
+  proId: number,
+  docs: SupportDocInput[] | undefined,
+): Promise<void> {
+  if (!docs || docs.length === 0) return
+  const db = getDb()
+  const rows: { docKey: string; mime: string; name: string | null }[] = []
+  for (const doc of docs.slice(0, SUPPORT_DOC_MAX)) {
+    try {
+      rows.push(await uploadSupportDoc(proId, doc))
+    } catch (err) {
+      console.error('[supportDocs] upload failed for one doc:', err)
+    }
+  }
+  if (rows.length === 0) return
+  try {
+    await db.insert(professionalDocuments).values(
+      rows.map((r) => ({
+        professionalId: proId,
+        docKey: r.docKey,
+        mime: r.mime,
+        name: r.name,
+      })),
+    )
+  } catch (err) {
+    // ponytail: clean up the orphan R2 objects so a failed bulk insert doesn't
+    // leak storage (the rows are the source of truth).
+    for (const r of rows) {
+      try {
+        await getR2().delete(r.docKey)
+      } catch {
+        /* best-effort */
+      }
+    }
+    console.error('[supportDocs] insert failed:', err)
+  }
 }
 
 // ── Avatar ──────────────────────────────────────────────────────────────────
@@ -786,6 +875,13 @@ const registerStep2Object = z.object({
     .min(8, 'WhatsApp inválido')
     .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
   certificate: certificateSchema.nullable().optional(),
+  // ponytail: additional optional certificates / support docs (repeatable).
+  // Same PDF/image payload as `certificate`; capped client + server side.
+  supportDocs: z
+    .array(supportDocSchema)
+    .max(SUPPORT_DOC_MAX, `Máximo ${SUPPORT_DOC_MAX} documentos.`)
+    .optional()
+    .default([]),
 })
 
 // ponytail: step 2 schema validates only step-2 fields.
@@ -825,6 +921,14 @@ export const registerSchema = z
       .min(8, 'WhatsApp inválido')
       .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
     certificate: certificateSchema.nullable().optional(),
+    // ponytail: additional certificates / support docs. Mirrors the step-2
+    // field; kept in sync manually (registerSchema is a separate object, not
+    // an extend of step2Object, to preserve its name/email/password fields).
+    supportDocs: z
+      .array(supportDocSchema)
+      .max(SUPPORT_DOC_MAX, `Máximo ${SUPPORT_DOC_MAX} documentos.`)
+      .optional()
+      .default([]),
   })
   .superRefine(refineProfessional)
 
@@ -954,6 +1058,14 @@ export const registerProfessional = createServerFn({ method: 'POST' })
         'No pudimos guardar tu registro. Revisa los datos e inténtalo de nuevo. Si persiste, escríbenos.',
       )
     }
+    // ponytail: resolve the numeric pro id once for the credential + support
+    // doc uploads (both are post-insert, best-effort).
+    const proIdRow = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(eq(professionals.userId, userId))
+      .limit(1)
+    const proId = proIdRow.at(0)?.id
     // ponytail: optional cert upload runs AFTER the row exists so a failed
     // upload never blocks registration. Best-effort — log + carry on without
     // the cert if R2 rejects (the pro still registers via their número de
@@ -968,6 +1080,11 @@ export const registerProfessional = createServerFn({ method: 'POST' })
       } catch (err) {
         console.error('[registerProfessional] certificate upload failed:', err)
       }
+    }
+    // ponytail: additional support docs (repeatable). Best-effort, same as the
+    // main cert — a storage hiccup never blocks the registration.
+    if (proId !== undefined) {
+      await persistSupportDocs(proId, data.supportDocs)
     }
     return { ok: true, userId }
   })
@@ -1005,10 +1122,16 @@ export const createProfessionalProfile = createServerFn({ method: 'POST' })
         throw new Error('Ya tienes un registro profesional.')
       }
     }
+    let proId: number | undefined
     try {
-      await db.insert(professionals).values(
-        buildProValues({ ...data, name: session.user.name }, session.user.id),
-      )
+      const inserted = await db
+        .insert(professionals)
+        .values(
+          buildProValues({ ...data, name: session.user.name }, session.user.id),
+        )
+        .returning({ id: professionals.id })
+      // ponytail: capture the new pro id for the support-docs upload below.
+      proId = inserted.at(0)?.id
     } catch (err) {
       if (err instanceof DrizzleError && /NOT NULL/i.test(err.message)) {
         console.error(
@@ -1038,6 +1161,10 @@ export const createProfessionalProfile = createServerFn({ method: 'POST' })
           err,
         )
       }
+    }
+    // ponytail: additional support docs (repeatable), best-effort.
+    if (proId !== undefined) {
+      await persistSupportDocs(proId, data.supportDocs)
     }
     return { ok: true }
   })
@@ -1282,6 +1409,158 @@ export const removeMyAvatar = createServerFn({ method: 'POST' }).handler(
   },
 )
 
+// ── Support documents: pro manages their own (additional certs / support docs)
+// ponytail: list/add/remove for the panel's "Documentos de apoyo" section.
+// Ownership is enforced by selecting on userId → professionals.id (never trust
+// the client to pass a pro id). Unlike audio, a pending/rejected pro CAN manage
+// these (the docs are FOR verification — they should be attachable pre-verify).
+
+export type MySupportDoc = {
+  id: number
+  mime: string
+  name: string | null
+  url: string
+  createdAt: Date | null
+}
+
+export const listMySupportDocs = createServerFn({ method: 'GET' }).handler(
+  async () => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) return []
+    const db = getDb()
+    const proRow = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(eq(professionals.userId, session.user.id))
+      .limit(1)
+    const pro = proRow.at(0)
+    if (!pro) return []
+    const rows = await db
+      .select({
+        id: professionalDocuments.id,
+        docKey: professionalDocuments.docKey,
+        mime: professionalDocuments.mime,
+        name: professionalDocuments.name,
+        createdAt: professionalDocuments.createdAt,
+      })
+      .from(professionalDocuments)
+      .where(eq(professionalDocuments.professionalId, pro.id))
+      .orderBy(desc(professionalDocuments.createdAt))
+    // ponytail: never leak the raw R2 key; only the resolved playback URL.
+    return rows.map((r) => ({
+      id: r.id,
+      mime: r.mime,
+      name: r.name,
+      url: publicSupportDocUrl(r.docKey),
+      createdAt: r.createdAt,
+    }))
+  },
+)
+
+// ponytail: reuse the certificate payload cap; support docs are the same kind
+// of file. name is the original filename (sent by the client from File.name).
+const addSupportDocSchema = supportDocSchema
+
+export const addMySupportDoc = createServerFn({ method: 'POST' })
+  .validator(addSupportDocSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión para subir un documento.')
+    }
+    const db = getDb()
+    const proRow = await db
+      .select({ id: professionals.id })
+      .from(professionals)
+      .where(eq(professionals.userId, session.user.id))
+      .limit(1)
+    const pro = proRow.at(0)
+    if (!pro) {
+      throw new Error('Completa tu perfil profesional antes de subir documentos.')
+    }
+    // ponytail: cap check pre-upload so we never write past the limit (no
+    // SQLite CHECK for "count per group", same as audios).
+    const countRows = await db
+      .select({ n: count() })
+      .from(professionalDocuments)
+      .where(eq(professionalDocuments.professionalId, pro.id))
+    if ((countRows.at(0)?.n ?? 0) >= SUPPORT_DOC_MAX) {
+      throw new Error(
+        `Ya tienes ${SUPPORT_DOC_MAX} documentos. Elimina uno para subir otro.`,
+      )
+    }
+    const uploaded = await uploadSupportDoc(pro.id, data)
+    try {
+      const inserted = await db
+        .insert(professionalDocuments)
+        .values({
+          professionalId: pro.id,
+          docKey: uploaded.docKey,
+          mime: uploaded.mime,
+          name: uploaded.name,
+        })
+        .returning({ id: professionalDocuments.id })
+      return { ok: true as const, id: inserted[0]?.id }
+    } catch (err) {
+      // ponytail: clean up the orphan R2 object on insert failure.
+      try {
+        await getR2().delete(uploaded.docKey)
+      } catch {
+        /* best-effort */
+      }
+      console.error('[addMySupportDoc] insert failed:', err)
+      throw new Error(
+        'No pudimos guardar el documento. Inténtalo de nuevo en unos segundos.',
+      )
+    }
+  },
+)
+
+const removeSupportDocSchema = z.object({ id: z.number().int().positive() })
+
+export const removeMySupportDoc = createServerFn({ method: 'POST' })
+  .validator(removeSupportDocSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const db = getDb()
+    // ponytail: ownership via join to professionals.userId — never trust the
+    // client's pro id. Returns docKey in the same query to delete the R2 object.
+    const rows = await db
+      .select({
+        id: professionalDocuments.id,
+        docKey: professionalDocuments.docKey,
+      })
+      .from(professionalDocuments)
+      .innerJoin(
+        professionals,
+        eq(professionals.id, professionalDocuments.professionalId),
+      )
+      .where(
+        and(
+          eq(professionalDocuments.id, data.id),
+          eq(professionals.userId, session.user.id),
+        ),
+      )
+      .limit(1)
+    const row = rows.at(0)
+    if (!row) {
+      throw new Error('No se encontró ese documento.')
+    }
+    await db
+      .delete(professionalDocuments)
+      .where(eq(professionalDocuments.id, row.id))
+    try {
+      await getR2().delete(row.docKey)
+    } catch (err) {
+      console.error('[removeMySupportDoc] R2 delete failed:', err)
+    }
+    return { ok: true as const }
+  },
+)
+
 // ponytail: pro edits their own social handles. Normalize server-side so the
 // stored form is always bare handles (no @, no URL) regardless of what the
 // client sent; empty → null so a cleared field is cleanly absent, not "".
@@ -1469,6 +1748,26 @@ export const listAllProfessionals = createServerFn({ method: 'GET' })
         .innerJoin(userTable, eq(userTable.id, professionals.userId))
         .where(where),
     ])
+    // ponytail: one extra query (not N+1) for the page's support docs, grouped
+    // by pro id so the admin card can link each doc alongside the main cert.
+    const proIds = rows.map((r) => r.id)
+    const docRows = proIds.length
+      ? await db
+          .select({
+            proId: professionalDocuments.professionalId,
+            docKey: professionalDocuments.docKey,
+            name: professionalDocuments.name,
+          })
+          .from(professionalDocuments)
+          .where(inArray(professionalDocuments.professionalId, proIds))
+          .orderBy(desc(professionalDocuments.createdAt))
+      : []
+    const docsByPro = new Map<number, { url: string; name: string | null }[]>()
+    for (const d of docRows) {
+      const list = docsByPro.get(d.proId) ?? []
+      list.push({ url: publicSupportDocUrl(d.docKey), name: d.name })
+      docsByPro.set(d.proId, list)
+    }
     // ponytail: parse the JSON tag columns once, server-side, so the admin
     // client gets clean arrays.
     return {
@@ -1491,6 +1790,7 @@ export const listAllProfessionals = createServerFn({ method: 'GET' })
         modality: r.modality,
         whatsapp: r.whatsapp,
         certificateKey: r.certificateKey,
+        supportDocs: docsByPro.get(r.id) ?? [],
         userEmail: r.userEmail,
         createdAt: r.createdAt,
       })),

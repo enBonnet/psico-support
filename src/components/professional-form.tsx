@@ -244,7 +244,7 @@ export function CertificateInput({
 // natively via <img>; PDFs via <object> with an "Abrir" <a> fallback for
 // browsers (esp. mobile) that can't embed PDF inline. Capped heights keep the
 // form scrollable on small screens.
-function CertificatePreview({
+export function CertificatePreview({
   url,
   type,
 }: {
@@ -280,6 +280,119 @@ function CertificatePreview({
           Abrir documento
         </a>
       </object>
+    </div>
+  )
+}
+
+// ── Additional support documents (repeatable) ───────────────────────────────
+// ponytail: mirrors CertificateInput but manages an array. Same PDF/image mimes
+// + 5MB cap (duplicated locally — CertificateInput does the same; the server
+// re-validates). name is the original File.name so the panel/admin list shows a
+// readable label. value is the transport shape; the object URLs are a view-only
+// side-state kept in a parallel array (indices align because these forms only
+// mutate the array through this component).
+export const SUPPORT_DOC_MAX = 6
+
+export type SupportDocValue = CertificateValue & { name: string }
+
+export function SupportDocsInput({
+  value,
+  onChange,
+}: {
+  value: SupportDocValue[]
+  onChange: (v: SupportDocValue[]) => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const [previews, setPreviews] = useState<string[]>([])
+  const [error, setError] = useState<string | null>(null)
+
+  // ponytail: revoke every object URL on unmount to avoid leaks.
+  useEffect(() => {
+    return () => {
+      for (const p of previews) URL.revokeObjectURL(p)
+    }
+    // ponytail: deps intentionally empty — revoke only on real unmount.
+  }, [])
+
+  async function handleFile(file: File | undefined) {
+    if (!file) return
+    if (!CERT_ALLOWED.has(file.type)) {
+      setError('Solo PDF, JPG, PNG o WEBP.')
+      return
+    }
+    if (file.size > CERTIFICATE_MAX_BYTES) {
+      setError('El archivo supera los 5 MB.')
+      return
+    }
+    if (value.length >= SUPPORT_DOC_MAX) {
+      setError(`Máximo ${SUPPORT_DOC_MAX} documentos.`)
+      return
+    }
+    try {
+      const cert = await readFileAsCertificate(file)
+      const nextUrl = URL.createObjectURL(file)
+      onChange([...value, { ...cert, name: file.name }])
+      setPreviews((p) => [...p, nextUrl])
+      setError(null)
+      if (inputRef.current) inputRef.current.value = ''
+    } catch {
+      setError('No se pudo leer el archivo.')
+    }
+  }
+
+  function removeAt(i: number) {
+    const next = value.filter((_, idx) => idx !== i)
+    setPreviews((prev) => {
+      const url = prev[i]
+      if (url) URL.revokeObjectURL(url)
+      return prev.filter((_, idx) => idx !== i)
+    })
+    onChange(next)
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {value.length > 0 && (
+        <ul className="flex flex-col gap-3">
+          {value.map((doc, i) => {
+            const url = previews[i]
+            return (
+              <li key={`${doc.name}-${i}`} className="flex flex-col gap-1">
+                <div className="glass-input flex h-12 items-center justify-between gap-2 px-3">
+                  <span className="truncate text-sm text-[var(--medi-text-primary)]">
+                    ✓ {doc.name}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removeAt(i)}
+                    className="shrink-0 text-sm font-medium text-[var(--medi-secondary)]"
+                  >
+                    Quitar
+                  </button>
+                </div>
+                {url && <CertificatePreview url={url} type={doc.type} />}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      {value.length < SUPPORT_DOC_MAX && (
+        <input
+          ref={inputRef}
+          type="file"
+          accept={CERTIFICATE_ACCEPT}
+          onChange={(e) => handleFile(e.target.files?.[0])}
+          className="glass-input h-12 w-full px-2 text-sm text-[var(--medi-text-secondary)]"
+        />
+      )}
+
+      {error && <span className="text-sm text-red-600">{error}</span>}
+      <span className="text-xs text-[var(--medi-text-secondary)]">
+        Documentos adicionales (certificados, credenciales, especializaciones).
+        PDF o imagen (JPG, PNG, WEBP). Máx. 5 MB cada uno, hasta{' '}
+        {SUPPORT_DOC_MAX} archivos. Acelera la verificación de tu perfil.
+      </span>
     </div>
   )
 }

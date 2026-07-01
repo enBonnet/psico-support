@@ -33,6 +33,7 @@ import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
+import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
 import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
 import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
 import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
@@ -161,6 +162,11 @@ const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   path: '/ayuda/profesionales/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MediaDocumentSplatRoute = MediaDocumentSplatRouteImport.update({
+  id: '/media/document/$',
+  path: '/media/document/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MediaCertificateSplatRoute = MediaCertificateSplatRouteImport.update({
   id: '/media/certificate/$',
   path: '/media/certificate/$',
@@ -216,6 +222,7 @@ export interface FileRoutesByFullPath {
   '/media/audio/$': typeof MediaAudioSplatRoute
   '/media/avatar/$': typeof MediaAvatarSplatRoute
   '/media/certificate/$': typeof MediaCertificateSplatRoute
+  '/media/document/$': typeof MediaDocumentSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesByTo {
@@ -247,6 +254,7 @@ export interface FileRoutesByTo {
   '/media/audio/$': typeof MediaAudioSplatRoute
   '/media/avatar/$': typeof MediaAvatarSplatRoute
   '/media/certificate/$': typeof MediaCertificateSplatRoute
+  '/media/document/$': typeof MediaDocumentSplatRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRoutesById {
@@ -279,6 +287,7 @@ export interface FileRoutesById {
   '/media/audio/$': typeof MediaAudioSplatRoute
   '/media/avatar/$': typeof MediaAvatarSplatRoute
   '/media/certificate/$': typeof MediaCertificateSplatRoute
+  '/media/document/$': typeof MediaDocumentSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
 }
 export interface FileRouteTypes {
@@ -312,6 +321,7 @@ export interface FileRouteTypes {
     | '/media/audio/$'
     | '/media/avatar/$'
     | '/media/certificate/$'
+    | '/media/document/$'
     | '/ayuda/profesionales/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -343,6 +353,7 @@ export interface FileRouteTypes {
     | '/media/audio/$'
     | '/media/avatar/$'
     | '/media/certificate/$'
+    | '/media/document/$'
     | '/ayuda/profesionales'
   id:
     | '__root__'
@@ -374,6 +385,7 @@ export interface FileRouteTypes {
     | '/media/audio/$'
     | '/media/avatar/$'
     | '/media/certificate/$'
+    | '/media/document/$'
     | '/ayuda/profesionales/'
   fileRoutesById: FileRoutesById
 }
@@ -406,6 +418,7 @@ export interface RootRouteChildren {
   MediaAudioSplatRoute: typeof MediaAudioSplatRoute
   MediaAvatarSplatRoute: typeof MediaAvatarSplatRoute
   MediaCertificateSplatRoute: typeof MediaCertificateSplatRoute
+  MediaDocumentSplatRoute: typeof MediaDocumentSplatRoute
   AyudaProfesionalesIndexRoute: typeof AyudaProfesionalesIndexRoute
 }
 
@@ -579,6 +592,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/media/document/$': {
+      id: '/media/document/$'
+      path: '/media/document/$'
+      fullPath: '/media/document/$'
+      preLoaderRoute: typeof MediaDocumentSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/media/certificate/$': {
       id: '/media/certificate/$'
       path: '/media/certificate/$'
@@ -646,6 +666,7 @@ const rootRouteChildren: RootRouteChildren = {
   MediaAudioSplatRoute: MediaAudioSplatRoute,
   MediaAvatarSplatRoute: MediaAvatarSplatRoute,
   MediaCertificateSplatRoute: MediaCertificateSplatRoute,
+  MediaDocumentSplatRoute: MediaDocumentSplatRoute,
   AyudaProfesionalesIndexRoute: AyudaProfesionalesIndexRoute,
 }
 export const routeTree = rootRouteImport

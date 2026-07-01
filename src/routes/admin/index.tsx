@@ -635,6 +635,22 @@ function ProCard({
         </a>
       )}
 
+      {pro.supportDocs.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1">
+          {pro.supportDocs.map((d, i) => (
+            <a
+              key={`${d.url}-${i}`}
+              href={d.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-medium text-[var(--medi-secondary)] hover:underline"
+            >
+              📎 {d.name ?? 'Documento adicional'}
+            </a>
+          ))}
+        </div>
+      )}
+
       {canToggleService && (
         <label className="mt-3 flex items-center gap-2 text-sm text-[var(--medi-text-secondary)]">
           <Switch
