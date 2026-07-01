@@ -8,7 +8,6 @@ import {
   asc,
   like,
   count,
-  sql,
   ne,
   inArray,
   DrizzleError,
@@ -404,6 +403,21 @@ function tzParts(
   return { day, mins: h * 60 + m }
 }
 
+// ponytail: true if the pro can be contacted right now. always → sí; inactive
+// → no; scheduled → dentro de un slot. Pure (no DB), same logic the directory
+// card/badge compute client-side and what the (stale, cron-less) `available`
+// column was meant to express — but evaluated live at view time.
+export function isContactableNow(
+  mode: AvailabilityMode,
+  schedule: Schedule,
+  tz: string,
+  now: Date = new Date(),
+): boolean {
+  if (mode === 'always') return true
+  if (mode === 'inactive') return false
+  return isActiveNow(schedule, tz, now)
+}
+
 // ponytail: pure — true if `now` (default: now) falls inside any schedule slot
 // in the pro's tz. Imported by the SSR profile (server) and the directory badge
 // (client). Bad/empty tz or schedule → false (never falsely "online").
@@ -644,7 +658,7 @@ export const listProfessionals = createServerFn({ method: 'GET' })
     const where = buildProfessionalWhere(data)
     const offset = (data.page - 1) * data.pageSize
 
-    const [rows, totalRows] = await Promise.all([
+    const [rows, totalRows, availRows] = await Promise.all([
       db
         .select({
           id: professionals.id,
@@ -673,7 +687,30 @@ export const listProfessionals = createServerFn({ method: 'GET' })
         .select({ n: count() })
         .from(professionals)
         .where(where),
+      // ponytail: light-column scan of the FULL filtered pool to know if anyone
+      // is contactable now (drives the "Al azar" disabled state across all pages,
+      // not just the current one). O(n) per poll — fine while the directory is
+      // small; switch to a cron-kept `available` flag if it grows past ~1k rows.
+      db
+        .select({
+          availabilityMode: professionals.availabilityMode,
+          availabilityScheduleRaw: professionals.availabilitySchedule,
+          timezone: professionals.timezone,
+        })
+        .from(professionals)
+        .where(where),
     ])
+
+    // ponytail: anyAvailableNow = at least one pro in the pool is contactable
+    // right now (always | scheduled-in-window). Computed server-side so it holds
+    // across pagination.
+    const anyAvailableNow = availRows.some((r) =>
+      isContactableNow(
+        r.availabilityMode,
+        parseSchedule(r.availabilityScheduleRaw),
+        r.timezone ?? 'America/Caracas',
+      ),
+    )
 
     return {
       rows: rows.map((r) => ({
@@ -692,6 +729,7 @@ export const listProfessionals = createServerFn({ method: 'GET' })
         practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
       })),
       total: totalRows.at(0)?.n ?? 0,
+      anyAvailableNow,
     }
   })
 
@@ -774,19 +812,32 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
   )
   .handler(async ({ data }) => {
     const db = getDb()
+    // ponytail: pull the filtered pool with availability columns, then keep only
+    // pros contactable right now and pick one at random. Availability is
+    // computed in JS (isActiveNow = Intl tz math), so it can't be a pure SQL
+    // filter. O(n) — fine while the directory is small; denormalize via a cron-
+    // kept `available` flag if/when this grows past ~1k rows.
     const rows = await db
       .select({
         id: professionals.id,
         name: professionals.name,
         whatsapp: professionals.whatsapp,
+        availabilityMode: professionals.availabilityMode,
+        availabilityScheduleRaw: professionals.availabilitySchedule,
+        timezone: professionals.timezone,
       })
       .from(professionals)
       .where(buildProfessionalWhere(data))
-      .orderBy(sql`RANDOM()`)
-      .limit(1)
-    // ponytail: .at(0) is type-honest (T | undefined) without needing
-    // noUncheckedIndexedAccess; rows[0] would type as always-present.
-    return rows.at(0) ?? null
+    const contactable = rows.filter((r) =>
+      isContactableNow(
+        r.availabilityMode,
+        parseSchedule(r.availabilityScheduleRaw),
+        r.timezone ?? 'America/Caracas',
+      ),
+    )
+    if (contactable.length === 0) return null
+    const picked = contactable[Math.floor(Math.random() * contactable.length)]
+    return { id: picked.id, name: picked.name, whatsapp: picked.whatsapp }
   })
 
 // ponytail: location is conditional. When country=Venezuela, estado and

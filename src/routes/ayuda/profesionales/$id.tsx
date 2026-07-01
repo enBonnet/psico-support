@@ -4,6 +4,7 @@ import {
   getPublicProfessional,
   socialLinks,
   isActiveNow,
+  isContactableNow,
   nextStartLabel,
   formatScheduleHuman,
 } from '#/server/professionals'
@@ -130,6 +131,14 @@ function ProfilePage() {
     pro.availabilitySchedule.length > 0
       ? formatScheduleHuman(pro.availabilitySchedule)
       : ''
+  // ponytail: el contacto se habilita solo si el pro es contactable ahora
+  // (always | scheduled en horario). SSR-computed con el "now" del worker, igual
+  // que el badge de arriba; coherente con el botón deshabilitado del directorio.
+  const contactable = isContactableNow(
+    pro.availabilityMode,
+    pro.availabilitySchedule,
+    tz,
+  )
 
   // ponytail: Web Share API on mobile (native sheet) → clipboard fallback for
   // desktop. navigator.share rejects on cancel; treat that as a no-op, not an
@@ -282,14 +291,23 @@ function ProfilePage() {
       </div>
 
       <div className="mt-4 flex flex-col gap-2">
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex min-h-12 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-3 text-base font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-        >
-          Contactar por WhatsApp
-        </a>
+        {contactable ? (
+          <a
+            href={href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex min-h-12 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-3 text-base font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+          >
+            Contactar por WhatsApp
+          </a>
+        ) : (
+          <span
+            aria-disabled="true"
+            className="flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-[var(--glass-radius-sm)] bg-[var(--glass-tint-soft)] px-4 py-3 text-base font-semibold text-[var(--medi-text-secondary)]"
+          >
+            No disponible ahora
+          </span>
+        )}
         <button
           type="button"
           onClick={onShare}

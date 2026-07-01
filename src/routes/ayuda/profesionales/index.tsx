@@ -8,6 +8,7 @@ import {
   listProfessionals,
   pickRandomProfessional,
   isActiveNow,
+  isContactableNow,
   nextStartLabel,
   formatScheduleHuman,
   POPULATION_OPTIONS,
@@ -209,7 +210,7 @@ function ProfessionalsList() {
         notify({
           type: 'info',
           title: 'Sin resultados',
-          body: 'No hay profesionales que coincidan con tu búsqueda.',
+          body: 'Ningún profesional está disponible en este momento. Inténtalo más tarde.',
         })
         return
       }
@@ -269,9 +270,13 @@ function ProfessionalsList() {
           <button
             type="button"
             onClick={contactRandom}
-            disabled={picking}
+            disabled={picking || !data.anyAvailableNow}
             className="glass-primary inline-flex shrink-0 items-center gap-2 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-semibold transition-all hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-            title="Contactar a un profesional verificado al azar"
+            title={
+              data.anyAvailableNow
+                ? 'Contactar a un profesional verificado al azar'
+                : 'Ningún profesional disponible en este momento'
+            }
           >
             <Shuffle className="size-4" aria-hidden="true" />
             {picking ? 'Buscando…' : 'Al azar'}
@@ -493,6 +498,14 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
   const digits = p.whatsapp.replace(/\D/g, '')
   const text = encodeURIComponent('Hola, te escribo por medio de PsicoAyudaVen.')
   const href = `https://wa.me/${digits}?text=${text}`
+  // ponytail: el contacto se habilita solo si el pro es contactable ahora
+  // (always | scheduled dentro de horario). inactive / fuera de horario →
+  // deshabilitado; el badge de la tarjeta ya muestra cuándo vuelve a estar.
+  const contactable = isContactableNow(
+    p.availabilityMode,
+    p.availabilitySchedule,
+    p.timezone ?? 'America/Caracas',
+  )
 
   return (
     <li className="glass-card p-4">
@@ -539,17 +552,26 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
           />
         </div>
       </div>
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        // ponytail: !important so white wins over the unlayered `a { color }`
-        // rule in styles.css (unlayered beats layered utilities in tw v4),
-        // in both default and hover states.
-        className="mt-4 flex min-h-12 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-3 text-base font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        Contactar por WhatsApp
-      </a>
+      {contactable ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          // ponytail: !important so white wins over the unlayered `a { color }`
+          // rule in styles.css (unlayered beats layered utilities in tw v4),
+          // in both default and hover states.
+          className="mt-4 flex min-h-12 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-3 text-base font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        >
+          Contactar por WhatsApp
+        </a>
+      ) : (
+        <span
+          aria-disabled="true"
+          className="mt-4 flex min-h-12 w-full cursor-not-allowed items-center justify-center rounded-[var(--glass-radius-sm)] bg-[var(--glass-tint-soft)] px-4 py-3 text-base font-semibold text-[var(--medi-text-secondary)]"
+        >
+          No disponible ahora
+        </span>
+      )}
     </li>
   )
 }
