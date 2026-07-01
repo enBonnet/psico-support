@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as YaRouteImport } from './routes/ya'
+import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
@@ -48,6 +49,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 const YaRoute = YaRouteImport.update({
   id: '/ya',
   path: '/ya',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SocialRoute = SocialRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
+  '/terminos': typeof TerminosRoute
   '/ya': typeof YaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -271,6 +278,7 @@ export interface FileRoutesByTo {
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
+  '/terminos': typeof TerminosRoute
   '/ya': typeof YaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -309,6 +317,7 @@ export interface FileRoutesById {
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
+  '/terminos': typeof TerminosRoute
   '/ya': typeof YaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
@@ -348,6 +357,7 @@ export interface FileRouteTypes {
     | '/psicologos'
     | '/signup'
     | '/social'
+    | '/terminos'
     | '/ya'
     | '/profesional/audios'
     | '/profesional/completar'
@@ -385,6 +395,7 @@ export interface FileRouteTypes {
     | '/psicologos'
     | '/signup'
     | '/social'
+    | '/terminos'
     | '/ya'
     | '/profesional/audios'
     | '/profesional/completar'
@@ -422,6 +433,7 @@ export interface FileRouteTypes {
     | '/psicologos'
     | '/signup'
     | '/social'
+    | '/terminos'
     | '/ya'
     | '/profesional/audios'
     | '/profesional/completar'
@@ -460,6 +472,7 @@ export interface RootRouteChildren {
   PsicologosRoute: typeof PsicologosRoute
   SignupRoute: typeof SignupRoute
   SocialRoute: typeof SocialRoute
+  TerminosRoute: typeof TerminosRoute
   YaRoute: typeof YaRoute
   ProfesionalAudiosRoute: typeof ProfesionalAudiosRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
@@ -495,6 +508,13 @@ declare module '@tanstack/react-router' {
       path: '/ya'
       fullPath: '/ya'
       preLoaderRoute: typeof YaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/social': {
@@ -748,6 +768,7 @@ const rootRouteChildren: RootRouteChildren = {
   PsicologosRoute: PsicologosRoute,
   SignupRoute: SignupRoute,
   SocialRoute: SocialRoute,
+  TerminosRoute: TerminosRoute,
   YaRoute: YaRoute,
   ProfesionalAudiosRoute: ProfesionalAudiosRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
@@ -778,12 +799,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

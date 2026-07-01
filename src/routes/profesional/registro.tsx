@@ -93,6 +93,7 @@ function RegisterPage() {
   const stepRef = useRef(step)
   stepRef.current = step
   const [attempted, setAttempted] = useState(false)
+  const [termsAccepted, setTermsAccepted] = useState(false)
 
   const mutation = useMutation({
     mutationFn: (vars: RegisterInput) => registerProfessional({ data: vars }),
@@ -172,6 +173,12 @@ function RegisterPage() {
         // gate on "Continuar".
         const res = registerStep1Schema.safeParse(value)
         if (!res.success) {
+          setAttempted(true)
+          return
+        }
+        // ponytail: consentimiento de términos obligatorio antes de avanzar.
+        // Client-only: no contamina registerStep1Schema (que viaja al server).
+        if (!termsAccepted) {
           setAttempted(true)
           return
         }
@@ -282,6 +289,34 @@ function RegisterPage() {
                 </FieldShell>
               )}
             </form.Field>
+
+            {/* ponytail: consentimiento de términos (obligatorio). Client-only,
+                no forma parte del schema que viaja al server. target=_blank para
+                que abrir los términos no pierda lo escrito en el formulario. */}
+            <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => setTermsAccepted(e.target.checked)}
+                className="mt-1 size-4 shrink-0 accent-[var(--medi-secondary)]"
+              />
+              <span>
+                Acepto los{' '}
+                <Link
+                  to="/terminos"
+                  target="_blank"
+                  className="font-semibold text-[var(--medi-secondary)] underline"
+                >
+                  términos para profesionales
+                </Link>
+                .
+              </span>
+            </label>
+            {attempted && !termsAccepted && (
+              <p className="-mt-2 text-sm text-red-600">
+                Debes aceptar los términos para continuar.
+              </p>
+            )}
           </>
         )}
 
