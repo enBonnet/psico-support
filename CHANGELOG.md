@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.1] - 2026-06-30
+
+### Added
+- **Aclaración "persona real" en la home**: callout bajo el título que deja claro que los mensajes los leen y responden psicólogos verificados, no bots ni inteligencia artificial.
+
+### Deploy
+- Sin migraciones (solo copy en la home). `npm run deploy`.
+
 ## [1.13.0] - 2026-06-30
 
 ### Added

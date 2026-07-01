@@ -1,5 +1,11 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { HeartPulse, LifeBuoy, Stethoscope, Headphones } from 'lucide-react'
+import {
+  HeartPulse,
+  LifeBuoy,
+  Stethoscope,
+  Headphones,
+  UserCheck,
+} from 'lucide-react'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
 import { countVerifiedProfessionals } from '#/server/professionals'
@@ -45,6 +51,24 @@ function Landing() {
           </p>
         )}
       </header>
+
+      {/* ponytail: explicit "not a bot" reassurance. Users increasingly assume
+          WhatsApp support lines are AI; this states the opposite up front — real
+          verified psychologists read and answer every message. Keep it short and
+          warm; it sits between the hero and the action buttons. */}
+      <div className="glass-card-soft mt-6 flex items-center gap-3 rounded-[var(--glass-radius-sm)] px-4 py-3">
+        <UserCheck
+          aria-hidden="true"
+          className="size-5 shrink-0 text-[var(--medi-secondary)]"
+        />
+        <p className="text-sm text-[var(--medi-text-secondary)]">
+          Te responde una{' '}
+          <span className="font-semibold text-[var(--medi-text-primary)]">
+            persona real
+          </span>
+          : psicólogos verificados. Sin bots ni inteligencia artificial.
+        </p>
+      </div>
 
       <nav className="mt-10 flex flex-col gap-4">
       {/* ponytail: "Ahora" = immediate → straight to the remote directory
