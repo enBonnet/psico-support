@@ -12,18 +12,39 @@ import { Avatar } from '#/components/avatar'
 import { cn } from '#/lib/utils'
 import {
   getMyProfessional,
-  setAvailability,
+  setAvailabilityMode,
   deleteMyProfessional,
   amIAdmin,
   getCurrentUser,
   uploadMyAvatar,
   removeMyAvatar,
   updateMySocials,
+  updateMyProfile,
+  COMMON_TIMEZONES,
+  defaultTimezoneForCountry,
+  WEEKDAY_LABEL_ES,
+  POPULATION_OPTIONS,
+  FOCUS_GROUP_OPTIONS,
+  PRACTICE_AREA_OPTIONS,
+  PAIS_OPTIONS,
+  VENEZUELA_ESTADOS,
   AVATAR_MIME,
   AVATAR_MAX_BYTES,
   AVATAR_ACCEPT,
 } from '#/server/professionals'
-import type { AvatarMime } from '#/server/professionals'
+import type {
+  AvatarMime,
+  ProfileEditInput,
+  ScheduleSlot,
+  AvailabilityMode,
+} from '#/server/professionals'
+import { VENEZUELA, ESTADO_CIUDADES } from '#/server/locations'
+import {
+  FieldShell,
+  SectionHeader,
+  inputCls,
+} from '#/components/professional-form'
+import { PhoneInput } from '#/components/phone-input'
 import {
   listMyStories,
   uploadMyStory,
@@ -31,6 +52,7 @@ import {
   STORY_MAX_PER_PRO,
   STORY_TITLE_MAX,
 } from '#/server/audio-stories'
+import { countMyOpenFollowUps } from '#/server/follow-ups'
 
 // ponytail: direct support line to the admin. Constant, not env — mirrors the
 // SITE_URL convention in src/lib/seo.ts. wa.me wants digits only (no +).
@@ -51,7 +73,6 @@ export const Route = createFileRoute('/profesional/panel')({
 })
 
 function PanelPage() {
-  const qc = useQueryClient()
   const [signingOut, setSigningOut] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [deleteName, setDeleteName] = useState('')
@@ -63,41 +84,16 @@ function PanelPage() {
     queryKey: ['my-admin'],
     queryFn: () => amIAdmin(),
   })
-
-  const toggle = useMutation({
-    mutationFn: (available: boolean) =>
-      setAvailability({ data: { available } }),
-    onMutate: (available) => {
-      qc.setQueryData(['my-professional'], (old: typeof me | undefined) =>
-        old ? { ...old, available } : old,
-      )
-    },
-    onSuccess: (_data, available) => {
-      qc.setQueryData(['my-professional'], (old: typeof me | undefined) =>
-        old ? { ...old, available } : old,
-      )
-      notify({
-        type: 'success',
-        title: available
-          ? 'Ahora estás visible para pacientes'
-          : 'Pasaste a fuera de turno',
-        body: available
-          ? 'Los pacientes pueden contactarte de inmediato.'
-          : 'Ya no apareces en la lista.',
-      })
-    },
-    onError: () =>
-      notify({
-        type: 'error',
-        title: 'No se pudo cambiar tu disponibilidad',
-        body: 'Inténtalo de nuevo en unos segundos.',
-      }),
+  // ponytail: open follow-ups count for the panel badge. Cheap (1 row) + auth-
+  // gated; refetches when the seguimiento route invalidates ['my-followups'].
+  const { data: openFollowUps = 0 } = useQuery({
+    queryKey: ['my-open-followups'],
+    queryFn: () => countMyOpenFollowUps(),
   })
 
-  const available = me?.available ?? false
   const verified = me?.verifiedStatus === 'verified'
   // ponytail: content-only pros don't provide direct service — hide the
-  // availability toggle and show a collaborator note instead. They still
+  // availability section and show a collaborator note instead. They still
   // contribute audios (MyStoriesSection below), gated on `verified`.
   const providesService = me?.providesService ?? true
 
@@ -216,40 +212,45 @@ function PanelPage() {
               </p>
             ) : (
               <p className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] bg-amber-50/60 px-3 py-2 text-sm text-amber-800">
-                Tu credencial está en revisión. El interruptor se activará cuando
-                un administrador apruebe tu registro.
+                Tu credencial está en revisión. Podrás configurar tu
+                disponibilidad cuando un administrador apruebe tu registro.
               </p>
             ))}
 
+          <ProfileSection me={me} />
           <AvatarSection me={me} />
           <SocialsSection me={me} />
 
-          {providesService ? (
-            <div
-              className={`glass-card mt-10 p-8 text-center transition-colors ${
-                available
-                  ? 'bg-green-600/30 text-green-900'
-                  : 'text-[var(--medi-text-secondary)]'
-              }`}
-            >
-              <p className="text-lg font-semibold">
-                {available ? 'Estás Visible para Pacientes' : 'Fuera de Turno'}
-              </p>
-              <button
-                type="button"
-                disabled={!verified || toggle.isPending}
-                onClick={() => toggle.mutate(!available)}
-                className="glass-pill mt-6 inline-flex h-16 w-32 items-center justify-center rounded-full bg-white/90 text-base font-bold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] disabled:opacity-50"
-                aria-pressed={available}
+          {/* ── Seguimiento clínico ── */}
+          <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-sm font-semibold text-[var(--medi-text-primary)]">
+                  Seguimiento clínico
+                </h2>
+                <p className="mt-1 text-xs text-[var(--medi-text-secondary)]">
+                  Registros privados de las personas que atiendes. Solo tú los
+                  ves.
+                </p>
+              </div>
+              <Link
+                to="/profesional/seguimiento"
+                // ponytail: !text-white beats the unlayered `a { color }` rule
+                // in styles.css (tw v4: unlayered beats layered utilities).
+                className="glass-primary inline-flex shrink-0 items-center gap-2 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
               >
-                {available ? 'ON' : 'OFF'}
-              </button>
-              <p className="mt-4 text-sm opacity-90">
-                {available
-                  ? 'Los pacientes pueden contactarte ahora.'
-                  : 'Nadie te verá en la lista.'}
-              </p>
+                Abrir
+                {openFollowUps > 0 && (
+                  <span className="glass-pill bg-white/30 px-2 py-0.5 text-xs">
+                    {openFollowUps}
+                  </span>
+                )}
+              </Link>
             </div>
+          </section>
+
+          {providesService ? (
+            <AvailabilitySection me={me} />
           ) : (
             <div className="glass-card-soft mt-10 rounded-[var(--glass-radius-sm)] p-5 text-center text-sm text-[var(--medi-text-secondary)]">
               <p className="font-semibold text-[var(--medi-primary)]">
@@ -531,6 +532,530 @@ function SocialsSection({ me }: { me: NonNullable<MyPro> }) {
         {save.isPending ? 'Guardando…' : 'Guardar redes'}
       </Button>
     </section>
+  )
+}
+
+// ponytail: minutes ↔ "HH:MM" for the schedule grid's <input type="time">.
+function minToTime(m: number): string {
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+}
+function timeToMin(t: string): number {
+  const [h, m] = t.split(':').map(Number)
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return 0
+  return Math.min(1440, Math.max(0, h * 60 + m))
+}
+
+const AVAILABILITY_MODE_OPTIONS: { value: AvailabilityMode; label: string }[] = [
+  { value: 'always', label: 'Siempre disponible' },
+  { value: 'scheduled', label: 'Por horario' },
+  { value: 'inactive', label: 'No disponible' },
+]
+
+// ponytail: three-state availability (F1). Replaces the old ON/OFF toggle.
+// 'always'/'inactive' are one-tap; 'scheduled' reveals a weekly grid of
+// {start,end} slots per day + a timezone select. Plain controlled state (like
+// SocialsSection); setAvailabilityMode persists + sets `available` server-side.
+function AvailabilitySection({ me }: { me: NonNullable<MyPro> }) {
+  const qc = useQueryClient()
+  const initialTz = me.timezone ?? defaultTimezoneForCountry(me.country)
+  const [mode, setMode] = useState<AvailabilityMode>(me.availabilityMode)
+  const [slots, setSlots] = useState<ScheduleSlot[]>(me.availabilitySchedule)
+  const [timezone, setTimezone] = useState(initialTz)
+
+  const save = useMutation({
+    mutationFn: (vars: {
+      mode: AvailabilityMode
+      schedule: ScheduleSlot[]
+      timezone: string
+    }) => setAvailabilityMode({ data: vars }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['my-professional'] })
+      notify({ type: 'success', title: 'Disponibilidad guardada' })
+    },
+    onError: () =>
+      notify({
+        type: 'error',
+        title: 'No se pudo guardar',
+        body: 'Inténtalo de nuevo.',
+      }),
+  })
+
+  // ponytail: only dirty if the mode changed, or (in scheduled mode) slots/tz
+  // changed. Switching to always/inactive discards the grid server-side, so
+  // slot edits don't count when not in scheduled mode.
+  const dirty =
+    mode !== me.availabilityMode ||
+    (mode === 'scheduled' &&
+      (JSON.stringify(slots) !== JSON.stringify(me.availabilitySchedule) ||
+        timezone !== initialTz))
+
+  function submit() {
+    save.mutate({
+      mode,
+      schedule: mode === 'scheduled' ? slots : [],
+      timezone,
+    })
+  }
+
+  // ponytail: Mon-first display order (d=0 is Domingo).
+  const DAYS_MON_FIRST = [1, 2, 3, 4, 5, 6, 0]
+  function addSlot(day: number) {
+    setSlots((s) => [...s, { d: day, s: 540, e: 1020 }])
+  }
+  function updateSlot(flatIndex: number, patch: Partial<ScheduleSlot>) {
+    setSlots((s) =>
+      s.map((sl, i) => (i === flatIndex ? { ...sl, ...patch } : sl)),
+    )
+  }
+  function removeSlot(flatIndex: number) {
+    setSlots((s) => s.filter((_, i) => i !== flatIndex))
+  }
+
+  return (
+    <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
+      <h2 className="text-sm font-semibold text-[var(--medi-text-primary)]">
+        Disponibilidad
+      </h2>
+      <p className="mt-1 text-xs text-[var(--medi-text-secondary)]">
+        Cómo y cuándo apareces para los pacientes en el directorio.
+      </p>
+
+      <div className="mt-3 grid grid-cols-3 gap-2">
+        {AVAILABILITY_MODE_OPTIONS.map((opt) => (
+          <button
+            key={opt.value}
+            type="button"
+            aria-pressed={mode === opt.value}
+            onClick={() => setMode(opt.value)}
+            className={
+              'min-h-11 rounded-[var(--glass-radius-sm)] border px-2 py-2 text-xs font-medium transition-all ' +
+              (mode === opt.value
+                ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
+                : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
+            }
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+
+      {mode === 'always' && (
+        <p className="mt-3 text-sm text-[var(--medi-text-secondary)]">
+          Apareces siempre como disponible.
+        </p>
+      )}
+      {mode === 'inactive' && (
+        <p className="mt-3 text-sm text-[var(--medi-text-secondary)]">
+          No apareces en el directorio hasta que vuelvas a activarte.
+        </p>
+      )}
+
+      {mode === 'scheduled' && (
+        <div className="mt-3 flex flex-col gap-2">
+          <FieldShell label="Zona horaria" errors={[]}>
+            <select
+              className={inputCls}
+              value={timezone}
+              onChange={(e) => setTimezone(e.target.value)}
+            >
+              {COMMON_TIMEZONES.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </select>
+          </FieldShell>
+
+          {DAYS_MON_FIRST.map((day) => {
+            const daySlots = slots
+              .map((s, i) => ({ s, i }))
+              .filter(({ s }) => s.d === day)
+              .sort((a, b) => a.s.s - b.s.s)
+            return (
+              <div
+                key={day}
+                className="rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] p-2"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-[var(--medi-text-primary)]">
+                    {WEEKDAY_LABEL_ES[day]}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => addSlot(day)}
+                    className="text-xs font-medium text-[var(--medi-secondary)] hover:underline"
+                  >
+                    + Añadir
+                  </button>
+                </div>
+                {daySlots.length === 0 ? (
+                  <p className="mt-1 text-xs text-[var(--medi-text-secondary)]">
+                    Sin horario
+                  </p>
+                ) : (
+                  <ul className="mt-1 flex flex-col gap-1">
+                    {daySlots.map(({ s, i }) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <input
+                          type="time"
+                          className="glass-input h-9 px-2 text-sm"
+                          value={minToTime(s.s)}
+                          onChange={(e) =>
+                            updateSlot(i, { s: timeToMin(e.target.value) })
+                          }
+                          aria-label="Inicio"
+                        />
+                        <span className="text-xs text-[var(--medi-text-secondary)]">
+                          –
+                        </span>
+                        <input
+                          type="time"
+                          className="glass-input h-9 px-2 text-sm"
+                          value={minToTime(s.e)}
+                          onChange={(e) =>
+                            updateSlot(i, { e: timeToMin(e.target.value) })
+                          }
+                          aria-label="Fin"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeSlot(i)}
+                          aria-label="Quitar horario"
+                          className="text-xs text-red-600 hover:underline"
+                        >
+                          ✕
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      <Button
+        type="button"
+        onClick={submit}
+        disabled={!dirty || save.isPending}
+        className="glass-primary mt-3 min-h-11 w-full !text-white disabled:opacity-50"
+      >
+        {save.isPending ? 'Guardando…' : 'Guardar disponibilidad'}
+      </Button>
+    </section>
+  )
+}
+
+// ponytail: self-serve profile edit. Plain controlled state (no TanStack Form),
+// matching SocialsSection's pattern — the server validates via profileEditSchema
+// and surfaces a single error toast; field-level inline errors are YAGNI for
+// editing already-valid data. Markup mirrors completar.tsx but on useState.
+// Changing certification number/country resets verifiedStatus → 'pending'.
+function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
+  const qc = useQueryClient()
+  const [name, setName] = useState(me.name)
+  const [certificationNumber, setCertificationNumber] = useState(
+    me.certificationNumber,
+  )
+  const [certifyingSchool, setCertifyingSchool] = useState(
+    me.certifyingSchool ?? '',
+  )
+  const [population, setPopulation] = useState<string[]>(me.population)
+  const [focusGroups, setFocusGroups] = useState<string[]>(me.focusGroups)
+  const [practiceAreas, setPracticeAreas] = useState<string[]>(
+    me.practiceAreas,
+  )
+  const [modality, setModality] = useState(me.modality)
+  const [country, setCountry] = useState(me.country)
+  const [estado, setEstado] = useState(me.estado ?? '')
+  const [ciudad, setCiudad] = useState(me.ciudad ?? '')
+  const [credentialCountry, setCredentialCountry] = useState(
+    me.credentialCountry ?? '',
+  )
+  const [whatsappCountry, setWhatsappCountry] = useState(
+    me.whatsappCountry ?? '',
+  )
+  const [whatsapp, setWhatsapp] = useState(me.whatsapp)
+
+  const save = useMutation({
+    mutationFn: (vars: ProfileEditInput) => updateMyProfile({ data: vars }),
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['my-professional'] })
+      notify({
+        type: 'success',
+        title: data.rereview
+          ? 'Perfil actualizado — tu credencial volvió a revisión'
+          : 'Perfil actualizado',
+      })
+    },
+    onError: (err: Error) =>
+      notify({
+        type: 'error',
+        title: 'No se pudo guardar',
+        body: err.message,
+      }),
+  })
+
+  // ponytail: dirty-gate the Save button so a no-op open doesn't write. Tag
+  // arrays compared by joined string (order-stable within a session).
+  const dirty =
+    name !== me.name ||
+    certificationNumber !== me.certificationNumber ||
+    (certifyingSchool || '') !== (me.certifyingSchool ?? '') ||
+    population.join(',') !== me.population.join(',') ||
+    focusGroups.join(',') !== me.focusGroups.join(',') ||
+    practiceAreas.join(',') !== me.practiceAreas.join(',') ||
+    modality !== me.modality ||
+    country !== me.country ||
+    estado !== (me.estado ?? '') ||
+    ciudad !== (me.ciudad ?? '') ||
+    credentialCountry !== (me.credentialCountry ?? '') ||
+    whatsappCountry !== (me.whatsappCountry ?? '') ||
+    whatsapp !== me.whatsapp
+
+  function submit() {
+    // ponytail: estado/ciudad are only meaningful for Venezuela; nulled
+    // otherwise so the payload matches profileEditSchema's output shape. The
+    // server re-validates, so the enum cast is safe (the <select> only emits
+    // valid members).
+    const payload = {
+      name: name.trim(),
+      certificationNumber,
+      certifyingSchool: certifyingSchool.trim() || null,
+      population,
+      focusGroups,
+      practiceAreas,
+      modality,
+      country,
+      estado: country === VENEZUELA ? estado : null,
+      ciudad: country === VENEZUELA ? ciudad || null : null,
+      credentialCountry: credentialCountry || null,
+      whatsappCountry: whatsappCountry || null,
+      whatsapp,
+    }
+    save.mutate(payload as ProfileEditInput)
+  }
+
+  const ciudades = (
+    ESTADO_CIUDADES as Record<string, readonly string[] | undefined>
+  )[estado] ?? []
+
+  return (
+    <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
+      <h2 className="text-sm font-semibold text-[var(--medi-text-primary)]">
+        Perfil profesional
+      </h2>
+      <p className="mt-1 text-xs text-[var(--medi-text-secondary)]">
+        Edita los datos del directorio. Cambiar tu número de colegiación
+        reinicia la verificación.
+      </p>
+
+      <div className="mt-3 flex flex-col gap-3">
+        <FieldShell label="Nombre" errors={[]}>
+          <input
+            className={inputCls}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+          />
+        </FieldShell>
+
+        <SectionHeader>Credencial</SectionHeader>
+        <FieldShell label="País del colegio o certificación" errors={[]}>
+          <select
+            className={inputCls}
+            value={credentialCountry}
+            onChange={(e) => setCredentialCountry(e.target.value)}
+          >
+            <option value="" disabled>
+              Selecciona…
+            </option>
+            {PAIS_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </FieldShell>
+        <FieldShell label="Número de colegiación" errors={[]}>
+          <input
+            type="text"
+            autoCapitalize="none"
+            className={inputCls}
+            value={certificationNumber}
+            onChange={(e) => setCertificationNumber(e.target.value)}
+          />
+        </FieldShell>
+        <FieldShell label="Colegio / institución (opcional)" errors={[]}>
+          <input
+            type="text"
+            className={inputCls}
+            value={certifyingSchool}
+            onChange={(e) => setCertifyingSchool(e.target.value)}
+            placeholder="Ej. Colegio de Psicólogos de Venezuela"
+          />
+        </FieldShell>
+
+        <SectionHeader>Especialización</SectionHeader>
+        <TagSelect
+          label="¿Con quién trabajas?"
+          options={POPULATION_OPTIONS}
+          value={population}
+          onChange={setPopulation}
+        />
+        <TagSelect
+          label="Poblaciones específicas (opcional)"
+          options={FOCUS_GROUP_OPTIONS}
+          value={focusGroups}
+          onChange={setFocusGroups}
+        />
+        <TagSelect
+          label="Áreas de intervención (opcional)"
+          options={PRACTICE_AREA_OPTIONS}
+          value={practiceAreas}
+          onChange={setPracticeAreas}
+        />
+
+        <SectionHeader>Ubicación &amp; contacto</SectionHeader>
+        <FieldShell label="Modalidad" errors={[]}>
+          <select
+            className={inputCls}
+            value={modality}
+            onChange={(e) =>
+              setModality(e.target.value as 'in_person' | 'remote' | 'both')
+            }
+          >
+            <option value="in_person">Presencial</option>
+            <option value="remote">A distancia</option>
+            <option value="both">Ambas</option>
+          </select>
+        </FieldShell>
+        <FieldShell label="País donde vives" errors={[]}>
+          <select
+            className={inputCls}
+            value={country}
+            onChange={(e) => {
+              setCountry(e.target.value)
+              // ponytail: reset estado/ciudad on country change — the lists are
+              // Venezuela-scoped; a stale value would filter to nothing.
+              setEstado('')
+              setCiudad('')
+            }}
+          >
+            {PAIS_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </FieldShell>
+        {country === VENEZUELA && (
+          <>
+            <FieldShell label="Estado" errors={[]}>
+              <select
+                className={inputCls}
+                value={estado}
+                onChange={(e) => {
+                  setEstado(e.target.value)
+                  setCiudad('')
+                }}
+              >
+                <option value="" disabled>
+                  Selecciona…
+                </option>
+                {VENEZUELA_ESTADOS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </FieldShell>
+            <FieldShell label="Ciudad" errors={[]}>
+              <select
+                className={inputCls}
+                value={ciudad}
+                onChange={(e) => setCiudad(e.target.value)}
+                disabled={!estado}
+              >
+                <option value="" disabled>
+                  {estado ? 'Selecciona…' : 'Primero elige estado'}
+                </option>
+                {ciudades.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </FieldShell>
+          </>
+        )}
+        <PhoneInput
+          country={whatsappCountry}
+          phone={whatsapp}
+          onCountryChange={setWhatsappCountry}
+          onPhoneChange={setWhatsapp}
+          countryLabel="País del WhatsApp"
+          phoneLabel="WhatsApp / teléfono"
+        />
+      </div>
+
+      <Button
+        type="button"
+        onClick={submit}
+        disabled={!dirty || save.isPending}
+        className="glass-primary mt-3 min-h-11 w-full !text-white disabled:opacity-50"
+      >
+        {save.isPending ? 'Guardando…' : 'Guardar perfil'}
+      </Button>
+    </section>
+  )
+}
+
+// ponytail: multi-select tag buttons (mirrors completar.tsx). Plain value +
+// onChange so it composes with useState (no TanStack Form generics here).
+function TagSelect({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: readonly string[]
+  value: string[]
+  onChange: (v: string[]) => void
+}) {
+  return (
+    <FieldShell label={label} errors={[]}>
+      <div className="flex flex-wrap gap-2">
+        {options.map((opt) => {
+          const selected = value.includes(opt)
+          return (
+            <button
+              key={opt}
+              type="button"
+              aria-pressed={selected}
+              onClick={() =>
+                onChange(
+                  selected
+                    ? value.filter((v) => v !== opt)
+                    : [...value, opt],
+                )
+              }
+              className={
+                'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
+                (selected
+                  ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
+                  : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
+              }
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+    </FieldShell>
   )
 }
 

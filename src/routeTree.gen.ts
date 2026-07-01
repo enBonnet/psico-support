@@ -27,6 +27,7 @@ import { Route as RecursosReaccionesNormalesRouteImport } from './routes/recurso
 import { Route as RecursosPrimerosAuxiliosRouteImport } from './routes/recursos/primeros-auxilios'
 import { Route as RecursosEnraizamientoRouteImport } from './routes/recursos/enraizamiento'
 import { Route as RecursosAutochequeoRouteImport } from './routes/recursos/autochequeo'
+import { Route as ProfesionalSeguimientoRouteImport } from './routes/profesional/seguimiento'
 import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
 import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
@@ -130,6 +131,11 @@ const RecursosAutochequeoRoute = RecursosAutochequeoRouteImport.update({
   path: '/recursos/autochequeo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfesionalSeguimientoRoute = ProfesionalSeguimientoRouteImport.update({
+  id: '/profesional/seguimiento',
+  path: '/profesional/seguimiento',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfesionalRegistroRoute = ProfesionalRegistroRouteImport.update({
   id: '/profesional/registro',
   path: '/profesional/registro',
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
+  '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
   '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
   '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
+  '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
   '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
   '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
@@ -256,6 +264,7 @@ export interface FileRoutesById {
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
+  '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
   '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
   '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
@@ -288,6 +297,7 @@ export interface FileRouteTypes {
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
+    | '/profesional/seguimiento'
     | '/recursos/autochequeo'
     | '/recursos/enraizamiento'
     | '/recursos/primeros-auxilios'
@@ -318,6 +328,7 @@ export interface FileRouteTypes {
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
+    | '/profesional/seguimiento'
     | '/recursos/autochequeo'
     | '/recursos/enraizamiento'
     | '/recursos/primeros-auxilios'
@@ -348,6 +359,7 @@ export interface FileRouteTypes {
     | '/profesional/login'
     | '/profesional/panel'
     | '/profesional/registro'
+    | '/profesional/seguimiento'
     | '/recursos/autochequeo'
     | '/recursos/enraizamiento'
     | '/recursos/primeros-auxilios'
@@ -379,6 +391,7 @@ export interface RootRouteChildren {
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
   ProfesionalPanelRoute: typeof ProfesionalPanelRoute
   ProfesionalRegistroRoute: typeof ProfesionalRegistroRoute
+  ProfesionalSeguimientoRoute: typeof ProfesionalSeguimientoRoute
   RecursosAutochequeoRoute: typeof RecursosAutochequeoRoute
   RecursosEnraizamientoRoute: typeof RecursosEnraizamientoRoute
   RecursosPrimerosAuxiliosRoute: typeof RecursosPrimerosAuxiliosRoute
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecursosAutochequeoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profesional/seguimiento': {
+      id: '/profesional/seguimiento'
+      path: '/profesional/seguimiento'
+      fullPath: '/profesional/seguimiento'
+      preLoaderRoute: typeof ProfesionalSeguimientoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profesional/registro': {
       id: '/profesional/registro'
       path: '/profesional/registro'
@@ -611,6 +631,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfesionalLoginRoute: ProfesionalLoginRoute,
   ProfesionalPanelRoute: ProfesionalPanelRoute,
   ProfesionalRegistroRoute: ProfesionalRegistroRoute,
+  ProfesionalSeguimientoRoute: ProfesionalSeguimientoRoute,
   RecursosAutochequeoRoute: RecursosAutochequeoRoute,
   RecursosEnraizamientoRoute: RecursosEnraizamientoRoute,
   RecursosPrimerosAuxiliosRoute: RecursosPrimerosAuxiliosRoute,

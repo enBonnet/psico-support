@@ -221,6 +221,254 @@ export function parsePracticeAreas(
   return parseJsonTagArray(raw, PRACTICE_AREA_OPTIONS)
 }
 
+// ── Availability schedule (F1) ───────────────────────────────────────────────
+// ponytail: recurring weekly availability as a JSON array of {d, s, e} slots.
+// d = weekday 0(Sun)..6(Sat) matching JS getDay() in the pro's tz; s/e = minutes
+// from midnight (e exclusive). The schedule is the source of truth; availability
+// is derived at view time via isActiveNow (shared by the SSR profile + the CSR
+// directory badge) — no cron. Plain text column like population; parsed on read.
+export type ScheduleSlot = { d: number; s: number; e: number }
+export type Schedule = ScheduleSlot[]
+
+const WEEKDAY_SHORT_TO_NUM: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+}
+// ponytail: Spanish weekday labels (Mon-first for display). d=0 is Domingo.
+export const WEEKDAY_LABEL_ES: Record<number, string> = {
+  0: 'Dom',
+  1: 'Lun',
+  2: 'Mar',
+  3: 'Mié',
+  4: 'Jue',
+  5: 'Vie',
+  6: 'Sáb',
+}
+// Mon-first order, used to group/merge consecutive days in formatScheduleHuman.
+const WEEKDAY_ORDER_MON_FIRST = [1, 2, 3, 4, 5, 6, 0]
+
+// ponytail: common American IANA timezones for the panel <select>. Default for
+// unknown/Otro is America/Caracas (the platform is Venezuela-focused; VEN has no
+// DST so the common case is trivial).
+export const COMMON_TIMEZONES = [
+  'America/Caracas',
+  'America/Argentina/Buenos_Aires',
+  'America/Bogota',
+  'America/Santiago',
+  'America/Lima',
+  'America/Guayaquil',
+  'America/Sao_Paulo',
+  'America/Mexico_City',
+  'America/Panama',
+  'America/Montevideo',
+  'America/La_Paz',
+  'America/Asuncion',
+  'America/Havana',
+] as const
+
+const COUNTRY_TIMEZONE: Record<string, string> = {
+  Venezuela: 'America/Caracas',
+  Argentina: 'America/Argentina/Buenos_Aires',
+  Bolivia: 'America/La_Paz',
+  Brasil: 'America/Sao_Paulo',
+  Chile: 'America/Santiago',
+  Colombia: 'America/Bogota',
+  Ecuador: 'America/Guayaquil',
+  Paraguay: 'America/Asuncion',
+  Perú: 'America/Lima',
+  Uruguay: 'America/Montevideo',
+  Panamá: 'America/Panama',
+  México: 'America/Mexico_City',
+  Cuba: 'America/Havana',
+}
+
+export function defaultTimezoneForCountry(
+  country: string | null | undefined,
+): string {
+  return (country && COUNTRY_TIMEZONE[country]) || 'America/Caracas'
+}
+
+// ponytail: weekday + minutes-from-midnight of `now` in the given tz, via
+// Intl.DateTimeFormat (supported in Workers + browsers). hour % 24 guards the
+// "24" at midnight some runtimes emit with hour12:false. Returns day=-1 on a
+// tz parse failure so callers can bail.
+function tzParts(
+  tz: string,
+  now: Date,
+): { day: number; mins: number } {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(now)
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  const day = WEEKDAY_SHORT_TO_NUM[get('weekday')] ?? -1
+  const h = Number(get('hour')) % 24
+  const m = Number(get('minute'))
+  return { day, mins: h * 60 + m }
+}
+
+// ponytail: pure — true if `now` (default: now) falls inside any schedule slot
+// in the pro's tz. Imported by the SSR profile (server) and the directory badge
+// (client). Bad/empty tz or schedule → false (never falsely "online").
+export function isActiveNow(
+  schedule: Schedule,
+  tz: string,
+  now: Date = new Date(),
+): boolean {
+  if (!schedule.length || !tz) return false
+  try {
+    const { day, mins } = tzParts(tz, now)
+    if (day < 0) return false
+    return schedule.some((s) => s.d === day && mins >= s.s && mins < s.e)
+  } catch {
+    return false
+  }
+}
+
+// ponytail: the next slot start strictly after `now` in the pro's tz, scanning
+// the next 8 days (covers a weekly cycle + today). Used for the "Vuelve…"
+// badge label. null if the schedule has no upcoming start within the window.
+export function nextStartTime(
+  schedule: Schedule,
+  tz: string,
+  now: Date = new Date(),
+): { day: number; start: number } | null {
+  if (!schedule.length || !tz) return null
+  try {
+    for (let offset = 0; offset < 8; offset++) {
+      const d = new Date(now.getTime() + offset * 86_400_000)
+      const { day, mins } = tzParts(tz, d)
+      const slots = schedule
+        .filter((s) => s.d === day)
+        .sort((a, b) => a.s - b.s)
+      for (const s of slots) {
+        if (offset > 0 || s.s > mins) return { day, start: s.s }
+      }
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+function minToHHMM(m: number): string {
+  const h = Math.floor(m / 60)
+  const mm = m % 60
+  return `${h}:${String(mm).padStart(2, '0')}`
+}
+
+// ponytail: formatted "Vuelve {weekday} HH:MM" for the directory badge, or null
+// if there's no upcoming start within the weekly window.
+export function nextStartLabel(
+  schedule: Schedule,
+  tz: string,
+  now: Date = new Date(),
+): string | null {
+  const next = nextStartTime(schedule, tz, now)
+  if (!next) return null
+  return `Vuelve ${WEEKDAY_LABEL_ES[next.day]} ${minToHHMM(next.start)}`
+}
+
+// ponytail: human-readable blocks for the directory card / profile, e.g.
+// "Lun–Vie 9:00–17:00" or "Lun 9:00–13:00, 15:00–18:00 · Vie 9:00–13:00".
+// Collapses runs of consecutive days (Mon-first) that share identical ranges.
+export function formatScheduleHuman(schedule: Schedule): string {
+  if (!schedule.length) return ''
+  const byDay = new Map<number, string[]>()
+  for (const s of schedule) {
+    const ranges = byDay.get(s.d) ?? []
+    ranges.push(`${minToHHMM(s.s)}–${minToHHMM(s.e)}`)
+    byDay.set(s.d, ranges)
+  }
+  const rangeOf = (d: number) =>
+    (byDay.get(d) ?? []).slice().sort().join(', ')
+
+  const out: string[] = []
+  let runStart = -1
+  let runEnd = -1
+  let runRange = ''
+  const flush = () => {
+    if (runStart < 0) return
+    const label =
+      runStart === runEnd
+        ? WEEKDAY_LABEL_ES[runStart]
+        : `${WEEKDAY_LABEL_ES[runStart]}–${WEEKDAY_LABEL_ES[runEnd]}`
+    out.push(`${label} ${runRange}`)
+  }
+  for (const d of WEEKDAY_ORDER_MON_FIRST) {
+    if (!byDay.has(d)) continue
+    const r = rangeOf(d)
+    const follows =
+      runEnd >= 0 &&
+      r === runRange &&
+      WEEKDAY_ORDER_MON_FIRST.indexOf(d) ===
+        WEEKDAY_ORDER_MON_FIRST.indexOf(runEnd) + 1
+    if (follows) {
+      runEnd = d
+    } else {
+      flush()
+      runStart = d
+      runEnd = d
+      runRange = r
+    }
+  }
+  flush()
+  return out.join(' · ')
+}
+
+// ponytail: parse the JSON schedule column; never throws. Drops malformed slots.
+export function parseSchedule(
+  raw: string | null | undefined,
+): ScheduleSlot[] {
+  if (!raw) return []
+  try {
+    const v = JSON.parse(raw)
+    if (!Array.isArray(v)) return []
+    return v.filter(
+      (x): x is ScheduleSlot =>
+        !!x &&
+        typeof x === 'object' &&
+        Number.isInteger(x.d) &&
+        x.d >= 0 &&
+        x.d <= 6 &&
+        Number.isInteger(x.s) &&
+        Number.isInteger(x.e) &&
+        x.e > x.s &&
+        x.s >= 0 &&
+        x.e <= 1440,
+    )
+  } catch {
+    return []
+  }
+}
+
+export const scheduleSlotSchema = z
+  .object({
+    d: z.number().int().min(0).max(6),
+    s: z.number().int().min(0).max(1440),
+    e: z.number().int().min(1).max(1440),
+  })
+  .refine((s) => s.e > s.s, {
+    message: 'La hora de fin debe ser mayor que la de inicio',
+  })
+export const scheduleSchema = z.array(scheduleSlotSchema)
+
+export type AvailabilityMode = 'always' | 'scheduled' | 'inactive'
+
+export const setAvailabilityModeSchema = z.object({
+  mode: z.enum(['always', 'scheduled', 'inactive']),
+  schedule: scheduleSchema.default([]),
+  timezone: z.string().trim().optional().nullable(),
+})
+
 export type PublicProfessional = {
   id: number
   name: string
@@ -229,7 +477,9 @@ export type PublicProfessional = {
   estado: string | null
   ciudad: string | null
   whatsapp: string
-  available: boolean
+  availabilityMode: AvailabilityMode
+  availabilitySchedule: ScheduleSlot[]
+  timezone: string | null
   population: Population[]
   focusGroups: FocusGroup[]
   practiceAreas: PracticeArea[]
@@ -315,16 +565,19 @@ export const listProfessionals = createServerFn({ method: 'GET' })
           estado: professionals.estado,
           ciudad: professionals.ciudad,
           whatsapp: professionals.whatsapp,
-          available: professionals.available,
+          availabilityMode: professionals.availabilityMode,
+          availabilityScheduleRaw: professionals.availabilitySchedule,
+          timezone: professionals.timezone,
           populationRaw: professionals.population,
           focusGroupsRaw: professionals.focusGroups,
           practiceAreasRaw: professionals.practiceAreas,
         })
         .from(professionals)
         .where(where)
-        // ponytail: float available pros to the top so patients see who's
-        // reachable now first, then alphabetical by name.
-        .orderBy(desc(professionals.available), asc(professionals.name))
+        // ponytail: alphabetical (F1) — the live "Disponible ahora" badge on each
+        // card conveys current availability; online-first sorting across pages
+        // would require denormalizing, which we chose not to (no cron).
+        .orderBy(asc(professionals.name))
         .limit(data.pageSize)
         .offset(offset),
       db
@@ -342,7 +595,9 @@ export const listProfessionals = createServerFn({ method: 'GET' })
         estado: r.estado,
         ciudad: r.ciudad,
         whatsapp: r.whatsapp,
-        available: r.available,
+        availabilityMode: r.availabilityMode,
+        availabilitySchedule: parseSchedule(r.availabilityScheduleRaw),
+        timezone: r.timezone,
         population: parsePopulation(r.populationRaw),
         focusGroups: parseFocusGroups(r.focusGroupsRaw),
         practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
@@ -369,7 +624,9 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
         estado: professionals.estado,
         ciudad: professionals.ciudad,
         whatsapp: professionals.whatsapp,
-        available: professionals.available,
+        availabilityMode: professionals.availabilityMode,
+        availabilityScheduleRaw: professionals.availabilitySchedule,
+        timezone: professionals.timezone,
         populationRaw: professionals.population,
         focusGroupsRaw: professionals.focusGroups,
         practiceAreasRaw: professionals.practiceAreas,
@@ -397,7 +654,9 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
       estado: r.estado,
       ciudad: r.ciudad,
       whatsapp: r.whatsapp,
-      available: r.available,
+      availabilityMode: r.availabilityMode,
+      availabilitySchedule: parseSchedule(r.availabilityScheduleRaw),
+      timezone: r.timezone,
       population: parsePopulation(r.populationRaw),
       focusGroups: parseFocusGroups(r.focusGroupsRaw),
       practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
@@ -505,29 +764,43 @@ const nullableWhenEmptyEstado = z.preprocess(
   z.enum(VENEZUELA_ESTADOS).optional().nullable(),
 )
 
+// ponytail: step-2 field shape as a plain object (pre-refine) so both the
+// registration schema and the profile-edit schema can extend it without
+// re-declaring the fields (DRY — the field set is the source of truth).
+const registerStep2Object = z.object({
+  certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
+  certifyingSchool: z.string().max(120).optional().nullable(),
+  population: z
+    .array(z.enum(POPULATION_OPTIONS))
+    .min(1, 'Selecciona al menos uno'),
+  focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
+  practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
+  modality: z.enum(['in_person', 'remote', 'both']),
+  country: z.enum(PAIS_OPTIONS),
+  estado: nullableWhenEmptyEstado,
+  ciudad: z.string().max(80).optional().nullable(),
+  credentialCountry: z.enum(PAIS_OPTIONS).optional().nullable(),
+  whatsappCountry: z.string().optional().nullable(),
+  whatsapp: z
+    .string()
+    .min(8, 'WhatsApp inválido')
+    .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
+  certificate: certificateSchema.nullable().optional(),
+})
+
 // ponytail: step 2 schema validates only step-2 fields.
-export const registerStep2Schema = z
-  .object({
-    certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
-    certifyingSchool: z.string().max(120).optional().nullable(),
-    population: z
-      .array(z.enum(POPULATION_OPTIONS))
-      .min(1, 'Selecciona al menos uno'),
-    focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
-    practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
-    modality: z.enum(['in_person', 'remote', 'both']),
-    country: z.enum(PAIS_OPTIONS),
-    estado: nullableWhenEmptyEstado,
-    ciudad: z.string().max(80).optional().nullable(),
-    credentialCountry: z.enum(PAIS_OPTIONS).optional().nullable(),
-    whatsappCountry: z.string().optional().nullable(),
-    whatsapp: z
-      .string()
-      .min(8, 'WhatsApp inválido')
-      .regex(/^\+?\d[\d\s-]{7,}$/, 'Formato: +58 412 1234567'),
-    certificate: certificateSchema.nullable().optional(),
-  })
+export const registerStep2Schema =
+  registerStep2Object.superRefine(refineProfessional)
+
+// ponytail: self-serve profile edit. Reuses the step-2 field shape + adds name
+// (editable here; registration gets name from the auth user). certificate is
+// omitted — credential-file changes aren't part of profile edit (the pro can
+// re-upload via a separate flow if ever needed).
+export const profileEditSchema = registerStep2Object
+  .extend({ name: z.string().min(2, 'Tu nombre es obligatorio') })
+  .omit({ certificate: true })
   .superRefine(refineProfessional)
+export type ProfileEditInput = z.infer<typeof profileEditSchema>
 
 export const registerSchema = z
   .object({
@@ -559,9 +832,9 @@ export type RegisterInput = z.infer<typeof registerSchema>
 export type RegisterStep2Input = z.infer<typeof registerStep2Schema>
 export { PAIS_OPTIONS, VENEZUELA_ESTADOS }
 
-// ponytail: shared insert-shape builder. registerProfessional (full one-shot
-// signup) and createProfessionalProfile (logged-in user adding a pro row)
-// both build the same row, so the field mapping lives in one place to avoid drift.
+// ponytail: the editable professional columns, shared by registration inserts
+// (buildProValues) and self-serve profile edits (updateMyProfile) so the field
+// mapping can't drift between them.
 type ProInsertData = {
   name: string
   certificationNumber: string
@@ -578,9 +851,8 @@ type ProInsertData = {
   whatsapp: string
 }
 
-function buildProValues(data: ProInsertData, userId: string) {
+function proEditableFields(data: ProInsertData) {
   return {
-    userId,
     name: data.name,
     certificationNumber: data.certificationNumber.trim(),
     certifyingSchool: data.certifyingSchool?.trim() || null,
@@ -595,6 +867,10 @@ function buildProValues(data: ProInsertData, userId: string) {
     whatsappCountry: data.whatsappCountry ?? null,
     whatsapp: data.whatsapp,
   }
+}
+
+function buildProValues(data: ProInsertData, userId: string) {
+  return { userId, ...proEditableFields(data) }
 }
 
 export const registerProfessional = createServerFn({ method: 'POST' })
@@ -766,23 +1042,53 @@ export const createProfessionalProfile = createServerFn({ method: 'POST' })
     return { ok: true }
   })
 
-const setAvailabilitySchema = z.object({
-  available: z.boolean(),
-})
-
-export const setAvailability = createServerFn({ method: 'POST' })
-  .validator(setAvailabilitySchema)
+// ponytail: three-state availability switch (F1). 'always' = Siempre disponible
+// (schedule null, available true); 'inactive' = No conectado (schedule null,
+// available false); 'scheduled' = store blocks + tz and set available from
+// isActiveNow so the panel reflects the correct state immediately (no cron wait
+// — the live badge in the directory then tracks it on each 20s poll).
+export const setAvailabilityMode = createServerFn({ method: 'POST' })
+  .validator(setAvailabilityModeSchema)
   .handler(async ({ data }) => {
     const session = await getAuth().api.getSession({ headers: getHeaders() })
     if (!session?.user) {
       throw new Error('Debes iniciar sesión.')
     }
     const db = getDb()
-    await db
-      .update(professionals)
-      .set({ available: data.available })
-      .where(eq(professionals.userId, session.user.id))
-    return { ok: true, available: data.available }
+    const mine = eq(professionals.userId, session.user.id)
+    if (data.mode === 'always') {
+      await db
+        .update(professionals)
+        .set({
+          availabilityMode: 'always',
+          availabilitySchedule: null,
+          available: true,
+        })
+        .where(mine)
+    } else if (data.mode === 'inactive') {
+      await db
+        .update(professionals)
+        .set({
+          availabilityMode: 'inactive',
+          availabilitySchedule: null,
+          available: false,
+        })
+        .where(mine)
+    } else {
+      // ponytail: tz defaults to Caracas if the client omitted it (the panel
+      // <select> seeds it from country, so this is a defensive fallback).
+      const tz = data.timezone?.trim() || 'America/Caracas'
+      await db
+        .update(professionals)
+        .set({
+          availabilityMode: 'scheduled',
+          availabilitySchedule: JSON.stringify(data.schedule),
+          timezone: tz,
+          available: isActiveNow(data.schedule, tz),
+        })
+        .where(mine)
+    }
+    return { ok: true as const }
   })
 
 // ponytail: self-serve account deletion = SOFT delete. We tombstone the pro
@@ -849,6 +1155,23 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
         socialX: professionals.socialX,
         socialInstagram: professionals.socialInstagram,
         socialTikTok: professionals.socialTikTok,
+        // ponytail: editable fields for the panel's ProfileSection (F2). Raw
+        // JSON tag columns parsed to clean arrays below.
+        populationRaw: professionals.population,
+        focusGroupsRaw: professionals.focusGroups,
+        practiceAreasRaw: professionals.practiceAreas,
+        country: professionals.country,
+        estado: professionals.estado,
+        ciudad: professionals.ciudad,
+        whatsapp: professionals.whatsapp,
+        whatsappCountry: professionals.whatsappCountry,
+        certificationNumber: professionals.certificationNumber,
+        credentialCountry: professionals.credentialCountry,
+        certifyingSchool: professionals.certifyingSchool,
+        // ponytail: availability (F1) — schedule parsed for the panel grid.
+        availabilityMode: professionals.availabilityMode,
+        availabilityScheduleRaw: professionals.availabilitySchedule,
+        timezone: professionals.timezone,
       })
       .from(professionals)
       .where(eq(professionals.userId, session.user.id))
@@ -859,7 +1182,33 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
     // re-register via /profesional/completar, which resurrects the row.
     // .at(0) is type-honest (T | undefined); rows[0] would type as always-present.
     const r = rows.at(0)
-    return r && r.verifiedStatus !== 'deleted' ? r : null
+    if (!r || r.verifiedStatus === 'deleted') return null
+    return {
+      id: r.id,
+      name: r.name,
+      verifiedStatus: r.verifiedStatus,
+      available: r.available,
+      providesService: r.providesService,
+      modality: r.modality,
+      avatarKey: r.avatarKey,
+      socialX: r.socialX,
+      socialInstagram: r.socialInstagram,
+      socialTikTok: r.socialTikTok,
+      population: parsePopulation(r.populationRaw),
+      focusGroups: parseFocusGroups(r.focusGroupsRaw),
+      practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+      country: r.country,
+      estado: r.estado,
+      ciudad: r.ciudad,
+      whatsapp: r.whatsapp,
+      whatsappCountry: r.whatsappCountry,
+      certificationNumber: r.certificationNumber,
+      credentialCountry: r.credentialCountry,
+      certifyingSchool: r.certifyingSchool,
+      availabilityMode: r.availabilityMode,
+      availabilitySchedule: parseSchedule(r.availabilityScheduleRaw),
+      timezone: r.timezone,
+    }
   },
 )
 
@@ -953,6 +1302,51 @@ export const updateMySocials = createServerFn({ method: 'POST' })
       })
       .where(eq(professionals.userId, session.user.id))
     return { ok: true }
+  })
+
+// ponytail: self-serve profile edit for verified (or pending) pros. Validates
+// with profileEditSchema (same field set as registration, minus certificate, +
+// name). Changing the certification number or its country is the trust root, so
+// it resets verifiedStatus to 'pending' + available=false for re-review (mirrors
+// the dormant pattern in reviewProfessional) — prevents verified-bait-and-
+// switch. name is also written to the auth user row so auth surfaces agree.
+export const updateMyProfile = createServerFn({ method: 'POST' })
+  .validator(profileEditSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user) {
+      throw new Error('Debes iniciar sesión.')
+    }
+    const db = getDb()
+    const rows = await db
+      .select({
+        certificationNumber: professionals.certificationNumber,
+        credentialCountry: professionals.credentialCountry,
+      })
+      .from(professionals)
+      .where(eq(professionals.userId, session.user.id))
+      .limit(1)
+    const cur = rows.at(0)
+    if (!cur) {
+      throw new Error('Completa tu perfil profesional primero.')
+    }
+    const credentialChanged =
+      cur.certificationNumber !== data.certificationNumber.trim() ||
+      (cur.credentialCountry ?? null) !== (data.credentialCountry ?? null)
+    await db
+      .update(professionals)
+      .set({
+        ...proEditableFields(data),
+        ...(credentialChanged
+          ? { verifiedStatus: 'pending' as const, available: false }
+          : {}),
+      })
+      .where(eq(professionals.userId, session.user.id))
+    await db
+      .update(userTable)
+      .set({ name: data.name })
+      .where(eq(userTable.id, session.user.id))
+    return { ok: true as const, rereview: credentialChanged }
   })
 
 const decisionSchema = z.object({

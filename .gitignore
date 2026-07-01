@@ -17,3 +17,6 @@ dev.db.bak
 .claude/
 .agents/
 .cursorrules
+
+# Local export — PII
+/professionals.csv

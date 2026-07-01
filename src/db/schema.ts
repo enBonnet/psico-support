@@ -168,6 +168,25 @@ export const professionals = sqliteTable(
     providesService: integer('provides_service', { mode: 'boolean' })
       .notNull()
       .default(true),
+    // ponytail: three-state availability (F1). 'always' = Siempre disponible
+    // (always on); 'scheduled' = available during availability_schedule blocks
+    // (live-derived via isActiveNow in the pro's timezone); 'inactive' = No
+    // conectado (opted out). Default 'always' so the migration backfills every
+    // existing pro to Siempre disponible (no one disappears at cutover) AND new
+    // signups appear online once verified — both via the column DEFAULT in one
+    // ALTER. The legacy `available` boolean is now dormant for display but kept
+    // roughly consistent on write for safety.
+    availabilityMode: text('availability_mode', {
+      enum: ['always', 'scheduled', 'inactive'],
+    })
+      .notNull()
+      .default('always'),
+    // ponytail: JSON Schedule (array of {d,s,e}) — only meaningful when
+    // availabilityMode='scheduled'. Null otherwise. Plain text like population.
+    availabilitySchedule: text('availability_schedule'),
+    // ponytail: IANA tz (e.g. 'America/Caracas') interpreting the schedule.
+    // Defaulted from country on first schedule save.
+    timezone: text('timezone'),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(
       sql`(unixepoch())`,
     ),
@@ -225,6 +244,66 @@ export const audioStories = sqliteTable(
     index('audio_stories_pro_status_idx').on(
       table.professionalId,
       table.status,
+    ),
+  ],
+)
+
+// ponytail: clinical follow-up (seguimiento) entries written by a professional
+// about a person who asked for support. PRIVATE to the owning pro: every query
+// scopes WHERE professional_id = <my pro id> derived from the session — there is
+// NO public route and NO admin route to these rows (per product decision; the
+// deployer can still read D1 directly, so this is app-level privacy, not crypto).
+// ON DELETE CASCADE never fires on soft-delete (verifiedStatus='deleted' keeps
+// the row) but is correct if a pro row is ever hard-deleted. risk_level is a
+// 3-level clinical triage (simplified Columbia/C-SSRS, none/watch/urgent);
+// action_taken is a JSON array of PFA-derived tags. status/risk_level follow the
+// codebase's plain-TEXT-enum pattern (no CHECK; Zod validates on write).
+export const followUps = sqliteTable(
+  'follow_ups',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    professionalId: integer('professional_id')
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    phone: text('phone').notNull(),
+    phoneCountry: text('phone_country'),
+    name: text('name'),
+    reason: text('reason'),
+    // ponytail: 'none' | 'watch' | 'urgent'. 'urgent' surfaces an escalation
+    // reminder in the UI. Simplified triage, not the full C-SSRS — field-worker
+    // scale; add structured items only if a concrete clinical need appears.
+    riskLevel: text('risk_level', {
+      enum: ['none', 'watch', 'urgent'],
+    })
+      .notNull()
+      .default('none'),
+    // ponytail: JSON array of PFA tags ('["Escucha activa","Derivación"]').
+    // Stored as text; same pattern as professionals.population. Null = none.
+    actionTaken: text('action_taken'),
+    status: text('status', {
+      enum: ['open', 'contacted', 'closed'],
+    })
+      .notNull()
+      .default('open'),
+    notes: text('notes'),
+    // ponytail: date the pro picks to re-contact. Stored as a timestamp (ms)
+    // at start-of-day; mode: 'timestamp' would lose sub-second; ms matches the
+    // user/session tables. Nullable = no planned follow-up.
+    nextContactAt: integer('next_contact_at', { mode: 'timestamp_ms' }),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // ponytail: the list query is always "this pro's entries, newest first";
+    // one composite on (professional_id, created_at) covers it.
+    index('follow_ups_pro_created_idx').on(
+      table.professionalId,
+      table.createdAt,
     ),
   ],
 )

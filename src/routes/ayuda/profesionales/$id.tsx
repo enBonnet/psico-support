@@ -1,8 +1,11 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
-import { Share2, ArrowLeft, MapPin, Users } from 'lucide-react'
+import { Share2, ArrowLeft, MapPin, Users, Clock } from 'lucide-react'
 import {
   getPublicProfessional,
   socialLinks,
+  isActiveNow,
+  nextStartLabel,
+  formatScheduleHuman,
 } from '#/server/professionals'
 import { notify } from '#/lib/notifications'
 import { seoHead, profileJsonLd, SITE_URL } from '#/lib/seo'
@@ -100,6 +103,34 @@ function ProfilePage() {
         ? 'Atención presencial y online'
         : 'Atención presencial'
 
+  // ponytail: SSR-computed availability badge (F1). The loader already ran on
+  // the worker, so this is the worker's "now" in the pro's tz — crawlers/link
+  // previews get a correct label in the initial HTML. The three states map to
+  // always/scheduled/inactive; scheduled derives Disponible ahora / Vuelve… /
+  // No disponible via the shared helpers.
+  const tz = pro.timezone ?? 'America/Caracas'
+  const badge =
+    pro.availabilityMode === 'always'
+      ? { text: 'Siempre disponible', tone: 'green' as const }
+      : pro.availabilityMode === 'inactive'
+        ? { text: 'No conectado', tone: 'slate' as const }
+        : isActiveNow(pro.availabilitySchedule, tz)
+          ? { text: 'Disponible ahora', tone: 'green' as const }
+          : {
+              text: nextStartLabel(pro.availabilitySchedule, tz) ?? 'No disponible',
+              tone: 'amber' as const,
+            }
+  const badgeTone = {
+    green: { text: 'text-green-700', dot: 'bg-green-500' },
+    amber: { text: 'text-amber-700', dot: 'bg-amber-500' },
+    slate: { text: 'text-[var(--medi-text-secondary)]', dot: 'bg-slate-400' },
+  }[badge.tone]
+  const scheduleText =
+    pro.availabilityMode === 'scheduled' &&
+    pro.availabilitySchedule.length > 0
+      ? formatScheduleHuman(pro.availabilitySchedule)
+      : ''
+
   // ponytail: Web Share API on mobile (native sheet) → clipboard fallback for
   // desktop. navigator.share rejects on cancel; treat that as a no-op, not an
   // error. The shared URL is the current profile, which carries the OG tags.
@@ -179,14 +210,10 @@ function ProfilePage() {
                 Confirmado
               </span>
               <span
-                className={`glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium ${
-                  pro.available ? 'text-green-700' : 'text-amber-700'
-                }`}
+                className={`glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium ${badgeTone.text}`}
               >
-                <span
-                  className={`size-2 rounded-full ${pro.available ? 'bg-green-500' : 'bg-amber-500'}`}
-                />
-                {pro.available ? 'En línea' : 'No conectado'}
+                <span className={`size-2 rounded-full ${badgeTone.dot}`} />
+                {badge.text}
               </span>
             </div>
 
@@ -227,6 +254,12 @@ function ProfilePage() {
             <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
             <dd>{modalityText}</dd>
           </div>
+          {scheduleText && (
+            <div className="flex items-center gap-2">
+              <Clock className="size-4 shrink-0 text-[var(--medi-secondary)]" />
+              <dd>Horario: {scheduleText}</dd>
+            </div>
+          )}
           {pro.population.length > 0 && (
             <div className="flex items-center gap-2">
               <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />

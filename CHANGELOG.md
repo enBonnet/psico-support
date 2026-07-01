@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] - 2026-06-30
+
+### Added
+- **Disponibilidad por horario (tres estados, F1)**: el profesional elige entre **Siempre disponible** (siempre visible), **Por horario** (bloques de días y horas + zona horaria) o **No disponible** (fuera del directorio). Reemplaza el interruptor ON/OFF manual. La disponibilidad se **deriva en tiempo real** del horario en cada render (el directorio refresca cada 20 s; el perfil lo calcula el SSR del Worker con `Intl.DateTimeFormat`), por lo que **no hay cron ni lag**. La insignia del directorio y del perfil muestra "Siempre disponible" / "Disponible ahora" / "Vuelve {día} HH:MM" / "No disponible" / "No conectado". El orden del directorio pasa a alfabético (la insignia por tarjeta ya comunica el estado actual). Columnas `availability_mode` (default `'always'`, de modo que la migración **mantiene a todos visibles** y los registros nuevos aparecen al verificarse), `availability_schedule` (JSON de bloques `{d,s,e}`) y `timezone` (IANA, por defecto según país). El booleano `available` queda dormido como columna. Diseño y decisiones cerradas en `docs/design-scheduling-profile-followups.md`. Migración `0014`.
+- **Edición del perfil profesional desde el panel (F2)**: el profesional edita nombre, credencial, especializaciones (población/enfoque/áreas), modalidad, ubicación y WhatsApp desde `/profesional/panel`. Reutiliza `registerStep2Schema` (DRY, vía `registerStep2Object`) + `proEditableFields` (compartido con el alta, sin drift). Cambiar el **número de colegiación o su país reinicia la verificación** (`verifiedStatus → 'pending'`, evita el "carné cambiado tras verificar"). El nombre se sincroniza con el `user` de auth. Sin migración (todas las columnas ya existían).
+- **Seguimiento clínico (F3)**: nueva ruta privada `/profesional/seguimiento` donde el profesional registra a las personas que atiende. Campo requerido: **teléfono** (con el mismo input de país+formato que el WhatsApp del registro). Opcionales: nombre, motivo, **nivel de riesgo** (Sin riesgo / Vigilar / **Urgente**, triaje clínico simplificado tipo C-SSRS; "Urgente" muestra un recordatorio de derivación), **acción realizada** (etiquetas PFA: Escucha activa / Información sobre afrontamiento / Estabilización / Apoyo social / Derivación), estado, próximo contacto y notas. **Privado por profesional**: toda query filtra `WHERE professional_id = <mi pro>` desde la sesión; **sin acceso público ni de admin** (privacidad a nivel app — el deployer puede leer D1 directamente). Nueva tabla `follow_ups` (migración `0013`).
+- **`<PhoneInput>` compartido**: input de teléfono (país + formato WhatsApp) extraído a `src/components/phone-input.tsx`, usado por el seguimiento y la edición de perfil.
+
+### Changed
+- `getMyProfessional` y `getPublicProfessional` devuelven ahora los campos de disponibilidad (`availabilityMode`/`availabilitySchedule` parseado/`timezone`) y los editables del perfil; `PublicProfessional` reemplaza `available: boolean` por los tres campos de disponibilidad.
+- Eliminado `setAvailability` (interruptor ON/OFF) — reemplazado por `setAvailabilityMode`.
+
+### Deploy (esta release incluye migraciones)
+- `npx wrangler d1 migrations apply psico-support-db --remote` **y** `--local` (gotcha #1 — `npm run deploy` **no** aplica migraciones). Dos migraciones: `0013` (tabla `follow_ups`) y `0014` (`availability_mode` / `availability_schedule` / `timezone` en `professionals`) — todas aditivas (nueva tabla + columnas nullable / con default), **no breaking**.
+- `npx wrangler d1 migrations list psico-support-db --remote` para confirmar que no queda nada pendiente.
+- `npm version minor` (1.12.0 → 1.13.0). Sin bump del cache del SW (release compatible; SWR + `skipWaiting` refresca clientes instalados en un reload).
+
 ## [1.12.0] - 2026-06-30
 
 ### Added

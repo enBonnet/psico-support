@@ -7,12 +7,19 @@ import { Shuffle, Search, X, ChevronDown, SlidersHorizontal } from 'lucide-react
 import {
   listProfessionals,
   pickRandomProfessional,
+  isActiveNow,
+  nextStartLabel,
+  formatScheduleHuman,
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
   PAGE_SIZE_DEFAULT,
 } from '#/server/professionals'
-import type { PublicProfessional } from '#/server/professionals'
+import type {
+  PublicProfessional,
+  AvailabilityMode,
+  ScheduleSlot,
+} from '#/server/professionals'
 import { VENEZUELA_ESTADOS, ESTADO_CIUDADES } from '#/server/locations'
 import { notify } from '#/lib/notifications'
 import { seoHead } from '#/lib/seo'
@@ -516,10 +523,20 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
               {[...p.focusGroups, ...p.practiceAreas].join(' · ')}
             </p>
           )}
+          {p.availabilityMode === 'scheduled' &&
+            p.availabilitySchedule.length > 0 && (
+              <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
+                Horario: {formatScheduleHuman(p.availabilitySchedule)}
+              </p>
+            )}
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
           <BadgeFPV />
-          <StatusPill available={p.available} />
+          <AvailabilityBadge
+            mode={p.availabilityMode}
+            schedule={p.availabilitySchedule}
+            timezone={p.timezone}
+          />
         </div>
       </div>
       <a
@@ -537,22 +554,60 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
   )
 }
 
-function StatusPill({ available }: { available: boolean }) {
-  return available ? (
-    <span
-      className="glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700"
-      title="Disponible ahora"
-    >
-      <span className="size-2 rounded-full bg-green-500" />
-      En línea
-    </span>
-  ) : (
+function AvailabilityBadge({
+  mode,
+  schedule,
+  timezone,
+}: {
+  mode: AvailabilityMode
+  schedule: ScheduleSlot[]
+  timezone: string | null
+}) {
+  // ponytail: live-computed at render — the directory polls every 20s so the
+  // badge re-evaluates as windows cross. 'always' = Siempre disponible;
+  // 'inactive' = No conectado; 'scheduled' = Disponible ahora / Vuelve… / No disponible.
+  const tz = timezone ?? 'America/Caracas'
+  if (mode === 'always') {
+    return (
+      <span
+        className="glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700"
+        title="Siempre disponible"
+      >
+        <span className="size-2 rounded-full bg-green-500" />
+        Siempre disponible
+      </span>
+    )
+  }
+  if (mode === 'inactive') {
+    return (
+      <span
+        className="glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-[var(--medi-text-secondary)]"
+        title="No conectado"
+      >
+        <span className="size-2 rounded-full bg-slate-400" />
+        No conectado
+      </span>
+    )
+  }
+  if (isActiveNow(schedule, tz)) {
+    return (
+      <span
+        className="glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700"
+        title="Disponible ahora"
+      >
+        <span className="size-2 rounded-full bg-green-500" />
+        Disponible ahora
+      </span>
+    )
+  }
+  const label = nextStartLabel(schedule, tz)
+  return (
     <span
       className="glass-pill inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-700"
-      title="No conectado"
+      title={label ?? 'No disponible'}
     >
       <span className="size-2 rounded-full bg-amber-500" />
-      No conectado
+      {label ?? 'No disponible'}
     </span>
   )
 }
