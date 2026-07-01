@@ -201,7 +201,7 @@ function RegisterPage() {
       </Link>
 
       <h1 className="mt-4 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Registro de Profesional
+        Registro de profesional
       </h1>
       <div className="section-underline mt-2" />
       <p className="mt-3 text-sm text-[var(--medi-text-secondary)]">

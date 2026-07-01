@@ -17,7 +17,7 @@ export const Route = createFileRoute('/')({
   loader: async () => ({ count: await countVerifiedProfessionals() }),
   head: () =>
     seoHead({
-      title: 'Red de Apoyo Psicológico Venezuela',
+      title: 'Red de apoyo psicológico Venezuela',
       description:
         'Conectamos a personas afectadas con psicólogos verificados. Apoyo presencial y online por WhatsApp, gratuito y confidencial.',
       path: '/',
@@ -39,7 +39,7 @@ function Landing() {
       <header className="text-center">
         <p className="section-kicker">Venezuela</p>
         <h1 className="mt-2 text-3xl font-bold leading-tight text-[var(--medi-primary)] sm:text-4xl">
-          Red de Apoyo Psicológico
+          Red de apoyo psicológico
         </h1>
         <div className="section-underline mx-auto mt-3" />
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
@@ -81,7 +81,7 @@ function Landing() {
         className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <LifeBuoy aria-hidden="true" className="size-5" />
-        Necesito Ayuda Ahora
+        Necesito ayuda ahora
       </Link>
       <Link
         to="/apoyo"
@@ -95,14 +95,14 @@ function Landing() {
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <HeartPulse aria-hidden="true" className="size-5" />
-        Herramientas de Autocuidado
+        Herramientas de autocuidado
       </Link>
       <Link
         to="/profesional/registro"
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <Stethoscope aria-hidden="true" className="size-5" />
-        Ofrezco Ayuda (Soy Psicólogo)
+        Ofrezco ayuda (soy psicólogo)
       </Link>
       </nav>
 
@@ -110,7 +110,7 @@ function Landing() {
 
       <Link
         to="/como-funciona"
-        aria-label="Cómo funciona Psicoayudaven"
+        aria-label="Cómo funciona PsicoAyudaVen"
         className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         ¿Primera vez aquí?{' '}
@@ -121,12 +121,12 @@ function Landing() {
 
       <Link
         to="/acerca-de"
-        aria-label="Acerca de Psicoayudaven"
+        aria-label="Acerca de PsicoAyudaVen"
         className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         Servicio gratuito y confidencial.{' '}
         <span className="font-medium text-[var(--medi-secondary)]">
-          Acerca de Psicoayudaven
+          Acerca de PsicoAyudaVen
         </span>
       </Link>
     </main>

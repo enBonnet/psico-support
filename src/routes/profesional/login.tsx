@@ -60,7 +60,7 @@ function LoginPage() {
       </Link>
 
       <h1 className="mt-4 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Iniciar Sesión
+        Iniciar sesión
       </h1>
       <div className="section-underline mt-2" />
 

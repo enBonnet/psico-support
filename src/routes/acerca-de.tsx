@@ -28,9 +28,9 @@ const pillClass =
 export const Route = createFileRoute('/acerca-de')({
   head: () =>
     seoHead({
-      title: 'Acerca de Psicoayudaven',
+      title: 'Acerca de PsicoAyudaVen',
       description:
-        'psicoayudaven es una plataforma de código abierto, parte de Build4Venezuela, que conecta a personas en Venezuela con psicólogos verificados de forma gratuita y confidencial.',
+        'PsicoAyudaVen es una plataforma de código abierto, parte de Build4Venezuela, que conecta a personas en Venezuela con psicólogos verificados de forma gratuita y confidencial.',
       path: '/acerca-de',
     }),
   component: AboutPage,
@@ -47,14 +47,14 @@ function AboutPage() {
         ‹ Atrás
       </Link>
 
-      <p className="section-kicker mt-6">Acerca de Psicoayudaven</p>
+      <p className="section-kicker mt-6">Acerca de PsicoAyudaVen</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
         Tecnología al servicio de la salud mental
       </h1>
       <div className="section-underline mt-2" />
 
       <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-        psicoayudaven es una plataforma de código abierto que conecta a personas
+        PsicoAyudaVen es una plataforma de código abierto que conecta a personas
         afectadas por situaciones de crisis en Venezuela con psicólogos
         verificados, de forma gratuita y confidencial.
       </p>

@@ -57,8 +57,8 @@ const TOOLS: readonly Tool[] = [
   },
   {
     to: '/recursos/primeros-auxilios',
-    title: 'Primeros Auxilios Psicológicos',
-    desc: 'Cómo acompañar a alguien en crisis (Mirar, Escuchar, Conectar).',
+    title: 'Primeros auxilios psicológicos',
+    desc: 'Cómo acompañar a alguien en crisis (mirar, escuchar, conectar).',
     audience: 'Para ayudar a otros',
     icon: LifeBuoy,
   },

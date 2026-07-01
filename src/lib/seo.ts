@@ -2,7 +2,7 @@
 // the prod domain is a constant here — not an env var. Swap for an env-driven
 // value only if a staging domain ever needs different previews.
 export const SITE_URL = 'https://psicoayudaven.com'
-export const SITE_NAME = 'psicoayudaven'
+export const SITE_NAME = 'PsicoAyudaVen'
 const DEFAULT_IMAGE = `${SITE_URL}/logo512.png`
 
 type SeoInput = {

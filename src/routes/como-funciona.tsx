@@ -22,7 +22,7 @@ import { seoHead } from '#/lib/seo'
 export const Route = createFileRoute('/como-funciona')({
   head: () =>
     seoHead({
-      title: 'Cómo funciona Psicoayudaven',
+      title: 'Cómo funciona PsicoAyudaVen',
       description:
         'Conoce cómo usar la plataforma para recibir ayuda psicológica, cómo funciona para psicólogos verificados y cómo protegemos tus datos.',
       path: '/como-funciona',
@@ -80,7 +80,7 @@ function HowItWorksPage() {
 
       <p className="section-kicker mt-6">Cómo funciona</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Cómo funciona Psicoayudaven
+        Cómo funciona PsicoAyudaVen
       </h1>
       <div className="section-underline mt-2" />
       <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
@@ -112,7 +112,7 @@ function HowItWorksPage() {
                 search={{ modality: 'remote' }}
                 className="font-semibold text-[var(--medi-secondary)]"
               >
-                Necesito Ayuda Ahora
+                Necesito ayuda ahora
               </Link>{' '}
               y filtra por estado, modalidad o especialidad. Solo verás
               psicólogos con su cédula y colegiación ya verificadas.
@@ -138,7 +138,7 @@ function HowItWorksPage() {
                 to="/recursos"
                 className="font-semibold text-[var(--medi-secondary)]"
               >
-                Herramientas de Autocuidado
+                Herramientas de autocuidado
               </Link>{' '}
               encontrarás ejercicios de respiración, técnicas de enraizamiento y
               un autochequeo emocional privado.
@@ -309,7 +309,7 @@ function HowItWorksPage() {
           to="/acerca-de"
           className="font-medium text-[var(--medi-secondary)] hover:underline"
         >
-          Acerca de Psicoayudaven
+          Acerca de PsicoAyudaVen
         </Link>
       </footer>
     </main>

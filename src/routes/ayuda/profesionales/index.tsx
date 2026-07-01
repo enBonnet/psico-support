@@ -98,8 +98,8 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
     return seoHead({
       title:
         modality === 'remote'
-          ? 'Asistencia a Distancia — Psicólogos Verificados'
-          : 'Asistencia Presencial — Psicólogos Verificados',
+          ? 'Asistencia a distancia — psicólogos verificados'
+          : 'Asistencia presencial — psicólogos verificados',
       description:
         'Directorio de psicólogos verificados. Filtra por estado, ciudad o población y contacta directamente por WhatsApp.',
       path: `/ayuda/profesionales?modality=${modality}`,
@@ -215,7 +215,7 @@ function ProfessionalsList() {
       }
       const digits = picked.whatsapp.replace(/\D/g, '')
       const text = encodeURIComponent(
-        'Hola, te escribo por medio de psicoayudaven.',
+        'Hola, te escribo por medio de PsicoAyudaVen.',
       )
       window.open(
         `https://wa.me/${digits}?text=${text}`,
@@ -235,8 +235,8 @@ function ProfessionalsList() {
 
   const title =
     filters.modality === 'in_person'
-      ? 'Asistencia Presencial'
-      : 'Asistencia a Distancia'
+      ? 'Asistencia presencial'
+      : 'Asistencia a distancia'
 
   // ponytail: ciudades is estado-scoped. Cast the lookup to | undefined so
   // the ?? [] is type-honest — without noUncheckedIndexedAccess, TS thinks
@@ -260,7 +260,7 @@ function ProfessionalsList() {
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-xl font-bold text-[var(--medi-text-primary)]">
-              Profesionales Verificados
+              Profesionales verificados
             </h1>
             <p className="text-sm text-[var(--medi-text-secondary)]">
               {title}
@@ -491,7 +491,7 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
   // "+58 1234567890", so strip everything but \d. Default message pre-fills
   // the chat so the professional knows where the lead came from.
   const digits = p.whatsapp.replace(/\D/g, '')
-  const text = encodeURIComponent('Hola, te escribo por medio de psicoayudaven.')
+  const text = encodeURIComponent('Hola, te escribo por medio de PsicoAyudaVen.')
   const href = `https://wa.me/${digits}?text=${text}`
 
   return (

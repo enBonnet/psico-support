@@ -12,9 +12,9 @@ import { ProCta } from '#/components/pro-cta'
 export const Route = createFileRoute('/recursos/primeros-auxilios')({
   head: () =>
     seoHead({
-      title: 'Primeros Auxilios Psicológicos (PAP)',
+      title: 'Primeros auxilios psicológicos (PAP)',
       description:
-        'Guía práctica de Primeros Auxilios Psicológicos para acompañar a alguien en crisis: Mirar, Escuchar y Conectar. Qué hacer y qué evitar.',
+        'Guía práctica de primeros auxilios psicológicos para acompañar a alguien en crisis: mirar, escuchar y conectar. Qué hacer y qué evitar.',
       path: '/recursos/primeros-auxilios',
     }),
   component: PrimerosAuxilios,
@@ -71,12 +71,12 @@ function PrimerosAuxilios() {
 
       <p className="section-kicker mt-6">Para ayudar a otros</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Primeros Auxilios Psicológicos (PAP)
+        Primeros auxilios psicológicos (PAP)
       </h1>
       <div className="section-underline mt-2" />
 
       <p className="mt-4 text-sm text-[var(--medi-text-secondary)]">
-        Los Primeros Auxilios Psicológicos son una forma humana y práctica de
+        Los primeros auxilios psicológicos son una forma humana y práctica de
         acompañar a alguien que vive una crisis. No requieren formación clínica:
         se basan en tres pasos sencillos.
       </p>
@@ -141,8 +141,8 @@ function PrimerosAuxilios() {
       </section>
 
       <p className="mt-4 text-xs text-[var(--medi-text-secondary)]">
-        Esta guía resume los principios de los Primeros Auxilios Psicológicos
-        basados en el modelo de la OMS (Mirar, Escuchar, Conectar). No
+        Esta guía resume los principios de los primeros auxilios psicológicos
+        basados en el modelo de la OMS (mirar, escuchar, conectar). No
         convierte a quien la lee en profesional de salud mental.
       </p>
 

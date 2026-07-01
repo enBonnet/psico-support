@@ -9,7 +9,7 @@ import { notify } from '#/lib/notifications'
 
 const SHARE_URL = `${SITE_URL}/social`
 const SHARE_TEXT =
-  '¿Eres psicólogo/a? Únete a la Red de Apoyo Psicológico de Venezuela y conecta con quienes te necesitan. Verificamos tus credenciales. Gratis y confidencial.'
+  '¿Eres psicólogo/a? Únete a la red de apoyo psicológico de Venezuela y conecta con quienes te necesitan. Verificamos tus credenciales. Gratis y confidencial.'
 
 export const Route = createFileRoute('/social')({
   head: () =>

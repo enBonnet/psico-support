@@ -126,7 +126,7 @@ function PanelPage() {
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-[var(--medi-text-primary)]">
-          Mi Panel
+          Mi panel
         </h1>
         <div className="flex items-center gap-3">
           {isAdmin && (
@@ -298,7 +298,7 @@ function PanelPage() {
             // the professional so the admin knows who's reaching out. Pure
             // client-side — no server fn / DB column needed.
             const supportText = encodeURIComponent(
-              `Hola, soy ${me.name} te escribo por medio de psicoayudaven.`,
+              `Hola, soy ${me.name} te escribo por medio de PsicoAyudaVen.`,
             )
             const supportHref = `https://wa.me/${SUPPORT_WHATSAPP}?text=${supportText}`
             return (

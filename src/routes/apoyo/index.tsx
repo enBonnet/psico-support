@@ -15,7 +15,7 @@ export const Route = createFileRoute('/apoyo/')({
   ssr: false,
   head: () =>
     seoHead({
-      title: 'Voces que acompañan — Psicoayudaven',
+      title: 'Voces que acompañan — PsicoAyudaVen',
       description:
         'Escucha mensajes en voz de psicólogos verificados. Si necesitas acompañamiento ahora, empieza aquí.',
       path: '/apoyo',

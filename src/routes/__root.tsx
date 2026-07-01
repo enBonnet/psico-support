@@ -46,7 +46,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: '#13297e',
       },
       {
-        title: 'Red de Apoyo Psicológico Venezuela',
+        title: 'Red de apoyo psicológico Venezuela',
       },
     ],
     links: [

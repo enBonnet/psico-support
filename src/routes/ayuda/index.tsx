@@ -44,7 +44,7 @@ function ModalitySelection() {
           <MessageCircle className="size-9 shrink-0 text-[var(--medi-secondary)]" />
           <span>
             <span className="block text-lg font-semibold text-[var(--medi-text-primary)]">
-              Asistencia a Distancia
+              Asistencia a distancia
             </span>
             <span className="block text-sm text-[var(--medi-text-secondary)]">
               Online / WhatsApp ahora
@@ -60,7 +60,7 @@ function ModalitySelection() {
           <MapPin className="size-9 shrink-0 text-[var(--medi-secondary)]" />
           <span>
             <span className="block text-lg font-semibold text-[var(--medi-text-primary)]">
-              Asistencia Presencial
+              Asistencia presencial
             </span>
             <span className="block text-sm text-[var(--medi-text-secondary)]">
               Brigadas en zonas críticas en todo el país
