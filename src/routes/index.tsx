@@ -131,6 +131,17 @@ function Landing() {
       </Link>
 
       <Link
+        to="/equipo"
+        aria-label="Equipo de PsicoAyudaVen"
+        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        Las personas detrás del proyecto.{' '}
+        <span className="font-medium text-[var(--medi-secondary)]">
+          Equipo
+        </span>
+      </Link>
+
+      <Link
         to="/terminos"
         aria-label="Términos para profesionales"
         className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"

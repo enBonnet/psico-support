@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.16.0] - 2026-07-01
+
+### Added
+- **Página de equipo (/equipo)**: nueva página estática con las personas detrás de PsicoAyudaVen — psicología, trabajo social, estrategia y desarrollo. SSR (como `/acerca-de` y `/terminos`), con SEO propio. Accesible desde la página de inicio, junto al enlace "Acerca de".
+
 ### Added
 - **Página de error 500**: cualquier error no capturado (caída del loader, fallo de server-fn, error de render) ahora muestra una página en español que explica lo ocurrido, con dos acciones claras: **Volver al inicio** (botón principal) y **Reintentar** (para errores transitorios). Antes, estos caían al mensaje genérico en inglés de TanStack Router, sin ruta de regreso. Sigue el mismo diseño que la página 404 existente. El error además se registra en `console.error` (Sentry aquí es solo servidor, así que los errores de cliente no se capturan automáticamente aún).
 
