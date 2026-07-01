@@ -14,6 +14,7 @@ import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
 import { Route as CuentaRouteImport } from './routes/cuenta'
+import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
 import { Route as AyudameRouteImport } from './routes/ayudame'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
@@ -63,6 +64,11 @@ const PsicologosRoute = PsicologosRouteImport.update({
 const CuentaRoute = CuentaRouteImport.update({
   id: '/cuenta',
   path: '/cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComoFuncionaRoute = ComoFuncionaRouteImport.update({
+  id: '/como-funciona',
+  path: '/como-funciona',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AyudameRoute = AyudameRouteImport.update({
@@ -198,6 +204,7 @@ export interface FileRoutesByFullPath {
   '/acerca-de': typeof AcercaDeRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
+  '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/acerca-de': typeof AcercaDeRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
+  '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
@@ -263,6 +271,7 @@ export interface FileRoutesById {
   '/acerca-de': typeof AcercaDeRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
+  '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
   '/signup': typeof SignupRoute
@@ -297,6 +306,7 @@ export interface FileRouteTypes {
     | '/acerca-de'
     | '/app'
     | '/ayudame'
+    | '/como-funciona'
     | '/cuenta'
     | '/psicologos'
     | '/signup'
@@ -329,6 +339,7 @@ export interface FileRouteTypes {
     | '/acerca-de'
     | '/app'
     | '/ayudame'
+    | '/como-funciona'
     | '/cuenta'
     | '/psicologos'
     | '/signup'
@@ -361,6 +372,7 @@ export interface FileRouteTypes {
     | '/acerca-de'
     | '/app'
     | '/ayudame'
+    | '/como-funciona'
     | '/cuenta'
     | '/psicologos'
     | '/signup'
@@ -394,6 +406,7 @@ export interface RootRouteChildren {
   AcercaDeRoute: typeof AcercaDeRoute
   AppRoute: typeof AppRoute
   AyudameRoute: typeof AyudameRoute
+  ComoFuncionaRoute: typeof ComoFuncionaRoute
   CuentaRoute: typeof CuentaRoute
   PsicologosRoute: typeof PsicologosRoute
   SignupRoute: typeof SignupRoute
@@ -457,6 +470,13 @@ declare module '@tanstack/react-router' {
       path: '/cuenta'
       fullPath: '/cuenta'
       preLoaderRoute: typeof CuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/como-funciona': {
+      id: '/como-funciona'
+      path: '/como-funciona'
+      fullPath: '/como-funciona'
+      preLoaderRoute: typeof ComoFuncionaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ayudame': {
@@ -642,6 +662,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcercaDeRoute: AcercaDeRoute,
   AppRoute: AppRoute,
   AyudameRoute: AyudameRoute,
+  ComoFuncionaRoute: ComoFuncionaRoute,
   CuentaRoute: CuentaRoute,
   PsicologosRoute: PsicologosRoute,
   SignupRoute: SignupRoute,

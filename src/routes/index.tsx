@@ -109,9 +109,20 @@ function Landing() {
       <InstallCard />
 
       <Link
+        to="/como-funciona"
+        aria-label="Cómo funciona Psicoayudaven"
+        className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        ¿Primera vez aquí?{' '}
+        <span className="font-medium text-[var(--medi-secondary)]">
+          Cómo funciona
+        </span>
+      </Link>
+
+      <Link
         to="/acerca-de"
         aria-label="Acerca de Psicoayudaven"
-        className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         Servicio gratuito y confidencial.{' '}
         <span className="font-medium text-[var(--medi-secondary)]">
