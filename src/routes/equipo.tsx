@@ -43,13 +43,8 @@ const TEAM: Member[] = [
     country: 'Colombia',
   },
   {
-    name: 'Claudia Gómez',
-    role: 'Directora de C7 Salud Mental',
-    country: 'México',
-  },
-  {
-    name: 'Claudia Ruiz',
-    role: 'Directora de C7 Salud Mental',
+    name: 'Claudia Gómez y Claudia Ruiz',
+    role: 'Directoras de C7 Salud Mental',
     country: 'México',
   },
   {
