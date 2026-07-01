@@ -30,9 +30,13 @@ import { Route as RecursosEnraizamientoRouteImport } from './routes/recursos/enr
 import { Route as RecursosAutochequeoRouteImport } from './routes/recursos/autochequeo'
 import { Route as ProfesionalSeguimientoRouteImport } from './routes/profesional/seguimiento'
 import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
+import { Route as ProfesionalPresentacionRouteImport } from './routes/profesional/presentacion'
+import { Route as ProfesionalPerfilRouteImport } from './routes/profesional/perfil'
 import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
 import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
+import { Route as ProfesionalDisponibilidadRouteImport } from './routes/profesional/disponibilidad'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
+import { Route as ProfesionalAudiosRouteImport } from './routes/profesional/audios'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
 import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
 import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
@@ -148,6 +152,16 @@ const ProfesionalRegistroRoute = ProfesionalRegistroRouteImport.update({
   path: '/profesional/registro',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfesionalPresentacionRoute = ProfesionalPresentacionRouteImport.update({
+  id: '/profesional/presentacion',
+  path: '/profesional/presentacion',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfesionalPerfilRoute = ProfesionalPerfilRouteImport.update({
+  id: '/profesional/perfil',
+  path: '/profesional/perfil',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfesionalPanelRoute = ProfesionalPanelRouteImport.update({
   id: '/profesional/panel',
   path: '/profesional/panel',
@@ -158,9 +172,20 @@ const ProfesionalLoginRoute = ProfesionalLoginRouteImport.update({
   path: '/profesional/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfesionalDisponibilidadRoute =
+  ProfesionalDisponibilidadRouteImport.update({
+    id: '/profesional/disponibilidad',
+    path: '/profesional/disponibilidad',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ProfesionalCompletarRoute = ProfesionalCompletarRouteImport.update({
   id: '/profesional/completar',
   path: '/profesional/completar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfesionalAudiosRoute = ProfesionalAudiosRouteImport.update({
+  id: '/profesional/audios',
+  path: '/profesional/audios',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
@@ -210,9 +235,13 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/ya': typeof YaRoute
+  '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
+  '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
+  '/profesional/perfil': typeof ProfesionalPerfilRoute
+  '/profesional/presentacion': typeof ProfesionalPresentacionRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
   '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
@@ -243,9 +272,13 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/ya': typeof YaRoute
+  '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
+  '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
+  '/profesional/perfil': typeof ProfesionalPerfilRoute
+  '/profesional/presentacion': typeof ProfesionalPresentacionRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
   '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
@@ -277,9 +310,13 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/ya': typeof YaRoute
+  '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
+  '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
   '/profesional/login': typeof ProfesionalLoginRoute
   '/profesional/panel': typeof ProfesionalPanelRoute
+  '/profesional/perfil': typeof ProfesionalPerfilRoute
+  '/profesional/presentacion': typeof ProfesionalPresentacionRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
   '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
@@ -312,9 +349,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/social'
     | '/ya'
+    | '/profesional/audios'
     | '/profesional/completar'
+    | '/profesional/disponibilidad'
     | '/profesional/login'
     | '/profesional/panel'
+    | '/profesional/perfil'
+    | '/profesional/presentacion'
     | '/profesional/registro'
     | '/profesional/seguimiento'
     | '/recursos/autochequeo'
@@ -345,9 +386,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/social'
     | '/ya'
+    | '/profesional/audios'
     | '/profesional/completar'
+    | '/profesional/disponibilidad'
     | '/profesional/login'
     | '/profesional/panel'
+    | '/profesional/perfil'
+    | '/profesional/presentacion'
     | '/profesional/registro'
     | '/profesional/seguimiento'
     | '/recursos/autochequeo'
@@ -378,9 +423,13 @@ export interface FileRouteTypes {
     | '/signup'
     | '/social'
     | '/ya'
+    | '/profesional/audios'
     | '/profesional/completar'
+    | '/profesional/disponibilidad'
     | '/profesional/login'
     | '/profesional/panel'
+    | '/profesional/perfil'
+    | '/profesional/presentacion'
     | '/profesional/registro'
     | '/profesional/seguimiento'
     | '/recursos/autochequeo'
@@ -412,9 +461,13 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   SocialRoute: typeof SocialRoute
   YaRoute: typeof YaRoute
+  ProfesionalAudiosRoute: typeof ProfesionalAudiosRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
+  ProfesionalDisponibilidadRoute: typeof ProfesionalDisponibilidadRoute
   ProfesionalLoginRoute: typeof ProfesionalLoginRoute
   ProfesionalPanelRoute: typeof ProfesionalPanelRoute
+  ProfesionalPerfilRoute: typeof ProfesionalPerfilRoute
+  ProfesionalPresentacionRoute: typeof ProfesionalPresentacionRoute
   ProfesionalRegistroRoute: typeof ProfesionalRegistroRoute
   ProfesionalSeguimientoRoute: typeof ProfesionalSeguimientoRoute
   RecursosAutochequeoRoute: typeof RecursosAutochequeoRoute
@@ -584,6 +637,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfesionalRegistroRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profesional/presentacion': {
+      id: '/profesional/presentacion'
+      path: '/profesional/presentacion'
+      fullPath: '/profesional/presentacion'
+      preLoaderRoute: typeof ProfesionalPresentacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/perfil': {
+      id: '/profesional/perfil'
+      path: '/profesional/perfil'
+      fullPath: '/profesional/perfil'
+      preLoaderRoute: typeof ProfesionalPerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profesional/panel': {
       id: '/profesional/panel'
       path: '/profesional/panel'
@@ -598,11 +665,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfesionalLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profesional/disponibilidad': {
+      id: '/profesional/disponibilidad'
+      path: '/profesional/disponibilidad'
+      fullPath: '/profesional/disponibilidad'
+      preLoaderRoute: typeof ProfesionalDisponibilidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profesional/completar': {
       id: '/profesional/completar'
       path: '/profesional/completar'
       fullPath: '/profesional/completar'
       preLoaderRoute: typeof ProfesionalCompletarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/audios': {
+      id: '/profesional/audios'
+      path: '/profesional/audios'
+      fullPath: '/profesional/audios'
+      preLoaderRoute: typeof ProfesionalAudiosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ayuda/profesionales/': {
@@ -668,9 +749,13 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   SocialRoute: SocialRoute,
   YaRoute: YaRoute,
+  ProfesionalAudiosRoute: ProfesionalAudiosRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
+  ProfesionalDisponibilidadRoute: ProfesionalDisponibilidadRoute,
   ProfesionalLoginRoute: ProfesionalLoginRoute,
   ProfesionalPanelRoute: ProfesionalPanelRoute,
+  ProfesionalPerfilRoute: ProfesionalPerfilRoute,
+  ProfesionalPresentacionRoute: ProfesionalPresentacionRoute,
   ProfesionalRegistroRoute: ProfesionalRegistroRoute,
   ProfesionalSeguimientoRoute: ProfesionalSeguimientoRoute,
   RecursosAutochequeoRoute: RecursosAutochequeoRoute,

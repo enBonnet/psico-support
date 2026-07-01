@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.15.0] - 2026-07-01
+
+### Changed
+- **Panel profesional rediseñado como menú de accesos**: `/profesional/panel` deja de ser una sola pantalla larga con todos los formularios apilados y pasa a ser un **hub de tarjetas descriptivas** (icono + título + subtítulo + estado actual), siguiendo el mismo patrón que `/cuenta` y `/ayuda`. Pensado para usuarios con poca familiarity tecnológica: una decisión por pantalla en lugar de seis formularios en un solo scroll.
+  - El **estado de verificación** pasa de una línea pequeña a un **banner destacado** (es la principal duda del profesional).
+  - Cada tarjeta muestra una **vista previa del estado actual** sin necesidad de abrirla: la tarjeta de Disponibilidad muestra el modo (Siempre / Por horario / No disponible); la de Seguimiento, el conteo de abiertos; la de Audios, `N/2`.
+  - Los formularios grandes se mueven a sus propias rutas enfocadas, cada una con enlace "‹ Panel" para volver:
+    - `/profesional/perfil` — datos del directorio (nombre, credencial, especialidad, ubicación, teléfono) + **documentos de respaldo** (los ex "Documentos de apoyo", ahora como subsección aquí).
+    - `/profesional/presentacion` — foto de perfil + redes sociales.
+    - `/profesional/disponibilidad` — modo de disponibilidad + grilla semanal (oculta para colaboradores de contenido, que ven una nota explicativa).
+    - `/profesional/audios` — grabadora y lista de "Voces que acompañan" (se mantiene el gate por verificación).
+  - Soporte por WhatsApp y eliminación de cuenta quedan **en línea** en el hub (acciones únicas, no merecen ruta propia).
+  - Sin cambios de API/base de datos → **sin migración**. Soporte y eliminación de cuenta mantienen su comportamiento anterior.
+
+
 ## [1.14.0] - 2026-06-30
 
 ### Added
