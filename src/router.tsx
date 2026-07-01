@@ -5,6 +5,7 @@ import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query
 import { getContext } from './integrations/tanstack-query/root-provider'
 import { RoutePending } from './components/route-pending'
 import { NotFound } from './components/not-found'
+import { DefaultErrorComponent } from './components/error'
 
 export function getRouter() {
   const context = getContext()
@@ -24,6 +25,10 @@ export function getRouter() {
     // (verified-only public data). Without a default this fell to TanStack
     // Router's generic <p>Not Found</p> + a dev warning. Spanish 404 page.
     defaultNotFoundComponent: NotFound,
+    // ponytail: without a default, any uncaught error (loader/server-fn/render
+    // throw) fell to TanStack Router's generic English error UI with no way
+    // home. Spanish 500 page mirroring NotFound — home button + retry.
+    defaultErrorComponent: DefaultErrorComponent,
   })
 
   setupRouterSsrQueryIntegration({ router, queryClient: context.queryClient })
