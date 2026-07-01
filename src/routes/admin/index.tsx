@@ -5,7 +5,8 @@ import {
   useQueryClient,
   keepPreviousData,
 } from '@tanstack/react-query'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { useDebounced } from '#/lib/hooks/use-debounced'
 import { Search, MessageCircle } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
@@ -118,16 +119,8 @@ function AdminPage() {
 
 // ── shared search + pagination bits ─────────────────────────────────────────
 
-// ponytail: tiny debounce so typing in the search box doesn't fire one server
-// fn per keystroke. 300ms matches typical "stopped typing" cadence.
-function useDebounced<T>(value: T, ms = 300): T {
-  const [d, setD] = useState(value)
-  useEffect(() => {
-    const t = setTimeout(() => setD(value), ms)
-    return () => clearTimeout(t)
-  }, [value, ms])
-  return d
-}
+// ponytail: useDebounced now lives in src/lib/hooks/use-debounced.ts (shared
+// with the professionals directory route). See it for the rationale.
 
 function SectionSearch({
   value,

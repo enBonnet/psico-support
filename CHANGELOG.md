@@ -10,6 +10,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Página de error 500**: cualquier error no capturado (caída del loader, fallo de server-fn, error de render) ahora muestra una página en español que explica lo ocurrido, con dos acciones claras: **Volver al inicio** (botón principal) y **Reintentar** (para errores transitorios). Antes, estos caían al mensaje genérico en inglés de TanStack Router, sin ruta de regreso. Sigue el mismo diseño que la página 404 existente. El error además se registra en `console.error` (Sentry aquí es solo servidor, así que los errores de cliente no se capturan automáticamente aún).
 
+## [1.15.1] - 2026-07-01
+
+### Fixed
+- **Filtros del directorio inutilizables**: en `/ayuda/profesionales`, cada tecla en el buscador (y cada cambio en un `<select>` o de página) reescribía la URL, lo que disparaba el `loaderDeps` → el loader del route volvía a correr → el router entraba en estado *pending* y reemplazaba toda la página por el spinner `RoutePending` (incluyendo el `<input>`, que se desmontaba). El efecto era el de una recarga de página por cada pulsación. Ahora:
+  - Los filtros (`q`, estado, ciudad, edad, población, área) y la página viven en **estado local** del componente, sembrados **una sola vez** desde la URL al montar (un enlace profundo como `?q=Ana&estado=Zulia` sigue resolviendo en la primera carga, pero refinar ya no navega).
+  - La búsqueda de texto libre se **debouncea** (300 ms, `useDebounced` compartido con el panel de admin); los `<select>` y la paginación disparan la consulta al instante.
+  - La consulta usa `placeholderData: keepPreviousData`, de modo que cualquier cambio mantiene la lista anterior a la vista **sin blanks ni suspensión** mientras llega la nueva. Solo en la **primera carga** (sin datos previos) se muestran *skeletons*.
+  - `modality` (presencial vs distancia) sigue en la URL (cambia la página entera + el `head()`/OG); `page` también, para que un enlace pueda apuntar a una página concreta.
+  - El loader pasó de hacer un fetch por filtro a **no hacer fetch** (solo devuelve `modality` para el `head()`), así ya nunca dispara el spinner.
+- **`useDebounced` compartido**: el hook que vivía inline en `src/routes/admin/index.tsx` se movió a `src/lib/hooks/use-debounced.ts` y ahora lo reutilizan admin y el directorio (una sola copia).
+
 ## [1.15.0] - 2026-07-01
 
 ### Changed

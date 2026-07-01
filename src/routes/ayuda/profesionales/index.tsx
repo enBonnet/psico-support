@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { useSuspenseQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import { Shuffle, Search, X, ChevronDown, SlidersHorizontal } from 'lucide-react'
 
 import {
@@ -23,17 +23,28 @@ import type {
 } from '#/server/professionals'
 import { VENEZUELA_ESTADOS, ESTADO_CIUDADES } from '#/server/locations'
 import { notify } from '#/lib/notifications'
+import { useDebounced } from '#/lib/hooks/use-debounced'
 import { seoHead } from '#/lib/seo'
+import { Skeleton } from '#/components/ui/skeleton'
 
-// ponytail: bare URL (no ?modality=) used to 500 — default to in_person so
-// direct entry resolves instead of throwing on the missing search param.
-// Every filter is URL-synced so a search is shareable + SSR-friendly; page
-// is 1-based and resets to 1 whenever a filter changes (handled in the UI).
-// Filters are plain optional strings (defaulted to '') — they only feed
-// eq()/like() server-side where '' is treated as "no filter", so we pass
-// them straight through with no `|| undefined` coercion.
+// ponytail: filters used to live in the URL and feed loaderDeps, so every
+// keystroke / dropdown change rewrote the URL → re-ran the route loader →
+// flipped the router into pending state → the full-screen RoutePending
+// spinner replaced the page (and unmounted the input). It felt like a page
+// reload per keystroke.
+//
+// Now: only `modality` is URL-driven (it changes the whole page + head()),
+// plus `page` for pagination shareability. The rest (q, estado, ciudad,
+// population, focusGroups, practiceAreas) are local component state seeded
+// ONCE from the URL on mount, so an existing deep-link like ?q=Ana&estado=Zulia
+// still resolves on first load but refining the filters no longer navigates.
+// The list is served by a useQuery with placeholderData: keepPreviousData, so
+// any change (keystroke, select, page turn) keeps the previous rows visible
+// instead of suspending. q is debounced; the dropdowns/page refetch at once.
 const searchSchema = z.object({
   modality: z.enum(['in_person', 'remote']).default('in_person'),
+  // ponytail: these are read once to seed local state (deep-link support),
+  // not watched. Kept as plain strings — '' means "no filter" server-side.
   q: z.string().optional().default(''),
   estado: z.string().optional().default(''),
   ciudad: z.string().optional().default(''),
@@ -43,8 +54,12 @@ const searchSchema = z.object({
   page: z.number().int().min(1).default(1),
 })
 
+// ponytail: stable keys for the first-load skeleton cards. PAGE_SIZE_DEFAULT
+// would overshoot (12) — 4 mirrors a typical above-the-fold count and keeps
+// the skeleton list cheap.
+const DIRECTORY_SKELETONS = [0, 1, 2, 3] as const
+
 type Filters = {
-  modality: 'in_person' | 'remote'
   q: string
   estado: string
   ciudad: string
@@ -58,44 +73,20 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
   validateSearch: searchSchema,
   // ponytail: CSR-only — interactive directory that polls via TanStack Query
   // (refetchInterval). No crawler value (the per-pro profile route is the
-  // shareable/SEO surface, and it stays SSR). The loader still runs client-
-  // side to seed the suspense query's initialData, so no flash on mount.
+  // shareable/SEO surface, and it stays SSR).
   ssr: false,
-  // ponytail: loaderDeps drive both the loader and the suspense query
-  // key — including every filter here means a filter change refetches.
-  loaderDeps: ({ search }) => ({
-    modality: search.modality,
-    q: search.q,
-    estado: search.estado,
-    ciudad: search.ciudad,
-    population: search.population,
-    focusGroups: search.focusGroups,
-    practiceAreas: search.practiceAreas,
-    page: search.page,
-  }),
-  loader: async ({ deps }) => {
-    const initial = await listProfessionals({
-      data: {
-        modality: deps.modality,
-        q: deps.q,
-        estado: deps.estado,
-        ciudad: deps.ciudad,
-        population: deps.population,
-        focusGroups: deps.focusGroups,
-        practiceAreas: deps.practiceAreas,
-        page: deps.page,
-        pageSize: PAGE_SIZE_DEFAULT,
-      },
-    })
-    return { initial, filters: deps }
-  },
-  // ponytail: head() declared after loader so its loaderData param resolves
-  // against the loader's inferred return (declaring it earlier collapsed the
-  // route's generics). head has no `search` in context, so read the active
-  // modality from loaderData.filters — a shared list link previews the right
-  // intent (in-person vs remote are different searches).
+  // ponytail: head() needs the active modality to render the right title/OG,
+  // but head() context has no `search` (gotcha #3) — it only has loaderData.
+  // The loader returns just the modality (no fetch → no RoutePending flash on
+  // mount). loaderDeps carries ONLY modality — it's stable across filter
+  // edits (filters live in component state now), so this loader runs once on
+  // entry and never re-fires while refining. The live list data is owned
+  // entirely by the component's useQuery (placeholderData keeps previous rows
+  // during filter/page changes).
+  loaderDeps: ({ search }) => ({ modality: search.modality }),
+  loader: async ({ deps }) => ({ modality: deps.modality }),
   head: ({ loaderData }) => {
-    const modality = loaderData?.filters.modality ?? 'in_person'
+    const modality = loaderData?.modality ?? 'in_person'
     return seoHead({
       title:
         modality === 'remote'
@@ -110,86 +101,116 @@ export const Route = createFileRoute('/ayuda/profesionales/')({
 })
 
 function ProfessionalsList() {
-  const deps = Route.useLoaderData()
-  const filters = deps.filters
+  // ponytail: modality is URL-driven (changes the whole page + head()). The
+  // other filters + page are local state seeded once from the URL below, so
+  // a shared deep-link still resolves on first load.
+  const { modality } = Route.useSearch()
   const navigate = useNavigate({ from: Route.id })
+
+  // ponytail: seed local filter state from the URL ONCE. Subsequent edits
+  // mutate this state directly (no navigation), which is what stops the
+  // per-keystroke loader re-run. useState initializer ignores later URL
+  // changes — that's intended: refining filters shouldn't rewrite the URL.
+  const initial = Route.useSearch()
+  const [q, setQ] = useState(initial.q)
+  const [estado, setEstado] = useState(initial.estado)
+  const [ciudad, setCiudad] = useState(initial.ciudad)
+  const [population, setPopulation] = useState(initial.population)
+  const [focusGroups, setFocusGroups] = useState(initial.focusGroups)
+  const [practiceAreas, setPracticeAreas] = useState(initial.practiceAreas)
+  const [page, setPage] = useState(initial.page)
+
   const [picking, setPicking] = useState(false)
   // ponytail: filters collapsed by default — the summary row shows what's
   // active so the user never loses track of why the list looks the way it does.
   const [filtersOpen, setFiltersOpen] = useState(false)
 
-  const { data } = useSuspenseQuery({
+  // ponytail: debounce only the free-text search (dropdowns commit at once).
+  // 300ms matches typical "stopped typing" cadence; see use-debounced.ts.
+  const debouncedQ = useDebounced(q)
+
+  // ponytail: placeholderData: keepPreviousData keeps the previous rows on
+  // screen while a new filter/page fetch is in flight, so the list never
+  // blanks or suspends to a spinner during refinement — the core UX fix.
+  // refetchInterval keeps availability badges fresh (20s poll), unchanged.
+  const { data, isLoading } = useQuery({
     queryKey: [
       'professionals',
-      filters.modality,
-      filters.q,
-      filters.estado,
-      filters.ciudad,
-      filters.population,
-      filters.focusGroups,
-      filters.practiceAreas,
-      filters.page,
+      modality,
+      debouncedQ,
+      estado,
+      ciudad,
+      population,
+      focusGroups,
+      practiceAreas,
+      page,
     ],
     queryFn: () =>
       listProfessionals({
         data: {
-          modality: filters.modality,
-          q: filters.q,
-          estado: filters.estado,
-          ciudad: filters.ciudad,
-          population: filters.population,
-          focusGroups: filters.focusGroups,
-          practiceAreas: filters.practiceAreas,
-          page: filters.page,
+          modality,
+          q: debouncedQ,
+          estado,
+          ciudad,
+          population,
+          focusGroups,
+          practiceAreas,
+          page,
           pageSize: PAGE_SIZE_DEFAULT,
         },
       }),
-    initialData: deps.initial,
+    placeholderData: keepPreviousData,
     refetchInterval: 20_000,
     staleTime: 15_000,
   })
 
-  const totalPages = Math.max(1, Math.ceil(data.total / PAGE_SIZE_DEFAULT))
+  const total = data?.total ?? 0
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE_DEFAULT))
   const hasActiveFilters =
-    filters.q ||
-    filters.estado ||
-    filters.ciudad ||
-    filters.population ||
-    filters.focusGroups ||
-    filters.practiceAreas
+    q ||
+    estado ||
+    ciudad ||
+    population ||
+    focusGroups ||
+    practiceAreas
 
   // ponytail: human-readable list of the active filters for the collapsed
   // summary. Quoted term for the name search, plain labels for the rest.
   const activeFilterParts: string[] = []
-  if (filters.q) activeFilterParts.push(`“${filters.q}”`)
-  if (filters.estado) activeFilterParts.push(filters.estado)
-  if (filters.ciudad) activeFilterParts.push(filters.ciudad)
-  if (filters.population) activeFilterParts.push(filters.population)
-  if (filters.focusGroups) activeFilterParts.push(filters.focusGroups)
-  if (filters.practiceAreas) activeFilterParts.push(filters.practiceAreas)
+  if (q) activeFilterParts.push(`“${q}”`)
+  if (estado) activeFilterParts.push(estado)
+  if (ciudad) activeFilterParts.push(ciudad)
+  if (population) activeFilterParts.push(population)
+  if (focusGroups) activeFilterParts.push(focusGroups)
+  if (practiceAreas) activeFilterParts.push(practiceAreas)
   const filterSummary = activeFilterParts.join(' · ')
 
-  // ponytail: every filter change writes through the URL via navigate();
-  // page resets to 1 so the user never lands on an out-of-range page after
-  // narrowing. The setter merges onto the current search.
-  function setFilter(patch: Partial<Filters>) {
-    void navigate({
-      search: (prev) => ({ ...prev, ...patch, page: 1 }),
-    })
+  // ponytail: filter setters reset page → 1 (narrowing can shorten the list).
+  // Pure local state; no navigation. Page changes update local state too and,
+  // for shareability, also write `page` into the URL.
+  function patchFilter(patch: Partial<Omit<Filters, 'page'>>) {
+    setPage(1)
+    if (patch.q !== undefined) setQ(patch.q)
+    if (patch.estado !== undefined) setEstado(patch.estado)
+    if (patch.ciudad !== undefined) setCiudad(patch.ciudad)
+    if (patch.population !== undefined) setPopulation(patch.population)
+    if (patch.focusGroups !== undefined) setFocusGroups(patch.focusGroups)
+    if (patch.practiceAreas !== undefined) setPracticeAreas(patch.practiceAreas)
   }
   function clearFilters() {
-    void navigate({
-      search: (prev) => ({
-        ...prev,
-        q: '',
-        estado: '',
-        ciudad: '',
-        population: '',
-        focusGroups: '',
-        practiceAreas: '',
-        page: 1,
-      }),
-    })
+    setQ('')
+    setEstado('')
+    setCiudad('')
+    setPopulation('')
+    setFocusGroups('')
+    setPracticeAreas('')
+    setPage(1)
+  }
+  function goPage(next: number) {
+    setPage(next)
+    // ponytail: page is the only filter kept shareable in the URL — lets a
+    // user land on a specific page of results. modality already lives there.
+    void navigate({ search: (prev) => ({ ...prev, page: next }) })
   }
 
   async function contactRandom() {
@@ -197,13 +218,13 @@ function ProfessionalsList() {
     try {
       const picked = await pickRandomProfessional({
         data: {
-          modality: filters.modality,
-          q: filters.q,
-          estado: filters.estado,
-          ciudad: filters.ciudad,
-          population: filters.population,
-          focusGroups: filters.focusGroups,
-          practiceAreas: filters.practiceAreas,
+          modality,
+          q: debouncedQ,
+          estado,
+          ciudad,
+          population,
+          focusGroups,
+          practiceAreas,
         },
       })
       if (!picked) {
@@ -235,7 +256,7 @@ function ProfessionalsList() {
   }
 
   const title =
-    filters.modality === 'in_person'
+    modality === 'in_person'
       ? 'Asistencia presencial'
       : 'Asistencia a distancia'
 
@@ -245,7 +266,7 @@ function ProfessionalsList() {
   // undefined at runtime.
   const ciudades = (
     ESTADO_CIUDADES as Record<string, readonly string[] | undefined>
-  )[filters.estado] ?? []
+  )[estado] ?? []
 
   return (
     <main className="page-wrap page-wrap--wide flex min-h-[100dvh] flex-col py-4">
@@ -270,10 +291,10 @@ function ProfessionalsList() {
           <button
             type="button"
             onClick={contactRandom}
-            disabled={picking || !data.anyAvailableNow}
+            disabled={picking || !data?.anyAvailableNow}
             className="glass-primary inline-flex shrink-0 items-center gap-2 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-semibold transition-all hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
             title={
-              data.anyAvailableNow
+              data?.anyAvailableNow
                 ? 'Contactar a un profesional verificado al azar'
                 : 'Ningún profesional disponible en este momento'
             }
@@ -343,16 +364,16 @@ function ProfessionalsList() {
               <input
                 type="search"
                 inputMode="search"
-                value={filters.q}
-                onChange={(e) => setFilter({ q: e.target.value })}
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
                 placeholder="Buscar por nombre…"
                 aria-label="Buscar por nombre"
                 className="glass-input h-12 w-full pl-9 pr-9 text-base"
               />
-              {filters.q && (
+              {q && (
                 <button
                   type="button"
-                  onClick={() => setFilter({ q: '' })}
+                  onClick={() => patchFilter({ q: '' })}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-[var(--medi-text-secondary)] hover:text-[var(--medi-text-primary)]"
                   aria-label="Borrar búsqueda"
                 >
@@ -363,11 +384,11 @@ function ProfessionalsList() {
 
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <select
-                value={filters.estado}
+                value={estado}
                 onChange={(e) =>
                   // ponytail: reset ciudad when estado changes — the ciudad list
                   // is estado-scoped, a stale value would filter to nothing.
-                  setFilter({ estado: e.target.value, ciudad: '' })
+                  patchFilter({ estado: e.target.value, ciudad: '' })
                 }
                 aria-label="Filtrar por estado"
                 className="glass-input h-12 w-full px-3 text-base"
@@ -381,14 +402,14 @@ function ProfessionalsList() {
               </select>
 
               <select
-                value={filters.ciudad}
-                onChange={(e) => setFilter({ ciudad: e.target.value })}
-                disabled={!filters.estado}
+                value={ciudad}
+                onChange={(e) => patchFilter({ ciudad: e.target.value })}
+                disabled={!estado}
                 aria-label="Filtrar por ciudad"
                 className="glass-input h-12 w-full px-3 text-base disabled:opacity-50"
               >
                 <option value="">
-                  {filters.estado ? 'Todas las ciudades' : 'Primero el estado'}
+                  {estado ? 'Todas las ciudades' : 'Primero el estado'}
                 </option>
                 {ciudades.map((c) => (
                   <option key={c} value={c}>
@@ -398,8 +419,8 @@ function ProfessionalsList() {
               </select>
 
               <select
-                value={filters.population}
-                onChange={(e) => setFilter({ population: e.target.value })}
+                value={population}
+                onChange={(e) => patchFilter({ population: e.target.value })}
                 aria-label="Filtrar por edad"
                 className="glass-input h-12 w-full px-3 text-base"
               >
@@ -412,8 +433,8 @@ function ProfessionalsList() {
               </select>
 
               <select
-                value={filters.focusGroups}
-                onChange={(e) => setFilter({ focusGroups: e.target.value })}
+                value={focusGroups}
+                onChange={(e) => patchFilter({ focusGroups: e.target.value })}
                 aria-label="Filtrar por población específica"
                 className="glass-input h-12 w-full px-3 text-base"
               >
@@ -426,8 +447,8 @@ function ProfessionalsList() {
               </select>
 
               <select
-                value={filters.practiceAreas}
-                onChange={(e) => setFilter({ practiceAreas: e.target.value })}
+                value={practiceAreas}
+                onChange={(e) => patchFilter({ practiceAreas: e.target.value })}
                 aria-label="Filtrar por área de intervención"
                 className="glass-input h-12 w-full px-3 text-base"
               >
@@ -443,8 +464,28 @@ function ProfessionalsList() {
         )}
       </div>
 
+      {/* ── Resultados ── */}
       <ul className="mt-4 grid grid-cols-1 gap-3 pb-8 md:grid-cols-2">
-        {data.rows.length === 0 ? (
+        {isLoading || !data ? (
+          // ponytail: only on the very first load (no placeholderData yet).
+          // Any later filter/page change keeps the previous rows via
+          // keepPreviousData, so skeletons never reappear during refinement.
+          <>
+            {DIRECTORY_SKELETONS.map((i) => (
+              <li key={i} className="glass-card p-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-3 w-52" />
+                  </div>
+                  <Skeleton className="h-6 w-28 rounded-full" />
+                </div>
+                <Skeleton className="mt-4 h-12 w-full" />
+              </li>
+            ))}
+          </>
+        ) : data.rows.length === 0 ? (
           <li className="glass-card-soft p-5 text-center text-[var(--medi-text-secondary)] md:col-span-2">
             {hasActiveFilters
               ? 'No hay profesionales que coincidan con tu búsqueda.'
@@ -456,31 +497,23 @@ function ProfessionalsList() {
       </ul>
 
       {/* ── Paginación ── */}
-      {totalPages > 1 && (
+      {data && totalPages > 1 && (
         <div className="mt-auto flex items-center justify-center gap-4 pb-6 text-sm">
           <button
             type="button"
-            disabled={filters.page <= 1}
-            onClick={() =>
-              void navigate({
-                search: (prev) => ({ ...prev, page: prev.page - 1 }),
-              })
-            }
+            disabled={page <= 1}
+            onClick={() => goPage(page - 1)}
             className="glass-pill px-4 py-2 font-medium text-[var(--medi-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             ‹ Anterior
           </button>
           <span className="text-[var(--medi-text-secondary)]">
-            Página {filters.page} de {totalPages}
+            Página {page} de {totalPages}
           </span>
           <button
             type="button"
-            disabled={filters.page >= totalPages}
-            onClick={() =>
-              void navigate({
-                search: (prev) => ({ ...prev, page: prev.page + 1 }),
-              })
-            }
+            disabled={page >= totalPages}
+            onClick={() => goPage(page + 1)}
             className="glass-pill px-4 py-2 font-medium text-[var(--medi-text-primary)] disabled:cursor-not-allowed disabled:opacity-40"
           >
             Siguiente ›
