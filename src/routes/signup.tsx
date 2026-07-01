@@ -135,6 +135,14 @@ function SignupPage() {
             {error}
           </p>
         )}
+        <p className="-mt-2 text-right text-sm">
+          <Link
+            to="/recuperar"
+            className="font-medium text-[var(--medi-secondary)]"
+          >
+            ¿Olvidaste tu contraseña?
+          </Link>
+        </p>
         <button
           type="submit"
           disabled={loading}

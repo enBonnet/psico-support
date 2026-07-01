@@ -13,6 +13,7 @@ import { Route as YaRouteImport } from './routes/ya'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
 import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
@@ -64,6 +65,11 @@ const SocialRoute = SocialRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PsicologosRoute = PsicologosRouteImport.update({
@@ -238,6 +244,7 @@ export interface FileRoutesByFullPath {
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
+  '/recuperar': typeof RecuperarRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
+  '/recuperar': typeof RecuperarRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
   '/psicologos': typeof PsicologosRoute
+  '/recuperar': typeof RecuperarRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/como-funciona'
     | '/cuenta'
     | '/psicologos'
+    | '/recuperar'
     | '/signup'
     | '/social'
     | '/terminos'
@@ -393,6 +403,7 @@ export interface FileRouteTypes {
     | '/como-funciona'
     | '/cuenta'
     | '/psicologos'
+    | '/recuperar'
     | '/signup'
     | '/social'
     | '/terminos'
@@ -431,6 +442,7 @@ export interface FileRouteTypes {
     | '/como-funciona'
     | '/cuenta'
     | '/psicologos'
+    | '/recuperar'
     | '/signup'
     | '/social'
     | '/terminos'
@@ -470,6 +482,7 @@ export interface RootRouteChildren {
   ComoFuncionaRoute: typeof ComoFuncionaRoute
   CuentaRoute: typeof CuentaRoute
   PsicologosRoute: typeof PsicologosRoute
+  RecuperarRoute: typeof RecuperarRoute
   SignupRoute: typeof SignupRoute
   SocialRoute: typeof SocialRoute
   TerminosRoute: typeof TerminosRoute
@@ -529,6 +542,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/psicologos': {
@@ -766,6 +786,7 @@ const rootRouteChildren: RootRouteChildren = {
   ComoFuncionaRoute: ComoFuncionaRoute,
   CuentaRoute: CuentaRoute,
   PsicologosRoute: PsicologosRoute,
+  RecuperarRoute: RecuperarRoute,
   SignupRoute: SignupRoute,
   SocialRoute: SocialRoute,
   TerminosRoute: TerminosRoute,

@@ -29,4 +29,22 @@
 			"bucket_name": "psico-support-media",
 		},
 	],
+	// ponytail: Cloudflare Email Service binding for transactional mail
+	// (password reset for now; verification/marketing later). Keyless — the
+	// sender domain is onboarded at the dashboard, NOT the CLI:
+	//   Compute > Email Service > Email Sending > Onboard Domain
+	// (the `wrangler email sending enable` beta command 403s with code 2036
+	// even with a valid email_sending scope — a known beta-CLI issue; the
+	// dashboard is the documented stable path). Until that onboarding is done,
+	// `env.EMAIL.send()` rejects at runtime (unverified sender domain).
+	// `remote: true` lets `wrangler dev` talk to the REAL binding instead of a
+	// local stub — required, or the send fails in local dev.
+	// Ceiling/upgrade: restrict with `allowed_sender_addresses` once the
+	// from-address stabilizes; batch sends for bulk notifications.
+	"send_email": [
+		{
+			"name": "EMAIL",
+			"remote": true,
+		},
+	],
 }

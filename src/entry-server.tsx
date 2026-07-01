@@ -11,6 +11,7 @@ import { setCloudflareEnv } from '#/db'
 type CloudflareEnv = {
   DB: D1Database
   MEDIA: R2Bucket
+  EMAIL: SendEmail
 }
 
 const handler = createStartHandler(defaultStreamHandler)

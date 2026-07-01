@@ -16,13 +16,15 @@ export default [
   },
   {
     // ponytail: generated + vendored code is never hand-edited, so linting it
-    // only produces noise (paraglide-js output, installed skill templates).
+    // only produces noise (paraglide-js output, installed skill templates,
+    // wrangler's per-dev-session tmp bundles).
     ignores: [
       'eslint.config.js',
       'prettier.config.js',
       'src/paraglide/**',
       '.agents/**',
       'public/**',
+      '.wrangler/**',
     ],
   },
 ]

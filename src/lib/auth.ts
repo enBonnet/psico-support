@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm'
 import { getDb } from '#/db'
 import * as schema from '#/db/schema'
 import { user as userTable } from '#/db/schema'
+import { resetPasswordHtml, sendEmail } from '#/server/email'
 
 // ponytail: Better Auth expects a singleton, but the D1 binding is only
 // resolvable inside a request. Build the auth instance on first use
@@ -26,6 +27,28 @@ function buildAuth() {
     }),
     emailAndPassword: {
       enabled: true,
+      // ponytail: password recovery via better-auth's built-in flow. POST
+      // /api/auth/request-password-reset → sendResetPassword (this fn) for
+      // real users only; GET /reset-password/:token 302s to /recuperar?token=
+      // or ?error=INVALID_TOKEN; POST /reset-password consumes the token and
+      // sets the new password. No migration needed — tokens live in the
+      // `verification` table as `reset-password:<token>` rows.
+      resetPasswordTokenExpiresIn: 60 * 30, // 30 min (default 1h is long for a reset link)
+      revokeSessionsOnPasswordReset: true, // invalidate every active session on reset
+      sendResetPassword: async ({ user, url }) => {
+        // `url` is the full ${baseURL}/reset-password/:token?callbackURL=... —
+        // baseURL resolves from the request (or BETTER_AUTH_URL), so in prod
+        // it points at psicoayudaven.com. sendEmail throws on a missing/
+        // unverified sender domain; that surfaces as a 500 on the request,
+        // which is acceptable (better than silently swallowing a send failure
+        // and leaving the user with a reset link that never arrives).
+        await sendEmail({
+          to: user.email,
+          subject: 'Restablece tu contraseña · PsicoAyudaVen',
+          html: resetPasswordHtml(url),
+          text: `Restablece tu contraseña en PsicoAyudaVen.\n\nAbre este enlace (válido por 30 minutos):\n${url}\n\nSi no pediste este cambio, ignora este correo: tu contraseña no cambiará.`,
+        })
+      },
     },
     plugins: [tanstackStartCookies()],
     // ponytail: trust every loopback origin on any port. Dev servers roam

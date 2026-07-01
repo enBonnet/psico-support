@@ -5,6 +5,7 @@ import * as schema from './schema.ts'
 type CloudflareEnv = {
   DB: D1Database
   MEDIA: R2Bucket
+  EMAIL: SendEmail
 }
 
 let _env: CloudflareEnv | null = null
@@ -46,4 +47,20 @@ export function getR2(): R2Bucket {
     )
   }
   return env.MEDIA
+}
+
+// ponytail: Cloudflare Email Service binding for transactional mail. Like
+// getR2(), not cached — the binding is a stateless handle. Throws a dev-facing
+// error when missing so the failure is obvious in local dev. Sender domain
+// must be onboarded in the dashboard (Compute > Email Service > Email Sending
+// > Onboard Domain) — NOT via `wrangler email sending enable`, which 403s
+// even with the right scope. See wrangler.jsonc send_email ponytail.
+export function getEmailBinding(): SendEmail {
+  const env = getCloudflareEnv()
+  if (!env?.EMAIL) {
+    throw new Error(
+      'Email binding (EMAIL) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+    )
+  }
+  return env.EMAIL
 }

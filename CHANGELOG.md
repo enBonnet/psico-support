@@ -10,6 +10,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Página de error 500**: cualquier error no capturado (caída del loader, fallo de server-fn, error de render) ahora muestra una página en español que explica lo ocurrido, con dos acciones claras: **Volver al inicio** (botón principal) y **Reintentar** (para errores transitorios). Antes, estos caían al mensaje genérico en inglés de TanStack Router, sin ruta de regreso. Sigue el mismo diseño que la página 404 existente. El error además se registra en `console.error` (Sentry aquí es solo servidor, así que los errores de cliente no se capturan automáticamente aún).
 
+## [1.15.2] - 2026-07-01
+
+### Added
+- **Recuperación de contraseña**: nuevo flujo completo en `/recuperar` para restablecer la contraseña por correo. Usa el flujo nativo de Better Auth: el usuario ingresa su correo → se envía un enlace (válido 30 min, uso único) → al abrirlo, define una nueva contraseña → todas las sesiones activas se invalidan (`revokeSessionsOnPasswordReset`) y queda en el login con un aviso de éxito.
+  - Enlace **"¿Olvidaste tu contraseña?"** añadido en `/profesional/login` y `/signup` (ambos comparten la tabla `user`).
+  - Respuesta neutral tanto si el correo existe como si no (protección anti enumeración de cuentas); el correo solo se envía a usuarios reales.
+  - Vista dedicada para enlaces caducados/ya usados (`?error=INVALID_TOKEN`) con botón para solicitar uno nuevo.
+  - **Nuevo binding `EMAIL` de Cloudflare Email Service** en `wrangler.jsonc`; correo de envío `noreply@psicoayudaven.com`. Requisito previo (manual, una vez): `npx wrangler email sending enable psicoayudaven.com` + los registros DNS (SPF/DKIM/DMARC) que muestre.
+  - Sin migración: los tokens viven en la tabla `verification` existente como filas `reset-password:<token>`.
+
 ## [1.15.1] - 2026-07-01
 
 ### Fixed
