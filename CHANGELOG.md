@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **GitHub Actions deploy workflow**: CI automático en push a `main` — build, `wrangler deploy`, y aplicación de migraciones D1 remotas (gotcha #1). Incluye sanity check con `migrations list --remote`. Node 22, prerender contra miniflare local (`CLOUDFLARE_VITE_FORCE_LOCAL=true`), migraciones locales antes del build para tablas D1.
+
+### Changed
+- **Token de API de Cloudflare**: ahora requiere `Account:Cloudflare:Read` además de `Workers Scripts:Edit` y `D1:Edit` para deploy desde CI.
+
 ## [1.17.0] - 2026-07-02
 
 ### Changed
