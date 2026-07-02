@@ -17,10 +17,14 @@ jobs:
 
       - run: npm ci
 
+      # ponytail: CLOUDFLARE_VITE_FORCE_LOCAL makes the @cloudflare/vite-plugin
+      # prerender the PWA shell against local miniflare instead of starting a
+      # remote edge-preview proxy session (which needs an extra API scope not
+      # in the standard Workers token template). The shell is static HTML;
+      # remote bindings (email) only matter at runtime, not build time.
       - run: npm run build
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_VITE_FORCE_LOCAL: "true"
 
       - run: npx wrangler deploy
         env:
