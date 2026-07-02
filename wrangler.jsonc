@@ -29,6 +29,16 @@
 			"bucket_name": "psico-support-media",
 		},
 	],
+	// ponytail: Cloudflare Analytics Engine binding for product analytics
+	// (funnel de help-seeker, adquisición de profesionales, engagement del
+	// panel, etc.). Write-only desde el Worker; la lectura es por HTTP externo
+	// (SQL API con API token a nivel de cuenta — el binding no permite leer).
+	// El dataset se crea solo en el primer writeDataPoint(). Costo: 10M writes
+	// gratis, luego $0.05/1M; retención 90 días. Fire-and-forget (sin await).
+	// Ceiling/upgrade: a >1M writes/min el motor muestrea; pre-agregar si escala.
+	"analytics_engine_datasets": [
+		{ "binding": "ANALYTICS", "dataset": "psico_events" },
+	],
 	// ponytail: Cloudflare Email Service binding for transactional mail
 	// (password reset for now; verification/marketing later). Keyless — the
 	// sender domain is onboarded at the dashboard, NOT the CLI:

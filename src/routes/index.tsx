@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import {
   HeartPulse,
   LifeBuoy,
@@ -6,6 +7,7 @@ import {
   Headphones,
   UserCheck,
 } from 'lucide-react'
+import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
 import { countVerifiedProfessionals } from '#/server/professionals'
@@ -34,6 +36,12 @@ function Landing() {
   // to 5 for finer granularity once the directory grows.
   const STEP = 10
   const claim = Math.floor(count / STEP) * STEP
+  // ponytail: landing_view fires once per mount (CSR hydrate), not on every
+  // SSR render — the component effect runs only client-side. route is implicit
+  // (the helper defaults to location.pathname).
+  useEffect(() => {
+    track({ event: 'landing_view', category: 'public' })
+  }, [])
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col justify-between py-8">
       <header className="text-center">
@@ -78,6 +86,7 @@ function Landing() {
       <Link
         to="/ayuda/profesionales"
         search={{ modality: 'remote' }}
+        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'help_now' })}
         className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <LifeBuoy aria-hidden="true" className="size-5" />
@@ -85,6 +94,7 @@ function Landing() {
       </Link>
       <Link
         to="/apoyo"
+        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'voces' })}
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <Headphones aria-hidden="true" className="size-5" />
@@ -92,6 +102,7 @@ function Landing() {
       </Link>
       <Link
         to="/recursos"
+        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'recursos' })}
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <HeartPulse aria-hidden="true" className="size-5" />
@@ -99,6 +110,7 @@ function Landing() {
       </Link>
       <Link
         to="/profesional/registro"
+        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'ofrezco_ayuda' })}
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <Stethoscope aria-hidden="true" className="size-5" />

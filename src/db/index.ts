@@ -6,6 +6,7 @@ type CloudflareEnv = {
   DB: D1Database
   MEDIA: R2Bucket
   EMAIL: SendEmail
+  ANALYTICS: AnalyticsEngineDataset
 }
 
 let _env: CloudflareEnv | null = null
@@ -16,7 +17,7 @@ export function setCloudflareEnv(env: CloudflareEnv) {
   _env = env
 }
 
-function getCloudflareEnv(): CloudflareEnv | null {
+export function getCloudflareEnv(): CloudflareEnv | null {
   return _env
 }
 
@@ -63,4 +64,20 @@ export function getEmailBinding(): SendEmail {
     )
   }
   return env.EMAIL
+}
+
+// ponytail: Analytics Engine binding for product analytics. Like getR2()/
+// getEmailBinding(): a stateless handle, not cached. Returns void on
+// writeDataPoint() (fire-and-forget — never await). In dev, the binding is
+// absent and writes silently no-op via the track() server fn guard; this
+// throws only when called directly (e.g. SSR funnel events) to make a missing
+// binding obvious. See src/server/analytics.ts for the catalog + track fn.
+export function getAnalytics(): AnalyticsEngineDataset {
+  const env = getCloudflareEnv()
+  if (!env?.ANALYTICS) {
+    throw new Error(
+      'Analytics binding (ANALYTICS) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+    )
+  }
+  return env.ANALYTICS
 }

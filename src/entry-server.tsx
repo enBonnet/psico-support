@@ -12,6 +12,7 @@ type CloudflareEnv = {
   DB: D1Database
   MEDIA: R2Bucket
   EMAIL: SendEmail
+  ANALYTICS: AnalyticsEngineDataset
 }
 
 const handler = createStartHandler(defaultStreamHandler)
