@@ -58,16 +58,17 @@ account page footer). `CHANGELOG.md` tracks human-readable history.
 ```bash
 npm version patch|minor|major     # bumps package.json, commits, tags (git must be clean)
 # 1. move [Unreleased] items into a new [X.Y.Z] - YYYY-MM-DD entry in CHANGELOG.md
-# 2. breaking server/API/DB change? bump CACHE in public/sw.js to match the
-#    new version — this force-invalidates every installed PWA client at once
 npm run deploy
 npx wrangler d1 migrations apply psico-support-db --remote   # if schema changed
 ```
 
 Semver: **patch** = bugfix, **minor** = backwards-compatible feature, **major**
-= breaking change. The SW cache key in `public/sw.js` mirrors the version on
-purpose — bump it ONLY on breaking releases; for compatible releases SWR +
-`skipWaiting` refreshes installed clients within one reload.
+= breaking change. The SW cache key in `public/sw.js` is auto-baked from
+`package.json` `version` at build time by `swVersionPlugin`
+(vite.config.ts `generateBundle` hook — `__SW_VERSION__` placeholder). Every
+`npm version ...` invalidates installed PWA clients at once; no separate
+hand-edit. For backwards-compatible releases, SWR + `skipWaiting` still
+refreshes content within one reload without needing a cache-name change.
 
 ## Critical gotchas
 

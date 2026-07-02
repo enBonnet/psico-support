@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **SW con clave de caché obsoleta (14 versiones atrás)**: la clave `CACHE` de `public/sw.js` estaba fija en `psico-support-1.3.0` mientras el `package.json` ya iba por `1.17.0`, así que las últimas 14 releases compatibles no llegaron a los clientes PWA instalados (corrían el shell `1.3.0` con datos potencialmente desactualizados, incluyendo respuestas SWR del directorio y shell anterior a varias features). Ahora `vite.config.ts` reescribe el placeholder `__SW_VERSION__` del SW en `generateBundle` con la versión de `package.json`, así cada `npm version ...` invalida automáticamente los caches instalados — sin hand-edit.
+
 ## [1.17.0] - 2026-07-02
 
 ### Changed

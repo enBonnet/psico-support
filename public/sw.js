@@ -21,12 +21,13 @@
 // build-time precache manifest is needed. Route chunks lazy-loaded after
 // hydration are still covered by runtime SWR.
 //
-// CACHE mirrors the app version in package.json. Bump BOTH together (here +
-// package.json `version`) when you must force-invalidate every installed PWA
-// client at once — e.g. a release with breaking server/API/DB changes or a
-// shell-shape change. For backward-compatible releases, SWR + skipWaiting
-// refreshes content within one reload.
-const CACHE = 'psico-support-1.3.0'
+// CACHE mirrors the app version in package.json. `__SW_VERSION__` is a
+// placeholder rewritten at build time by `swVersionPlugin` in vite.config.ts
+// (generateBundle hook) — every `npm version ...` automatically bumps the SW
+// cache key, force-invalidating installed PWA clients. No hand-edit needed.
+// For backward-compatible releases, SWR + skipWaiting still refreshes
+// content within one reload without a cache-name change.
+const CACHE = `psico-support-${__SW_VERSION__}`
 
 // ponytail: the static SPA shell generated at build time. Served on cold-open
 // offline and as the navigation fallback. Use the canonical /_shell URL (the

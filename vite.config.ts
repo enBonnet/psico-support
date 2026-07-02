@@ -1,5 +1,7 @@
-import { defineConfig } from 'vite'
-import { readFileSync } from 'node:fs'
+import { defineConfig, type Plugin } from 'vite'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { resolve, dirname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { devtools } from '@tanstack/devtools-vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -11,13 +13,55 @@ import tailwindcss from '@tailwindcss/vite'
 import { cloudflare } from '@cloudflare/vite-plugin'
 
 // ponytail: single source of truth for the app version. Read at build time
-// from package.json and injected via `define` below. To release a new
-// version: bump package.json `version`, update CHANGELOG.md, then redeploy.
-// The SW cache key in public/sw.js mirrors this on purpose — bump both
-// together when you need to force-invalidate every installed PWA client.
+// from package.json and injected into:
+//   - app code via `define` (`__APP_VERSION__` / src/lib/version.ts)
+//   - the service worker via `swVersionPlugin` below (rewrites
+//     `__SW_VERSION__` in the built public/sw.js with the package version)
+//
+// To release: bump package.json `version`, update CHANGELOG.md, redeploy.
+// The SW cache key in public/sw.js follows the package version
+// automatically — every `npm version ...` bumps it, force-invalidating
+// installed PWA clients without a separate hand-edit. Backwards-compatible
+// releases still rely on SWR + skipWaiting (one reload) for incremental
+// content refresh.
 const APP_VERSION = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ).version
+
+// ponytail: bake the package version into public/sw.js at build time.
+// public/ files are copied verbatim to disk by Vite's build-public plugin
+// and never enter the Rollup module graph — Vite's `transform` hook
+// doesn't fire on them, and `generateBundle`/`writeBundle` see the bundle
+// *before* public assets are written (so `bundle['sw.js']` is undefined).
+// We use `closeBundle`, which runs after every asset (including public
+// assets) is on disk, to read dist/client/sw.js, replace `__SW_VERSION__`
+// with `JSON.stringify(version)`, and write it back. We pick closeBundle
+// over a post-build script so the SW is always in sync with the package
+// version a single `npm run build` produces.
+// Ceiling: if SW moves out of public/ (e.g. into src/ as a TS module),
+// a plain `transform()` hook on the module id replaces this whole plugin.
+function swVersionPlugin(version: string): Plugin {
+  const __dirname = dirname(fileURLToPath(import.meta.url))
+  return {
+    name: 'sw-version-injection',
+    apply: 'build',
+    closeBundle() {
+      const swPath = resolve(__dirname, 'dist/client/sw.js')
+      if (!existsSync(swPath)) {
+        this.warn(
+          'sw-version-injection: dist/client/sw.js not found — skipping',
+        )
+        return
+      }
+      const source = readFileSync(swPath, 'utf8')
+      if (!source.includes('__SW_VERSION__')) return
+      writeFileSync(
+        swPath,
+        source.replace(/__SW_VERSION__/g, JSON.stringify(version)),
+      )
+    },
+  }
+}
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
@@ -86,6 +130,10 @@ const config = defineConfig({
       },
       devOptions: { enabled: false },
     }),
+    // ponytail: runs after vite-plugin-pwa. closeBundle fires after every
+    // asset (public + generated) is written, so sw.js is on disk and ready
+    // for the version rewrite.
+    swVersionPlugin(APP_VERSION),
   ],
 })
 
