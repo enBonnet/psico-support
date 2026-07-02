@@ -9,28 +9,50 @@ export const Route = createFileRoute('/recursos/enraizamiento')({
   ssr: false,
   head: () =>
     seoHead({
-      title: 'Técnica de enraizamiento 5-4-3-2-1',
+      title: 'Técnica de enraizamiento',
       description:
-        'Ejercicio de enraizamiento 5-4-3-2-1 para volver al presente cuando sientes ansiedad, pánico o desconexión.',
+        'Anclas corporales para volver al presente cuando sientes ansiedad, pánico o desconexión.',
       path: '/recursos/enraizamiento',
     }),
   component: Enraizamiento,
 })
 
-// ponytail: 5-step state machine — useState index + back/next. The "count
-// things out loud" instructions are the intervention; the UI just walks the
-// user through them one at a time so they're not overwhelmed.
+// ponytail: 5-step state machine — useState index + back/next. The anchors
+// stay in the body (feet, hands, breath, touch) instead of the environment:
+// in an emergency, "name 5 things you see / 2 smells" can point straight at
+// rubble, smoke or sirens. The UI walks one anchor at a time so the user is
+// never overwhelmed.
 interface Step {
-  n: number
-  verb: string
+  anchor: string
+  title: string
   prompt: string
 }
 const STEPS: readonly Step[] = [
-  { n: 5, verb: 'veas', prompt: 'Nombra 5 cosas que puedas ver a tu alrededor.' },
-  { n: 4, verb: 'puedas tocar', prompt: 'Nombra 4 cosas que puedas tocar.' },
-  { n: 3, verb: 'escuches', prompt: 'Nombra 3 sonidos que puedas escuchar.' },
-  { n: 2, verb: 'puedas oler', prompt: 'Identifica 2 olores cercanos.' },
-  { n: 1, verb: 'puedas saborear', prompt: 'Identifica 1 sabor en tu boca.' },
+  {
+    anchor: 'pies',
+    title: 'Siente los pies',
+    prompt: 'Nota el peso, la tela o el cuero. No tienes que mover nada.',
+  },
+  {
+    anchor: 'manos',
+    title: 'Aprieta y suelta las manos',
+    prompt: 'Cierra los puños contando hasta tres y suelta. Repite si quieres.',
+  },
+  {
+    anchor: 'hombros',
+    title: 'Afloja los hombros',
+    prompt: 'Déjalos caer con suavidad. Nota cómo pesan al soltarse.',
+  },
+  {
+    anchor: 'respiración',
+    title: 'Escucha tu respiración',
+    prompt: 'No la cambies. Solo nota cómo el aire entra y sale.',
+  },
+  {
+    anchor: 'tacto',
+    title: 'Toca algo cerca',
+    prompt: 'Una tela, tu mano, el borde de algo. Nota su textura.',
+  },
 ]
 
 function Enraizamiento() {
@@ -53,8 +75,8 @@ function Enraizamiento() {
       </h1>
       <div className="section-underline mt-2" />
       <p className="mt-3 text-sm text-[var(--medi-text-secondary)]">
-        La regla 5-4-3-2-1 te ayuda a volver al presente usando tus sentidos.
-        Ve paso a paso, en voz alta o mentalmente.
+        Cinco anclas para volver al presente llevando la atención a tu cuerpo.
+        Ve paso a paso, a tu ritmo.
       </p>
 
       <div className="mt-8">
@@ -62,7 +84,7 @@ function Enraizamiento() {
           <span>
             Paso {idx + 1} de {STEPS.length}
           </span>
-          <span>Sentido: {step.verb}</span>
+          <span>Ancla: {step.anchor}</span>
         </div>
         <div
           className="mt-2 flex h-1.5 overflow-hidden rounded-full"
@@ -81,14 +103,12 @@ function Enraizamiento() {
 
       <div className="glass-card mt-6 flex min-h-56 flex-col items-center justify-center gap-4 p-8 text-center">
         <span className="text-7xl font-bold text-[var(--medi-secondary)] tabular-nums">
-          {step.n}
+          {idx + 1}
         </span>
         <p className="text-lg font-medium text-[var(--medi-text-primary)]">
-          {step.prompt}
+          {step.title}
         </p>
-        <p className="text-sm text-[var(--medi-text-secondary)]">
-          Tómate tu tiempo. Cuando estés listo, continúa.
-        </p>
+        <p className="text-sm text-[var(--medi-text-secondary)]">{step.prompt}</p>
       </div>
 
       <div className="mt-6 flex gap-3">

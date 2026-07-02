@@ -44,7 +44,7 @@ const TOOLS: readonly Tool[] = [
   {
     to: '/recursos/enraizamiento',
     title: 'Técnica de enraizamiento',
-    desc: 'Vuelve al presente con la regla 5-4-3-2-1.',
+    desc: 'Vuelve al presente con anclas suaves en tu cuerpo.',
     audience: 'Para ti',
     icon: HandHeart,
   },
