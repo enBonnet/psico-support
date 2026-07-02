@@ -2,7 +2,14 @@ import { useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
-import { Shuffle, Search, X, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import {
+  Shuffle,
+  Search,
+  X,
+  ChevronDown,
+  SlidersHorizontal,
+  Wind,
+} from 'lucide-react'
 
 import {
   listProfessionals,
@@ -288,11 +295,14 @@ function ProfessionalsList() {
               {title}
             </p>
           </div>
+          {/* ponytail: Al azar lives in the header on desktop only. On mobile
+              it becomes a floating button above the bottom tabs (bigger, easier
+              to tap with a thumb) — see the FAB near the end of this component. */}
           <button
             type="button"
             onClick={contactRandom}
             disabled={picking || !data?.anyAvailableNow}
-            className="glass-primary inline-flex shrink-0 items-center gap-2 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-semibold transition-all hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+            className="glass-primary hidden md:inline-flex shrink-0 items-center gap-2 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-semibold transition-all hover:translate-y-[-1px] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
             title={
               data?.anyAvailableNow
                 ? 'Contactar a un profesional verificado al azar'
@@ -300,7 +310,7 @@ function ProfessionalsList() {
             }
           >
             <Shuffle className="size-4" aria-hidden="true" />
-            {picking ? 'Buscando…' : 'Al azar'}
+            {picking ? 'Buscando…' : 'Contactar al azar'}
           </button>
         </div>
       </div>
@@ -486,11 +496,44 @@ function ProfessionalsList() {
             ))}
           </>
         ) : data.rows.length === 0 ? (
-          <li className="glass-card-soft p-5 text-center text-[var(--medi-text-secondary)] md:col-span-2">
-            {hasActiveFilters
-              ? 'No hay profesionales que coincidan con tu búsqueda.'
-              : 'No hay profesionales en esta modalidad en este momento.'}
+          <li className="glass-card-soft p-5 text-center md:col-span-2">
+            <p className="text-[var(--medi-text-secondary)]">
+              {hasActiveFilters
+                ? 'No hay profesionales que coincidan con tu búsqueda.'
+                : 'No hay profesionales en esta modalidad en este momento.'}
+            </p>
+            {/* ponytail: no results at all → steer to self-help (/recursos) so
+                the user leaves with something actionable, not a dead end. */}
+            <Link
+              to="/recursos"
+              className="mt-4 inline-flex items-center gap-2 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2.5 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+            >
+              <Wind className="size-4" aria-hidden="true" />
+              Probar herramientas de autocuidado
+            </Link>
           </li>
+        ) : !data.anyAvailableNow ? (
+          // ponytail: results exist but none contactable right now — keep the
+          // list visible (they can still browse + message for later) but show a
+          // self-care nudge above the grid so the user isn't stuck waiting.
+          <>
+            <li className="glass-card-soft flex flex-col items-center gap-2 p-4 text-center md:col-span-2">
+              <p className="text-sm text-[var(--medi-text-secondary)]">
+                Ningún profesional está disponible en este momento. Mientras
+                tanto, puedes usar nuestras herramientas de autocuidado.
+              </p>
+              <Link
+                to="/recursos"
+                className="inline-flex items-center gap-2 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2.5 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+              >
+                <Wind className="size-4" aria-hidden="true" />
+                Probar herramientas de autocuidado
+              </Link>
+            </li>
+            {data.rows.map((p) => (
+              <ProfessionalCard key={p.id} p={p} />
+            ))}
+          </>
         ) : (
           data.rows.map((p) => <ProfessionalCard key={p.id} p={p} />)
         )}
@@ -498,7 +541,7 @@ function ProfessionalsList() {
 
       {/* ── Paginación ── */}
       {data && totalPages > 1 && (
-        <div className="mt-auto flex items-center justify-center gap-4 pb-6 text-sm">
+        <div className="mt-auto flex items-center justify-center gap-4 pb-28 text-sm md:pb-6">
           <button
             type="button"
             disabled={page <= 1}
@@ -520,6 +563,33 @@ function ProfessionalsList() {
           </button>
         </div>
       )}
+
+      {/* ponytail: mobile-only floating "Al azar" button, anchored above the
+          bottom tab bar so the thumb reaches it without fighting the tabs. The
+          z-index sits below the bottom tabs (40) but above cards; position uses
+          the safe-area inset so it clears the home indicator on notched phones.
+          Display is toggled with utilities (md:hidden) — the unlayered FAB styles
+          in styles.css intentionally do NOT set display (tw v4 unlayered-beats-
+          layered gotcha). Desktop keeps the inline header button above. */}
+      <button
+        type="button"
+        onClick={contactRandom}
+        disabled={picking || !data?.anyAvailableNow}
+        aria-label={
+          data?.anyAvailableNow
+            ? 'Contactar a un profesional verificado al azar'
+            : 'Ningún profesional disponible en este momento'
+        }
+        title={
+          data?.anyAvailableNow
+            ? 'Contactar a un profesional verificado al azar'
+            : 'Ningún profesional disponible en este momento'
+        }
+        className="fab-random glass-primary md:hidden"
+      >
+        <Shuffle className="size-6" aria-hidden="true" />
+        <span>{picking ? 'Buscando…' : 'Contactar al azar'}</span>
+      </button>
     </main>
   )
 }

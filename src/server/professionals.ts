@@ -656,64 +656,64 @@ export const listProfessionals = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     const db = getDb()
     const where = buildProfessionalWhere(data)
+
+    // ponytail: fetch the FULL filtered pool once, tier-sort in JS, then slice
+    // for pagination. Availability is derived via isActiveNow (Intl tz math),
+    // not a SQL column, so a pure SQL ORDER BY can't rank by live availability
+    // across pages. One query replaces the old 3-way fan-out (rows + count +
+    // availRows); total = rows.length and anyAvailableNow is derived here too.
+    // O(n) per poll — same ceiling already accepted for availRows; denormalize
+    // via a cron-kept `available` flag if the directory grows past ~1k rows.
+    const pool = await db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        modality: professionals.modality,
+        country: professionals.country,
+        estado: professionals.estado,
+        ciudad: professionals.ciudad,
+        whatsapp: professionals.whatsapp,
+        availabilityMode: professionals.availabilityMode,
+        availabilityScheduleRaw: professionals.availabilitySchedule,
+        timezone: professionals.timezone,
+        populationRaw: professionals.population,
+        focusGroupsRaw: professionals.focusGroups,
+        practiceAreasRaw: professionals.practiceAreas,
+      })
+      .from(professionals)
+      .where(where)
+
+    const now = new Date()
+    const ranked = pool
+      .map((r) => {
+        const mode = r.availabilityMode
+        const schedule = parseSchedule(r.availabilityScheduleRaw)
+        const tz = r.timezone ?? 'America/Caracas'
+        // ponytail: sort tier — lower sorts first. Active (contactable now) on
+        // top, with scheduled-in-block before always-available; not-available
+        // at the end, with scheduled-out-of-block before inactive.
+        //   0 scheduled + in block now
+        //   1 always
+        //   2 scheduled + out of block
+        //   3 inactive
+        const active =
+          mode === 'always' || (mode === 'scheduled' && isActiveNow(schedule, tz, now))
+        let tier: number
+        if (mode === 'scheduled' && active) tier = 0
+        else if (mode === 'always') tier = 1
+        else if (mode === 'scheduled') tier = 2
+        else tier = 3
+        return { r, schedule, tz, tier }
+      })
+      .sort((a, b) => a.tier - b.tier || a.r.name.localeCompare(b.r.name))
+
+    const total = ranked.length
     const offset = (data.page - 1) * data.pageSize
-
-    const [rows, totalRows, availRows] = await Promise.all([
-      db
-        .select({
-          id: professionals.id,
-          name: professionals.name,
-          modality: professionals.modality,
-          country: professionals.country,
-          estado: professionals.estado,
-          ciudad: professionals.ciudad,
-          whatsapp: professionals.whatsapp,
-          availabilityMode: professionals.availabilityMode,
-          availabilityScheduleRaw: professionals.availabilitySchedule,
-          timezone: professionals.timezone,
-          populationRaw: professionals.population,
-          focusGroupsRaw: professionals.focusGroups,
-          practiceAreasRaw: professionals.practiceAreas,
-        })
-        .from(professionals)
-        .where(where)
-        // ponytail: alphabetical (F1) — the live "Disponible ahora" badge on each
-        // card conveys current availability; online-first sorting across pages
-        // would require denormalizing, which we chose not to (no cron).
-        .orderBy(asc(professionals.name))
-        .limit(data.pageSize)
-        .offset(offset),
-      db
-        .select({ n: count() })
-        .from(professionals)
-        .where(where),
-      // ponytail: light-column scan of the FULL filtered pool to know if anyone
-      // is contactable now (drives the "Al azar" disabled state across all pages,
-      // not just the current one). O(n) per poll — fine while the directory is
-      // small; switch to a cron-kept `available` flag if it grows past ~1k rows.
-      db
-        .select({
-          availabilityMode: professionals.availabilityMode,
-          availabilityScheduleRaw: professionals.availabilitySchedule,
-          timezone: professionals.timezone,
-        })
-        .from(professionals)
-        .where(where),
-    ])
-
-    // ponytail: anyAvailableNow = at least one pro in the pool is contactable
-    // right now (always | scheduled-in-window). Computed server-side so it holds
-    // across pagination.
-    const anyAvailableNow = availRows.some((r) =>
-      isContactableNow(
-        r.availabilityMode,
-        parseSchedule(r.availabilityScheduleRaw),
-        r.timezone ?? 'America/Caracas',
-      ),
-    )
+    const pageRows = ranked.slice(offset, offset + data.pageSize)
+    const anyAvailableNow = ranked.some((x) => x.tier <= 1)
 
     return {
-      rows: rows.map((r) => ({
+      rows: pageRows.map(({ r, schedule }) => ({
         id: r.id,
         name: r.name,
         modality: r.modality,
@@ -722,13 +722,13 @@ export const listProfessionals = createServerFn({ method: 'GET' })
         ciudad: r.ciudad,
         whatsapp: r.whatsapp,
         availabilityMode: r.availabilityMode,
-        availabilitySchedule: parseSchedule(r.availabilityScheduleRaw),
+        availabilitySchedule: schedule,
         timezone: r.timezone,
         population: parsePopulation(r.populationRaw),
         focusGroups: parseFocusGroups(r.focusGroupsRaw),
         practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
       })),
-      total: totalRows.at(0)?.n ?? 0,
+      total,
       anyAvailableNow,
     }
   })
