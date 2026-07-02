@@ -17,6 +17,11 @@ jobs:
 
       - run: npm ci
 
+      # ponytail: prerender runs route loaders against local miniflare D1,
+      # which starts empty. Apply migrations to the local sqlite so the
+      # landing query (count of verified professionals) doesn't 500.
+      - run: npx wrangler d1 migrations apply psico-support-db --local
+
       # ponytail: CLOUDFLARE_VITE_FORCE_LOCAL makes the @cloudflare/vite-plugin
       # prerender the PWA shell against local miniflare instead of starting a
       # remote edge-preview proxy session (which needs an extra API scope not
