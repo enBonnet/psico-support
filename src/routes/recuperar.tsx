@@ -4,7 +4,6 @@ import { z } from 'zod'
 
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
-import { SITE_URL } from '#/lib/seo'
 
 export const Route = createFileRoute('/recuperar')({
   // ponytail: CSR-only — interactive recovery form, no crawler value. Server
@@ -52,12 +51,12 @@ function RequestResetView() {
     setError(null)
     setLoading(true)
     try {
-      // redirectTo is absolute (SITE_URL): better-auth uses it as callbackURL
-      // when 302-ing after token validation. The constant keeps it on the prod
-      // domain (nobody recovers a password from localhost). See seo.ts ponytail.
+      // redirectTo must match the request origin — better-auth validates it
+      // against trustedOrigins (baseURL + configured patterns). A hardcoded
+      // SITE_URL breaks local/wrangler dev with INVALID_REDIRECT_URL.
       const { error: err } = await authClient.requestPasswordReset({
         email,
-        redirectTo: `${SITE_URL}/recuperar`,
+        redirectTo: `${window.location.origin}/recuperar`,
       })
       if (err) {
         setError(err.message ?? 'No se pudo enviar el enlace.')
