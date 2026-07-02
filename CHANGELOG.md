@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.17.0] - 2026-07-02
+
+### Changed
+- **Directorio ordenado por disponibilidad**: la lista de profesionales (`/ayuda/profesionales`) ahora muestra primero los contactables en este momento — primero los `scheduled` dentro de su bloque, luego `always`, luego `scheduled` fuera de bloque, y al final `inactive` — con orden alfabético como desempate. La disponibilidad se calcula en vivo (tz del pro) y la lista se refresca cada 20s. Además, `listProfessionals` pasó de 3 queries a 1.
+
+### Added
+- **Botón "Al azar" flotante en móvil**: el directorio muestra ahora un botón flotante grande encima de la barra de navegación inferior, fácil de pulsar con el pulgar. En escritorio se mantiene en el header. La copy pasa de "Al azar" a "Contactar al azar".
+- **Derivación a autocuidado cuando no hay disponibilidad**: si no hay profesionales disponibles, el directorio muestra un CTA hacia `/recursos` (herramientas de autocuidado) — tanto en el estado vacío como en un banner sobre la grilla cuando hay resultados pero ninguno contactable ahora.
+
+### Fixed
+- **Paginación tapada por el FAB**: la paginación en móvil ahora deja espacio inferior (`pb-28`) para no ser cubierta por el botón flotante.
+
 ## [1.16.0] - 2026-07-01
 
 ### Added
