@@ -14,7 +14,7 @@ import {
   DrizzleError,
 } from 'drizzle-orm'
 
-import { getDb, getR2 } from '#/db'
+import { getDb, getR2, withD1Retry } from '#/db'
 import {
   professionals,
   professionalDocuments,
@@ -1884,19 +1884,29 @@ export const adminSetProvidesService = createServerFn({ method: 'POST' })
 // call it freely. Excludes content-only pros — the stat implies "available to
 // provide service", so counting content creators would mislead. Caller hides
 // the line when n === 0.
+// Fail-soft on transient D1 resets (gotcha: D1 DO occasionally resets and
+// returns "Internal error while starting up D1 DB storage caused object to be
+// reset"). The count is decorative social proof, not data the page depends on,
+// so a 0 hides the line rather than throwing a 500 on the landing (WEB-1).
 export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).handler(
   async () => {
     const db = getDb()
-    const rows = await db
-      .select({ n: count() })
-      .from(professionals)
-      .where(
-        and(
-          eq(professionals.verifiedStatus, 'verified'),
-          eq(professionals.providesService, true),
-        ),
+    try {
+      const rows = await withD1Retry(() =>
+        db
+          .select({ n: count() })
+          .from(professionals)
+          .where(
+            and(
+              eq(professionals.verifiedStatus, 'verified'),
+              eq(professionals.providesService, true),
+            ),
+          ),
       )
-    return rows.at(0)?.n ?? 0
+      return rows.at(0)?.n ?? 0
+    } catch {
+      return 0
+    }
   },
 )
 

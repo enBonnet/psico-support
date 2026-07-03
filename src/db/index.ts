@@ -37,6 +37,49 @@ export function getDb(): Db {
   return cached
 }
 
+// ponytail: D1 queries can fail transiently because the Durable Object hosting
+// the DB occasionally resets ("Internal error while starting up D1 DB storage
+// caused object to be reset", "Network connection lost", "storage operation
+// exceeded timeout", etc.). Cloudflare's own docs state "a handful of errors
+// every several hours is not unexpected" and that callers should retry. D1
+// auto-retries reads up to 2× internally, but that's not always enough for
+// landing-cold-load paths. This wrapper adds a few more retries with jittered
+// backoff. Ceiling: if it ever grows, pull @cloudflare/actors and use its
+// Retryable (it bundles a proper exponential-with-jitter strategy).
+const TRANSIENT_D1_MARKERS = [
+  'storage caused object to be reset',
+  'object to be reset',
+  'Network connection lost',
+  'storage operation exceeded timeout',
+  'exceeded its memory limit',
+  'D1_ERROR',
+]
+
+export function isTransientD1Error(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err)
+  return TRANSIENT_D1_MARKERS.some((m) => msg.includes(m))
+}
+
+export async function withD1Retry<T>(
+  fn: () => Promise<T>,
+  maxAttempts = 4,
+): Promise<T> {
+  let lastErr: unknown
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastErr = err
+      if (!isTransientD1Error(err) || attempt === maxAttempts - 1) throw err
+      // Jittered exponential backoff: ~[60,120,240]ms caps for 4 attempts.
+      const base = 60 * Math.pow(2, attempt)
+      const jitter = Math.random() * base * 0.5
+      await new Promise((r) => setTimeout(r, base + jitter))
+    }
+  }
+  throw lastErr
+}
+
 // ponytail: R2 binding for binary uploads (professional certificates).
 // Not cached — the binding is a stateless handle,getDb() caches the drizzle
 // wrapper, R2 has no such wrapper.
