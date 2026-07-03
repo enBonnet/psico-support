@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import { readFileSync } from 'node:fs'
 import { devtools } from '@tanstack/devtools-vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { VitePWA } from 'vite-plugin-pwa'
+import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite'
 
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
@@ -19,7 +20,10 @@ const APP_VERSION = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ).version
 
-const config = defineConfig({
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
+
+  return {
   resolve: { tsconfigPaths: true },
   define: {
     __APP_VERSION__: JSON.stringify(APP_VERSION),
@@ -86,7 +90,14 @@ const config = defineConfig({
       },
       devOptions: { enabled: false },
     }),
+    // ponytail: uploads source maps on deploy builds when SENTRY_AUTH_TOKEN is
+    // set. Org/project slugs come from .env.local or CI secrets. Plugin must
+    // be last. Without a token, builds still succeed — maps just won't upload.
+    sentryTanstackStart({
+      org: 'psico-ayuda-venezuela',
+      project: 'javascript-tanstackstart-react',
+      authToken: env.SENTRY_AUTH_TOKEN,
+    }),
   ],
+  }
 })
-
-export default config

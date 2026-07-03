@@ -7,7 +7,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "dotenv -e .env.local -- sh -c \"NODE_OPTIONS='--import ./instrument.server.mjs' vite dev --port 3000\"",
+    "dev": "dotenv -e .env.local -- vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
@@ -16,7 +16,6 @@
     "format": "prettier --write . && eslint --fix",
     "check": "prettier --check .",
     "deploy": "npm run build && wrangler deploy",
-    "start": "node --import ./.output/server/instrument.server.mjs .output/server/index.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
@@ -26,6 +25,7 @@
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
     "@faker-js/faker": "^10.3.0",
+    "@sentry/cloudflare": "^10.63.0",
     "@sentry/tanstackstart-react": "^10.42.0",
     "@t3-oss/env-core": "^0.13.10",
     "@tailwindcss/vite": "^4.1.18",

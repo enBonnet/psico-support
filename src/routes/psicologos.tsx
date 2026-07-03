@@ -32,7 +32,7 @@ export const REMOTE_DIRECTORY_SEARCH = {
 // RedirectOptions in this TanStack version has no status field; the framework
 // default status is used. Make it 301 only if SEO link-equity transfer
 // becomes important — would need a worker-level Response.redirect in
-// entry-server.tsx, like httpsRedirect.)
+// server.ts, like httpsRedirect.)
 export const Route = createFileRoute('/psicologos')({
   beforeLoad: () => {
     trackVanityRedirect('psicologos', '/psicologos')

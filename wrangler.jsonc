@@ -5,7 +5,7 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
-	"main": "./src/entry-server.tsx",
+	"main": "./src/server.ts",
 	"routes": [
 		{
 			"pattern": "psicoayudaven.com",
