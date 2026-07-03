@@ -11,6 +11,7 @@ import {
 } from '#/server/professionals'
 import { notify } from '#/lib/notifications'
 import { track, trackProContact } from '#/lib/analytics-client'
+import { whatsappHref } from '#/lib/whatsapp'
 import { seoHead, profileJsonLd, SITE_URL } from '#/lib/seo'
 import { Avatar } from '#/components/avatar'
 import { SocialIcon } from '#/components/social-icons'
@@ -89,10 +90,10 @@ function ProfilePage() {
     })
   }, [pro.id])
 
-  // ponytail: wa.me wants digits only (no +, no spaces). See directory card.
-  const digits = pro.whatsapp.replace(/\D/g, '')
-  const text = encodeURIComponent('Hola, te escribo por medio de PsicoAyudaVen.')
-  const href = `https://wa.me/${digits}?text=${text}`
+  // ponytail: wa.me deep-link + pre-filled message. See src/lib/whatsapp.ts.
+  // Non-null: verified pros pass a validated whatsapp (≥8 digits) at
+  // registration, so whatsappHref can't return null here in practice.
+  const href = whatsappHref(pro.whatsapp, pro.name)!
 
   // ponytail: social profile links — bare handles → absolute URLs. One source
   // of truth (socialLinks) feeds both the visible icon row AND the schema.org

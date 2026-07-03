@@ -1,10 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { HeartPulse, LifeBuoy, Stethoscope, UserCheck } from 'lucide-react'
-import { track } from '#/lib/analytics-client'
+import { track, trackProContactRandom } from '#/lib/analytics-client'
+import { notify } from '#/lib/notifications'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
-import { countVerifiedProfessionals } from '#/server/professionals'
+import { whatsappHref } from '#/lib/whatsapp'
+import {
+  countVerifiedProfessionals,
+  pickRandomProfessional,
+} from '#/server/professionals'
 
 export const Route = createFileRoute('/')({
   // ponytail: loader declared before head — declaring head first collapses
@@ -34,12 +39,72 @@ function Landing() {
   // to 5 for finer granularity once the directory grows.
   const STEP = 10
   const claim = Math.floor(count / STEP) * STEP
+  const [picking, setPicking] = useState(false)
   // ponytail: landing_view fires once per mount (CSR hydrate), not on every
   // SSR render — the component effect runs only client-side. route is implicit
   // (the helper defaults to location.pathname).
   useEffect(() => {
     track({ event: 'landing_view', category: 'public' })
   }, [])
+
+  // ponytail: the primary CTA used to deep-link to the directory, which lost
+  // ~96% of the funnel (500 landings → 20 contacts). Now it auto-picks a pro
+  // who is contactable right now (same pool as the directory's "Contactar al
+  // azar") and drops the user straight into a WhatsApp chat — one tap from the
+  // hero. If nobody is contactable at the moment (e.g. 3am), fall back to the
+  // directory via a notify + navigate so the user still has a path. modality
+  // is 'remote' — WhatsApp is the only on-demand modality (in-person = brigades).
+  async function helpNow() {
+    if (picking) return
+    // ponytail: fire intent up front so the funnel is measurable end-to-end:
+    // cta_click(help_now) = tapped the button; pro_contact_random = WhatsApp
+    // opened; cta_click(help_now_fallback) = no pro contactable. The gap
+    // between help_now and (pro_contact_random + help_now_fallback) is the
+    // error/abandon slice.
+    track({ event: 'cta_click', category: 'public', param1: 'help_now' })
+    setPicking(true)
+    try {
+      const picked = await pickRandomProfessional({
+        data: { modality: 'remote' },
+      })
+      if (!picked) {
+        notify({
+          type: 'info',
+          title: 'Nadie disponible en este momento',
+          body: 'Te llevamos al directorio para que veas horarios y escribas cuando quieras.',
+        })
+        track({
+          event: 'cta_click',
+          category: 'public',
+          param1: 'help_now_fallback',
+        })
+        // ponytail: window.location so it works regardless of router state —
+        // this is a one-shot escape from the SSR landing into the CSR
+        // directory, not an in-app navigation that needs to preserve history.
+        window.location.assign('/ayuda/profesionales?modality=remote')
+        return
+      }
+      trackProContactRandom({ proId: picked.id, modality: 'remote' })
+      const href = whatsappHref(picked.whatsapp, picked.name)
+      if (!href) {
+        notify({
+          type: 'error',
+          title: 'Algo salió mal',
+          body: 'No pudimos abrir WhatsApp. Inténtalo de nuevo.',
+        })
+        return
+      }
+      window.open(href, '_blank', 'noopener,noreferrer')
+    } catch {
+      notify({
+        type: 'error',
+        title: 'Algo salió mal',
+        body: 'No pudimos buscar un profesional. Inténtalo de nuevo.',
+      })
+    } finally {
+      setPicking(false)
+    }
+  }
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col justify-between py-8">
       <header className="text-center">
@@ -78,18 +143,36 @@ function Landing() {
       </div>
 
       <nav className="mt-10 flex flex-col gap-4">
-      {/* ponytail: "Ahora" = immediate → straight to the remote directory
-          (WhatsApp is the only on-demand modality; in-person is brigades).
-          The modality-selection page (/ayuda) stays reachable via the Ayuda
-          nav tab for users who specifically want in-person brigades. */}
+      {/* ponytail: "Ahora" = immediate. Auto-picks a professional who is
+          contactable right now and opens WhatsApp directly — one tap from the
+          hero instead of funneling through the directory (which was bleeding
+          ~96% of landings). The directory stays reachable via the "ver todos"
+          link below this CTA and via the Ayuda nav tab. */}
+      <button
+        type="button"
+        onClick={helpNow}
+        disabled={picking}
+        className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] disabled:cursor-progress disabled:opacity-80"
+      >
+        <LifeBuoy aria-hidden="true" className="size-5" />
+        {picking ? 'Buscando un profesional…' : 'Necesito ayuda ahora'}
+      </button>
+      {/* ponytail: secondary escape hatch for users who want to browse / pick
+          themselves. Kept small so the auto-pick stays the dominant CTA, but
+          present so the directory is never more than one tap away. */}
       <Link
         to="/ayuda/profesionales"
         search={{ modality: 'remote' }}
-        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'help_now' })}
-        className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        onClick={() =>
+          track({
+            event: 'cta_click',
+            category: 'public',
+            param1: 'help_now_browse',
+          })
+        }
+        className="self-center text-sm font-medium text-[var(--medi-secondary)] underline-offset-2 hover:underline"
       >
-        <LifeBuoy aria-hidden="true" className="size-5" />
-        Necesito ayuda ahora
+        O ver todos los profesionales
       </Link>
       <Link
         to="/recursos"
