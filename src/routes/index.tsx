@@ -57,9 +57,9 @@ function Landing() {
   async function helpNow() {
     if (picking) return
     // ponytail: fire intent up front so the funnel is measurable end-to-end:
-    // cta_click(help_now) = tapped the button; pro_contact_random = WhatsApp
+    // cta_click(help_now) = tapped the button; pro_contact_help_now = WhatsApp
     // opened; cta_click(help_now_fallback) = no pro contactable. The gap
-    // between help_now and (pro_contact_random + help_now_fallback) is the
+    // between help_now and (pro_contact_help_now + help_now_fallback) is the
     // error/abandon slice.
     track({ event: 'cta_click', category: 'public', param1: 'help_now' })
     setPicking(true)
@@ -84,7 +84,6 @@ function Landing() {
         window.location.assign('/ayuda/profesionales?modality=remote')
         return
       }
-      trackProContactHelpNow({ proId: picked.id, modality: 'remote' })
       const href = whatsappHref(picked.whatsapp, picked.name)
       if (!href) {
         notify({
@@ -94,6 +93,11 @@ function Landing() {
         })
         return
       }
+      // ponytail: fire success only once we know WhatsApp can actually open —
+      // a null href above returns early, so reaching here means we have a real
+      // wa.me link. Counting it before the null check would overstate the
+      // success metric.
+      trackProContactHelpNow({ proId: picked.id, modality: 'remote' })
       window.open(href, '_blank', 'noopener,noreferrer')
     } catch {
       notify({
@@ -147,16 +151,29 @@ function Landing() {
           contactable right now and opens WhatsApp directly — one tap from the
           hero instead of funneling through the directory (which was bleeding
           ~96% of landings). The directory stays reachable via the "ver todos"
-          link below this CTA and via the Ayuda nav tab. */}
-      <button
-        type="button"
-        onClick={helpNow}
-        disabled={picking}
-        className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] disabled:cursor-progress disabled:opacity-80"
+          link below this CTA and via the Ayuda nav tab.
+          Rendered as a real <a> (href to the directory) so it still works
+          without JS / before hydration — the landing is SSR'd, so the hero
+          ships as real HTML. helpNow intercepts the click to run the auto-pick
+          and preventDefault on success; if JS is off or hydration hasn't run,
+          the link is a plain navigation to the directory (the same URL
+          helpNow itself falls back to when no pro is contactable). */}
+      <a
+        href="/ayuda/profesionales?modality=remote"
+        onClick={(e) => {
+          // ponytail: only intercept as a JS click (left/middle click on a
+          // real anchor still works for open-in-new-tab etc.). Modifier
+          // clicks are the browser's to handle.
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+          e.preventDefault()
+          helpNow()
+        }}
+        aria-disabled={picking}
+        className="glass-primary flex min-h-16 cursor-pointer items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] aria-disabled:cursor-progress aria-disabled:opacity-80"
       >
         <LifeBuoy aria-hidden="true" className="size-5" />
         {picking ? 'Buscando un profesional…' : 'Necesito ayuda ahora'}
-      </button>
+      </a>
       {/* ponytail: secondary escape hatch for users who want to browse / pick
           themselves. Kept small so the auto-pick stays the dominant CTA, but
           present so the directory is never more than one tap away. */}
