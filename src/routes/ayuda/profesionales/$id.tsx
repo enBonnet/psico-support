@@ -1,4 +1,5 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { Share2, ArrowLeft, MapPin, Users, Clock } from 'lucide-react'
 import {
   getPublicProfessional,
@@ -9,6 +10,7 @@ import {
   formatScheduleHuman,
 } from '#/server/professionals'
 import { notify } from '#/lib/notifications'
+import { track, trackProContact } from '#/lib/analytics-client'
 import { seoHead, profileJsonLd, SITE_URL } from '#/lib/seo'
 import { Avatar } from '#/components/avatar'
 import { SocialIcon } from '#/components/social-icons'
@@ -78,6 +80,14 @@ export const Route = createFileRoute('/ayuda/profesionales/$id')({
 
 function ProfilePage() {
   const pro = Route.useLoaderData()
+
+  useEffect(() => {
+    track({
+      event: 'profile_view',
+      category: 'public',
+      param1: String(pro.id),
+    })
+  }, [pro.id])
 
   // ponytail: wa.me wants digits only (no +, no spaces). See directory card.
   const digits = pro.whatsapp.replace(/\D/g, '')
@@ -153,6 +163,12 @@ function ProfilePage() {
     if (navigator.share) {
       try {
         await navigator.share({ title: shareTitle, text: shareTitle, url })
+        track({
+          event: 'profile_share',
+          category: 'public',
+          param1: String(pro.id),
+          param2: 'native',
+        })
         return
       } catch {
         return // user dismissed the sheet
@@ -160,6 +176,12 @@ function ProfilePage() {
     }
     try {
       await navigator.clipboard.writeText(url)
+      track({
+        event: 'profile_share',
+        category: 'public',
+        param1: String(pro.id),
+        param2: 'clipboard',
+      })
       notify({
         type: 'success',
         title: 'Enlace copiado',
@@ -243,6 +265,14 @@ function ProfilePage() {
                 href={s.href}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() =>
+                  track({
+                    event: 'profile_social_click',
+                    category: 'public',
+                    param1: String(pro.id),
+                    param2: s.name,
+                  })
+                }
                 aria-label={`${SOCIAL_LABEL[s.name] ?? s.name} de ${pro.name}`}
                 className="flex size-10 items-center justify-center rounded-full glass-card-soft text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
               >
@@ -296,6 +326,12 @@ function ProfilePage() {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() =>
+              trackProContact({
+                proId: pro.id,
+                source: 'profile',
+              })
+            }
             className="flex min-h-12 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-3 text-base font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
           >
             Contactar por WhatsApp

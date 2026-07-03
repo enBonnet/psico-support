@@ -2,6 +2,7 @@ import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useRef } from 'react'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -83,11 +84,19 @@ function PresentacionPage() {
 function AvatarSection({ me }: { me: NonNullable<MyPro> }) {
   const qc = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = user?.id
 
   const upload = useMutation({
     mutationFn: (vars: { data: string; type: AvatarMime }) =>
       uploadMyAvatar({ data: vars }),
     onSuccess: (data) => {
+      if (actorId) {
+        track({ event: 'pro_avatar_upload', category: 'pro', actorId })
+      }
       qc.setQueryData(['my-professional'], (old: MyPro | undefined) =>
         old ? { ...old, avatarKey: data.avatarKey } : old,
       )
@@ -104,6 +113,9 @@ function AvatarSection({ me }: { me: NonNullable<MyPro> }) {
   const remove = useMutation({
     mutationFn: () => removeMyAvatar(),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'pro_avatar_remove', category: 'pro', actorId })
+      }
       qc.setQueryData(['my-professional'], (old: MyPro | undefined) =>
         old ? { ...old, avatarKey: null } : old,
       )
@@ -203,6 +215,11 @@ function AvatarSection({ me }: { me: NonNullable<MyPro> }) {
 // parity with the rest of the panel.
 function SocialsSection({ me }: { me: NonNullable<MyPro> }) {
   const qc = useQueryClient()
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = user?.id
   const [x, setX] = useState(me.socialX ?? '')
   const [ig, setIg] = useState(me.socialInstagram ?? '')
   const [tt, setTt] = useState(me.socialTikTok ?? '')
@@ -211,6 +228,9 @@ function SocialsSection({ me }: { me: NonNullable<MyPro> }) {
     mutationFn: (vars: { x: string; instagram: string; tiktok: string }) =>
       updateMySocials({ data: vars }),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'pro_socials_save', category: 'pro', actorId })
+      }
       qc.invalidateQueries({ queryKey: ['my-professional'] })
       notify({ type: 'success', title: 'Redes sociales guardadas' })
     },

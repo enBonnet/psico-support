@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { seoHead } from '#/lib/seo'
+import { track } from '#/lib/analytics-client'
 import { CrisisBanner } from '#/components/crisis-banner'
 import { ProCta } from '#/components/pro-cta'
 
@@ -59,6 +60,24 @@ function Enraizamiento() {
   const [idx, setIdx] = useState(0)
   const step = STEPS[idx]
   const last = idx === STEPS.length - 1
+
+  useEffect(() => {
+    track({
+      event: 'recursos_tool_view',
+      category: 'public',
+      param1: 'enraizamiento',
+    })
+  }, [])
+
+  function goNext() {
+    track({
+      event: 'enraizamiento_step',
+      category: 'public',
+      param1: step.anchor,
+      value: idx + 1,
+    })
+    if (!last) setIdx((i) => i + 1)
+  }
 
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
@@ -131,7 +150,7 @@ function Enraizamiento() {
         ) : (
           <button
             type="button"
-            onClick={() => setIdx((i) => Math.min(STEPS.length - 1, i + 1))}
+            onClick={goNext}
             className="glass-primary flex min-h-12 flex-1 items-center justify-center rounded-[var(--glass-radius-sm)] px-4 py-3 text-base font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
           >
             Siguiente

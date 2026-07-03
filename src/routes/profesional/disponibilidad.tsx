@@ -2,6 +2,7 @@ import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import {
@@ -37,6 +38,10 @@ function DisponibilidadPage() {
   const { data: me, isLoading } = useQuery({
     queryKey: ['my-professional'],
     queryFn: () => getMyProfessional(),
+  })
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
   })
 
   return (
@@ -87,7 +92,7 @@ function DisponibilidadPage() {
                   administrador apruebe tu registro.
                 </p>
               )}
-              <AvailabilitySection me={me} />
+              <AvailabilitySection me={me} actorId={user?.id} />
             </>
           )}
         </>
@@ -118,7 +123,13 @@ const AVAILABILITY_MODE_OPTIONS: { value: AvailabilityMode; label: string }[] = 
 // 'always'/'inactive' are one-tap; 'scheduled' reveals a weekly grid of
 // {start,end} slots per day + a timezone select. Plain controlled state (like
 // SocialsSection); setAvailabilityMode persists + sets `available` server-side.
-function AvailabilitySection({ me }: { me: NonNullable<MyPro> }) {
+function AvailabilitySection({
+  me,
+  actorId,
+}: {
+  me: NonNullable<MyPro>
+  actorId?: string
+}) {
   const qc = useQueryClient()
   const initialTz = me.timezone ?? defaultTimezoneForCountry(me.country)
   const [mode, setMode] = useState<AvailabilityMode>(me.availabilityMode)
@@ -132,6 +143,9 @@ function AvailabilitySection({ me }: { me: NonNullable<MyPro> }) {
       timezone: string
     }) => setAvailabilityMode({ data: vars }),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'availability_save', category: 'pro', actorId })
+      }
       qc.invalidateQueries({ queryKey: ['my-professional'] })
       notify({ type: 'success', title: 'Disponibilidad guardada' })
     },
@@ -182,7 +196,17 @@ function AvailabilitySection({ me }: { me: NonNullable<MyPro> }) {
             key={opt.value}
             type="button"
             aria-pressed={mode === opt.value}
-            onClick={() => setMode(opt.value)}
+            onClick={() => {
+              if (actorId && mode !== opt.value) {
+                track({
+                  event: 'availability_mode_change',
+                  category: 'pro',
+                  actorId,
+                  param1: opt.value,
+                })
+              }
+              setMode(opt.value)
+            }}
             className={
               'min-h-11 rounded-[var(--glass-radius-sm)] border px-2 py-2 text-xs font-medium transition-all ' +
               (mode === opt.value

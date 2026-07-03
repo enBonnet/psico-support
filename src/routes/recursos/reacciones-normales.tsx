@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { seoHead } from '#/lib/seo'
+import { track } from '#/lib/analytics-client'
 import { CrisisBanner } from '#/components/crisis-banner'
 import { ProCta } from '#/components/pro-cta'
 
@@ -19,6 +21,14 @@ export const Route = createFileRoute('/recursos/reacciones-normales')({
 })
 
 function ReaccionesNormales() {
+  useEffect(() => {
+    track({
+      event: 'recursos_tool_view',
+      category: 'public',
+      param1: 'reacciones-normales',
+    })
+  }, [])
+
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
       <Link

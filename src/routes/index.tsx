@@ -19,7 +19,7 @@ export const Route = createFileRoute('/')({
   loader: async () => ({ count: await countVerifiedProfessionals() }),
   head: () =>
     seoHead({
-      title: 'Red de apoyo psicológico Venezuela',
+      title: 'Red de apoyo psicológico',
       description:
         'Conectamos a personas afectadas con psicólogos verificados. Apoyo presencial y online por WhatsApp, gratuito y confidencial.',
       path: '/',

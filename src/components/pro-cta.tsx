@@ -1,5 +1,7 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { MessageCircle } from 'lucide-react'
+
+import { track } from '#/lib/analytics-client'
 
 // ponytail: the "talk to a professional" footer + safety disclaimer repeated
 // on every recursos tool page. Extracted (not inlined 5x) so the disclaimer
@@ -9,11 +11,20 @@ import { MessageCircle } from 'lucide-react'
 // genuinely on-demand — in-person is brigades (location-based, not instant).
 // A distressed user landing on an empty in-person list is the failure mode.
 export function ProCta() {
+  const { pathname } = useLocation()
+
   return (
     <div className="mt-8 flex flex-col gap-3">
       <Link
         to="/ayuda/profesionales"
         search={{ modality: 'remote' }}
+        onClick={() =>
+          track({
+            event: 'pro_cta_click',
+            category: 'public',
+            param2: pathname,
+          })
+        }
         className="glass-primary flex min-h-14 items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] px-6 py-4 text-base font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <MessageCircle aria-hidden="true" className="size-5" />

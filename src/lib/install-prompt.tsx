@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { Download, Share, X } from 'lucide-react'
 
+import { track } from '#/lib/analytics-client'
+
 // ponytail: BeforeInstallPromptEvent isn't in the TS DOM lib (still
 // Chromium-only as of 2025). Minimal shape — platforms/toUUID omitted since we
 // never read them. If it standardizes, drop this and use the lib type.
@@ -75,6 +77,7 @@ export function useInstallPrompt(): InstallPromptState {
     const onInstalled = () => {
       setDeferred(null)
       setInstalled(true)
+      track({ event: 'app_installed', category: 'public' })
     }
     window.addEventListener('beforeinstallprompt', onBip)
     window.addEventListener('appinstalled', onInstalled)
@@ -91,11 +94,13 @@ export function useInstallPrompt(): InstallPromptState {
     ios,
     promptInstall: async () => {
       if (!deferred) return
+      track({ event: 'install_prompt_trigger', category: 'public' })
       await deferred.prompt()
       await deferred.userChoice
       setDeferred(null)
     },
     dismiss: () => {
+      track({ event: 'install_prompt_dismiss', category: 'public' })
       try {
         localStorage.setItem(DISMISS_KEY, '1')
       } catch {

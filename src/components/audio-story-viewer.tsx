@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { X, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
 
 import type { StoryTrayPro } from '#/server/audio-stories'
+import { track } from '#/lib/analytics-client'
 
 // ponytail: IG-stories-style fullscreen audio viewer. The tray is hidden once
 // the viewer opens (only the current clip shows); auto-advance runs clip→clip
@@ -71,8 +72,13 @@ export function AudioStoryViewer({
   const close = useCallback(() => {
     if (closedRef.current) return
     closedRef.current = true
+    track({
+      event: 'audio_close',
+      category: 'public',
+      param1: String(tray[proIndex]?.professionalId ?? ''),
+    })
     onClose()
-  }, [onClose])
+  }, [onClose, tray, proIndex])
 
   // ponytail: advance one clip; if the pro's set is exhausted, advance to the
   // next pro; if the tray is exhausted, close. Returns false when there's
@@ -258,7 +264,14 @@ export function AudioStoryViewer({
             <Link
               to="/ayuda/profesionales/$id"
               params={{ id: String(currentPro.professionalId) }}
-              onClick={() => window.history.back()}
+              onClick={() => {
+                track({
+                  event: 'audio_attribution_click',
+                  category: 'public',
+                  param1: String(currentPro.professionalId),
+                })
+                window.history.back()
+              }}
               className="flex items-center gap-2 text-left"
             >
               <span className="flex size-9 items-center justify-center rounded-full bg-white/25 text-sm font-bold !text-white backdrop-blur-sm">

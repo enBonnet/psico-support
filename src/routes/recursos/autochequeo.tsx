@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, ClipboardCheck } from 'lucide-react'
 import { seoHead } from '#/lib/seo'
+import { track } from '#/lib/analytics-client'
 import { CrisisBanner } from '#/components/crisis-banner'
 import { ProCta } from '#/components/pro-cta'
 
@@ -105,7 +106,21 @@ function Autochequeo() {
   const score = useMemo(() => answers.reduce((a, b) => a + b, 0), [answers])
   const band = bandFor(score)
 
+  useEffect(() => {
+    track({
+      event: 'recursos_tool_view',
+      category: 'public',
+      param1: 'autochequeo',
+    })
+  }, [])
+
   function gateAnswer(yes: boolean) {
+    track({
+      event: 'autochequeo_gate_response',
+      category: 'public',
+      param1: String(gateIdx),
+      param2: yes ? 'yes' : 'no',
+    })
     if (yes) {
       setPhase('crisis')
       return
@@ -119,7 +134,16 @@ function Autochequeo() {
     next[k6Idx] = value
     setAnswers(next)
     if (k6Idx + 1 < K6_ITEMS.length) setK6Idx((i) => i + 1)
-    else setPhase('result')
+    else {
+      const finalScore = next.reduce((a, b) => a + b, 0)
+      track({
+        event: 'autochequeo_complete',
+        category: 'public',
+        value: finalScore,
+        param1: bandFor(finalScore),
+      })
+      setPhase('result')
+    }
   }
 
   function back() {
@@ -207,7 +231,10 @@ function Autochequeo() {
           </div>
           <button
             type="button"
-            onClick={() => setPhase('gate')}
+            onClick={() => {
+              track({ event: 'autochequeo_start', category: 'public' })
+              setPhase('gate')
+            }}
             className="glass-primary mt-5 flex min-h-12 w-full items-center justify-center rounded-[var(--glass-radius-sm)] px-6 py-3 text-base font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
           >
             Empezar

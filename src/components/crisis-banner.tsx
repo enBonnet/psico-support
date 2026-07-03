@@ -1,5 +1,7 @@
-import { Link } from '@tanstack/react-router'
+import { Link, useLocation } from '@tanstack/react-router'
 import { AlertTriangle } from 'lucide-react'
+
+import { track } from '#/lib/analytics-client'
 
 // ponytail: no Venezuela-wide crisis line exists as of this build, so the
 // banner points to local emergency services + the directory rather than a
@@ -12,6 +14,8 @@ import { AlertTriangle } from 'lucide-react'
 // in-person is brigades (location-based, not instantaneous). Pinning here
 // means a person in distress never lands on an empty in-person list.
 export function CrisisBanner() {
+  const { pathname } = useLocation()
+
   return (
     <aside
       aria-label="Información de emergencia"
@@ -30,6 +34,13 @@ export function CrisisBanner() {
         <Link
           to="/ayuda/profesionales"
           search={{ modality: 'remote' }}
+          onClick={() =>
+            track({
+              event: 'crisis_cta_click',
+              category: 'public',
+              param2: pathname,
+            })
+          }
           className="font-medium text-[var(--medi-secondary)] underline"
         >
           Hablar con un profesional

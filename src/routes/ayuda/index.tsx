@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { MapPin, MessageCircle, Headphones } from 'lucide-react'
+import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/ayuda/')({
@@ -17,6 +18,7 @@ function ModalitySelection() {
   const navigate = useNavigate()
 
   const go = (modality: 'in_person' | 'remote') => {
+    track({ event: 'modality_select', category: 'public', param1: modality })
     navigate({ to: '/ayuda/profesionales', search: { modality } })
   }
 

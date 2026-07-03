@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
+import { track } from '#/lib/analytics-client'
 
 export const Route = createFileRoute('/profesional/login')({
   // ponytail: CSR-only — interactive auth form, no crawler value. Server
@@ -44,6 +45,7 @@ function LoginPage() {
       // browser, and invalidating ['me'] means cuenta/panel re-read it.
       await authClient.getSession()
       qc.invalidateQueries({ queryKey: ['me'] })
+      track({ event: 'auth_signin', category: 'auth' })
       await navigate({ to: '/profesional/panel' })
     } finally {
       setLoading(false)

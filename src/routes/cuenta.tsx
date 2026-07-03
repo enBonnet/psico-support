@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { LifeBuoy, LogIn, LogOut, ShieldCheck, UserPlus } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 import { APP_VERSION } from '#/lib/version'
 import { Skeleton } from '#/components/ui/skeleton'
@@ -53,6 +54,7 @@ function CuentaPage() {
       })
       return
     }
+    track({ event: 'auth_signout', category: 'auth', actorId: me?.id })
     window.location.href = '/'
   }
 

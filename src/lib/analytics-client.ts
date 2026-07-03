@@ -97,3 +97,42 @@ export function track(args: TrackArgs): void {
     /* swallow — analytics must never break the feature */
   }
 }
+
+type ProContactSource = 'directory' | 'profile'
+
+/**
+ * Track a "Contactar por WhatsApp" click. param1=proId is sent from the
+ * client; the track() server fn resolves param3=userId from D1.
+ *
+ * Aggregate contacts per account in Analytics Engine SQL:
+ *
+ *   SELECT blob4 AS pro_id, blob6 AS user_id, SUM(_sample_interval * double1) AS clicks
+ *   FROM psico_events
+ *   WHERE blob1 = 'pro_contact'
+ *   GROUP BY pro_id, user_id
+ *   ORDER BY clicks DESC
+ */
+export function trackProContact(args: {
+  proId: number | string
+  source: ProContactSource
+}): void {
+  track({
+    event: 'pro_contact',
+    category: 'public',
+    param1: String(args.proId),
+    param2: args.source,
+  })
+}
+
+/** Track "Contactar al azar" — userId resolved server-side like trackProContact. */
+export function trackProContactRandom(args: {
+  proId: number | string
+  modality: string
+}): void {
+  track({
+    event: 'pro_contact_random',
+    category: 'public',
+    param1: String(args.proId),
+    param2: args.modality,
+  })
+}

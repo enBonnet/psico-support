@@ -3,10 +3,13 @@
 // value only if a staging domain ever needs different previews.
 export const SITE_URL = 'https://psicoayudaven.com'
 export const SITE_NAME = 'PsicoAyudaVen'
+export const SITE_BRAND = 'Psico Ayuda Venezuela'
+export const SITE_TAGLINE = 'No estás solo'
+export const SITE_DEFAULT_TITLE = `${SITE_BRAND} | ${SITE_TAGLINE}`
 const DEFAULT_IMAGE = `${SITE_URL}/logo512.png`
 
 type SeoInput = {
-  /** Page title without the brand suffix — the suffix is added for <title>. */
+  /** Page title without the brand suffix — omitted on `/` (uses SITE_DEFAULT_TITLE). */
   title: string
   description: string
   /** Canonical path, e.g. '/ayuda'. Must start with '/'. */
@@ -36,18 +39,21 @@ export function seoHead({
   type = 'website',
 }: SeoInput) {
   const url = `${SITE_URL}${path}`
+  const documentTitle =
+    path === '/' ? SITE_DEFAULT_TITLE : `${title} | ${SITE_BRAND}`
+  const shareTitle = path === '/' ? SITE_DEFAULT_TITLE : title
   const meta = [
-    { title: `${title} · ${SITE_NAME}` },
+    { title: documentTitle },
     { name: 'description', content: description },
-    { property: 'og:site_name', content: SITE_NAME },
-    { property: 'og:title', content: title },
+    { property: 'og:site_name', content: SITE_BRAND },
+    { property: 'og:title', content: shareTitle },
     { property: 'og:description', content: description },
     { property: 'og:type', content: type },
     { property: 'og:url', content: url },
     { property: 'og:image', content: image },
     { property: 'og:locale', content: 'es_VE' },
     { property: 'twitter:card', content: 'summary_large_image' },
-    { property: 'twitter:title', content: title },
+    { property: 'twitter:title', content: shareTitle },
     { property: 'twitter:description', content: description },
     { property: 'twitter:image', content: image },
   ]

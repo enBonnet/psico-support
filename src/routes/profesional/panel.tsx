@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
@@ -57,6 +58,17 @@ function PanelPage() {
     queryKey: ['my-professional'],
     queryFn: () => getMyProfessional(),
   })
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = user?.id
+
+  useEffect(() => {
+    if (actorId) {
+      track({ event: 'panel_view', category: 'pro', actorId })
+    }
+  }, [actorId])
   const { data: isAdmin } = useQuery({
     queryKey: ['my-admin'],
     queryFn: () => amIAdmin(),
@@ -88,6 +100,7 @@ function PanelPage() {
   const del = useMutation({
     mutationFn: () => deleteMyProfessional(),
     onSuccess: async () => {
+      track({ event: 'panel_delete_account', category: 'pro', actorId })
       notify({
         type: 'success',
         title: 'Tu cuenta profesional fue eliminada',
@@ -119,6 +132,7 @@ function PanelPage() {
       })
       return
     }
+    track({ event: 'auth_signout', category: 'auth', actorId })
     window.location.href = '/'
   }
 
