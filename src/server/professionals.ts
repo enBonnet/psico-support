@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
+import * as Sentry from '@sentry/tanstackstart-react'
 import { z } from 'zod'
 import {
   eq,
@@ -1890,8 +1891,8 @@ export const adminSetProvidesService = createServerFn({ method: 'POST' })
 // so a 0 hides the line rather than throwing a 500 on the landing (WEB-1).
 export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const db = getDb()
     try {
+      const db = getDb()
       const rows = await withD1Retry(() =>
         db
           .select({ n: count() })
@@ -1904,7 +1905,10 @@ export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).hand
           ),
       )
       return rows.at(0)?.n ?? 0
-    } catch {
+    } catch (err) {
+      // Still observable: a non-transient failure (schema bug, dropped column)
+      // would otherwise render the line hidden forever with no signal.
+      Sentry.captureException(err)
       return 0
     }
   },

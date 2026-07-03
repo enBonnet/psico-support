@@ -52,7 +52,7 @@ const TRANSIENT_D1_MARKERS = [
   'Network connection lost',
   'storage operation exceeded timeout',
   'exceeded its memory limit',
-  'D1_ERROR',
+  'reset because its code was updated',
 ]
 
 export function isTransientD1Error(err: unknown): boolean {
