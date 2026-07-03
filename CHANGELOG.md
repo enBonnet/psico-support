@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **GitHub Actions deploy workflow**: CI automático en push a `main` — build, `wrangler deploy`, y aplicación de migraciones D1 remotas (gotcha #1). Incluye sanity check con `migrations list --remote`. Node 22, prerender contra miniflare local (`CLOUDFLARE_VITE_FORCE_LOCAL=true`), migraciones locales antes del build para tablas D1.
+- **Monitor de errores Sentry (cliente + worker)**: integración de `@sentry/cloudflare` en el worker (`src/server.ts`) y `@sentry/tanstackstart-react` en el cliente (init, router tracing, captura en el error boundary, middleware de server-fns). El DSN (`VITE_SENTRY_DSN`) es opcional — sin él el SDK se desactiva y el build corre igual. Subida de source maps en deploy vía `SENTRY_AUTH_TOKEN`.
+
+### Fixed
+- **Fuga de datos entre peticiones concurrentes**: el worker stashaba la `Request` entrante en `globalThis.__TSS_REQUEST__`, lo que podía mezclar cookies/headers entre peticiones solapadas en el mismo isolate. Ahora se usa el almacén por-petición de TanStack Start (`getRequestHeaders()` vía `AsyncLocalStorage`, aislado y seguro bajo concurrencia).
 
 ### Changed
 - **Token de API de Cloudflare**: ahora requiere `Account:Cloudflare:Read` además de `Workers Scripts:Edit` y `D1:Edit` para deploy desde CI.

@@ -17,6 +17,10 @@ export function getSentryInitOptions(): Options | undefined {
     dsn,
     environment: import.meta.env.DEV ? 'development' : 'production',
     release: `psico-support@${APP_VERSION}`,
+    // ponytail: required for tanstackRouterBrowserTracingIntegration to emit
+    // spans — without it the integration is a no-op. Sample everything in dev,
+    // 10% in prod (D1-scale traffic; bump if traces look sparse).
+    tracesSampleRate: import.meta.env.DEV ? 1.0 : 0.1,
     dataCollection: {
       // https://docs.sentry.io/platforms/javascript/guides/tanstackstart-react/configuration/options/#dataCollection
       // userInfo: false,

@@ -44,14 +44,8 @@ const entry = createServerEntry(
       if (redirect) return redirect
 
       if (env) setCloudflareEnv(env)
-      const g = globalThis as unknown as { __TSS_REQUEST__?: Request }
-      g.__TSS_REQUEST__ = request
-      try {
-        // @ts-expect-error — worker fetch passes env as the second argument
-        return await handler(request, env)
-      } finally {
-        g.__TSS_REQUEST__ = undefined
-      }
+      // @ts-expect-error — worker fetch passes env as the second argument
+      return await handler(request, env)
     },
   }),
 )
@@ -59,6 +53,5 @@ const entry = createServerEntry(
 const sentryOptions = getSentryInitOptions()
 
 export default sentryOptions
-  ? // @ts-expect-error — TanStack's ExportedHandler shape differs from Cloudflare's
-    Sentry.withSentry(() => sentryOptions, entry)
+  ? Sentry.withSentry(() => sentryOptions, entry)
   : entry

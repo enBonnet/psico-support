@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import { and, eq, like, or, desc, count, sql } from 'drizzle-orm'
 
@@ -16,9 +17,15 @@ import { getAuth } from '#/lib/auth'
 // Duplicated per-domain to keep them decoupled; extract to lib/auth.ts if a
 // fourth fn module needs it.
 function getHeaders(): Headers {
-  const req = (globalThis as unknown as { __TSS_REQUEST__?: Request })
-    .__TSS_REQUEST__
-  return req ? new Headers(req.headers) : new Headers()
+  // ponytail: request-isolated via TanStack Start's AsyncLocalStorage — safe
+  // under concurrent requests (the old globalThis.__TSS_REQUEST__ leaked
+  // headers between overlapping requests in the same isolate). Empty-headers
+  // fallback for calls outside a request (e.g. tests).
+  try {
+    return getRequestHeaders()
+  } catch {
+    return new Headers()
+  }
 }
 
 // ponytail: PFA-derived (WHO/NCTSN Psychological First Aid) action tags. Multi-
