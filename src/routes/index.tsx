@@ -1,12 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import {
-  HeartPulse,
-  LifeBuoy,
-  Stethoscope,
-  Headphones,
-  UserCheck,
-} from 'lucide-react'
+import { HeartPulse, LifeBuoy, Stethoscope, UserCheck } from 'lucide-react'
 import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
@@ -19,9 +13,13 @@ export const Route = createFileRoute('/')({
   loader: async () => ({ count: await countVerifiedProfessionals() }),
   head: () =>
     seoHead({
-      title: 'Red de apoyo psicológico',
+      // ponytail: title is ignored for path '/' (seoHead falls back to
+      // SITE_DEFAULT_TITLE — "Psico Ayuda Venezuela · Red de apoyo gratuito
+      // ante la contingencia"), but kept here as a self-documenting hint and
+      // for callers that read this route's head config directly.
+      title: 'Psico Ayuda Venezuela · Red de apoyo gratuito ante la contingencia',
       description:
-        'Conectamos a personas afectadas con psicólogos verificados. Apoyo presencial y online por WhatsApp, gratuito y confidencial.',
+        'Red de apoyo psicológico gratuito para personas afectadas por los terremotos en Venezuela. Te conectamos con psicólogos verificados, por WhatsApp o de forma presencial. Servicio confidencial.',
       path: '/',
     }),
   component: Landing,
@@ -47,15 +45,16 @@ function Landing() {
       <header className="text-center">
         <p className="section-kicker">Venezuela</p>
         <h1 className="mt-2 text-3xl font-bold leading-tight text-[var(--medi-primary)] sm:text-4xl">
-          Red de apoyo psicológico
+          Apoyo psicológico ante los terremotos
         </h1>
         <div className="section-underline mx-auto mt-3" />
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-          Conectamos a personas afectadas con psicólogos verificados.
+          Red gratuita y confidencial para personas afectadas por la
+          contingencia.
         </p>
         {claim >= STEP && (
           <p className="mt-1 text-sm font-medium text-[var(--medi-secondary)]">
-            Más de {claim} profesionales verificados
+            Más de {claim} profesionales en la red
           </p>
         )}
       </header>
@@ -93,14 +92,6 @@ function Landing() {
         Necesito ayuda ahora
       </Link>
       <Link
-        to="/apoyo"
-        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'voces' })}
-        className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <Headphones aria-hidden="true" className="size-5" />
-        Voces que acompañan
-      </Link>
-      <Link
         to="/recursos"
         onClick={() => track({ event: 'cta_click', category: 'public', param1: 'recursos' })}
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
@@ -114,7 +105,7 @@ function Landing() {
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <Stethoscope aria-hidden="true" className="size-5" />
-        Ofrezco ayuda (soy psicólogo)
+        Soy psicólogo, quiero ayudar
       </Link>
       </nav>
 
@@ -122,7 +113,7 @@ function Landing() {
 
       <Link
         to="/como-funciona"
-        aria-label="Cómo funciona PsicoAyudaVen"
+        aria-label="Cómo funciona Psico Ayuda Venezuela"
         className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         ¿Primera vez aquí?{' '}
@@ -133,33 +124,12 @@ function Landing() {
 
       <Link
         to="/acerca-de"
-        aria-label="Acerca de PsicoAyudaVen"
+        aria-label="Acerca de Psico Ayuda Venezuela"
         className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         Servicio gratuito y confidencial.{' '}
         <span className="font-medium text-[var(--medi-secondary)]">
-          Acerca de PsicoAyudaVen
-        </span>
-      </Link>
-
-      <Link
-        to="/equipo"
-        aria-label="Equipo de PsicoAyudaVen"
-        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        Las personas detrás del proyecto.{' '}
-        <span className="font-medium text-[var(--medi-secondary)]">
-          Equipo
-        </span>
-      </Link>
-
-      <Link
-        to="/terminos"
-        aria-label="Términos para profesionales"
-        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <span className="font-medium text-[var(--medi-secondary)]">
-          Términos para profesionales
+          Acerca de Psico Ayuda Venezuela
         </span>
       </Link>
     </main>

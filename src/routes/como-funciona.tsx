@@ -22,9 +22,9 @@ import { seoHead } from '#/lib/seo'
 export const Route = createFileRoute('/como-funciona')({
   head: () =>
     seoHead({
-      title: 'Cómo funciona PsicoAyudaVen',
+      title: 'Cómo funciona Psico Ayuda Venezuela',
       description:
-        'Conoce cómo usar la plataforma para recibir ayuda psicológica, cómo funciona para psicólogos verificados y cómo protegemos tus datos.',
+        'Cómo usar la red para recibir apoyo psicológico gratuito tras los terremotos en Venezuela, cómo se verifica cada psicólogo y cómo cuidamos tus datos. Servicio confidencial por WhatsApp o de forma presencial.',
       path: '/como-funciona',
     }),
   component: HowItWorksPage,
@@ -80,11 +80,12 @@ function HowItWorksPage() {
 
       <p className="section-kicker mt-6">Cómo funciona</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Cómo funciona PsicoAyudaVen
+        Cómo funciona Psico Ayuda Venezuela
       </h1>
       <div className="section-underline mt-2" />
       <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-        Una red de psicólogos verificados que acompaña a personas en Venezuela.
+        Una red de psicólogos verificados que acompaña, de forma gratuita y
+        confidencial, a las personas afectadas por los terremotos en Venezuela.
         Aquí explicamos cómo recibir ayuda, cómo se verifica cada profesional y
         cómo cuidamos tu información.
       </p>
@@ -198,15 +199,19 @@ function HowItWorksPage() {
               Tú decides cómo y cuándo responder.
             </Step>
           </ol>
-          <div className="mt-4">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <Link to="/profesional/registro" className={pillClass}>
               <Stethoscope aria-hidden="true" className="size-4" />
               Quiero registrarme
             </Link>
+            <Link
+              to="/terminos"
+              className="text-sm font-medium text-[var(--medi-secondary)] hover:underline"
+            >
+              Términos para profesionales
+            </Link>
           </div>
         </section>
-
-        {/* ── Seguridad y privacidad ── */}
         <section className="glass-card p-5">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--medi-text-primary)]">
             <ShieldCheck
@@ -309,7 +314,7 @@ function HowItWorksPage() {
           to="/acerca-de"
           className="font-medium text-[var(--medi-secondary)] hover:underline"
         >
-          Acerca de PsicoAyudaVen
+          Acerca de Psico Ayuda Venezuela
         </Link>
       </footer>
     </main>

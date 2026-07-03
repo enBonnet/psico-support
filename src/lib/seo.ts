@@ -4,8 +4,15 @@
 export const SITE_URL = 'https://psicoayudaven.com'
 export const SITE_NAME = 'PsicoAyudaVen'
 export const SITE_BRAND = 'Psico Ayuda Venezuela'
-export const SITE_TAGLINE = 'No estás solo'
-export const SITE_DEFAULT_TITLE = `${SITE_BRAND} | ${SITE_TAGLINE}`
+// ponytail: tagline names the contingency, not just "you're not alone" — the
+// platform exists specifically for people affected by the earthquakes in
+// Venezuela. Kept generic ("contingencia") so the title survives the
+// emergency evolving past the terremotos; the home/acerca copy names the quakes
+// explicitly. Separator is · (matches the brand-title rhythm) and is reused
+// by seoHead for per-page titles so the whole site reads as one family.
+export const SITE_TAGLINE = 'Red de apoyo gratuito ante la contingencia'
+export const SITE_TITLE_SEPARATOR = ' · '
+export const SITE_DEFAULT_TITLE = `${SITE_BRAND}${SITE_TITLE_SEPARATOR}${SITE_TAGLINE}`
 const DEFAULT_IMAGE = `${SITE_URL}/logo512.png`
 
 type SeoInput = {
@@ -40,7 +47,9 @@ export function seoHead({
 }: SeoInput) {
   const url = `${SITE_URL}${path}`
   const documentTitle =
-    path === '/' ? SITE_DEFAULT_TITLE : `${title} | ${SITE_BRAND}`
+    path === '/'
+      ? SITE_DEFAULT_TITLE
+      : `${title}${SITE_TITLE_SEPARATOR}${SITE_BRAND}`
   const shareTitle = path === '/' ? SITE_DEFAULT_TITLE : title
   const meta = [
     { title: documentTitle },

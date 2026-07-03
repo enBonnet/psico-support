@@ -28,9 +28,9 @@ const pillClass =
 export const Route = createFileRoute('/acerca-de')({
   head: () =>
     seoHead({
-      title: 'Acerca de PsicoAyudaVen',
+      title: 'Acerca de Psico Ayuda Venezuela',
       description:
-        'PsicoAyudaVen es una plataforma de código abierto, parte de Build4Venezuela, que conecta a personas en Venezuela con psicólogos verificados de forma gratuita y confidencial.',
+        'Psico Ayuda Venezuela es una red de apoyo psicológico gratuito, de código abierto y parte de Build4Venezuela, creada para acompañar a las personas afectadas por los terremotos en Venezuela con psicólogos verificados, de forma confidencial.',
       path: '/acerca-de',
     }),
   component: AboutPage,
@@ -47,16 +47,17 @@ function AboutPage() {
         ‹ Atrás
       </Link>
 
-      <p className="section-kicker mt-6">Acerca de PsicoAyudaVen</p>
+      <p className="section-kicker mt-6">Acerca de Psico Ayuda Venezuela</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Tecnología al servicio de la salud mental
+        Acompañamiento psicológico ante la contingencia
       </h1>
       <div className="section-underline mt-2" />
 
       <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-        PsicoAyudaVen es una plataforma de código abierto que conecta a personas
-        afectadas por situaciones de crisis en Venezuela con psicólogos
-        verificados, de forma gratuita y confidencial.
+        Psico Ayuda Venezuela es una red de apoyo psicológico gratuito y de
+        código abierto, creada para acompañar a las personas afectadas por los
+        terremotos en Venezuela. Las conectamos con psicólogos verificados, de forma
+        confidencial.
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
@@ -183,15 +184,23 @@ function AboutPage() {
       </div>
 
       <footer className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)]">
-        <a
-          href={RELEASE_URL}
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          to="/equipo"
           className="font-medium text-[var(--medi-secondary)] hover:underline"
         >
-          v{APP_VERSION}
-        </a>{' '}
-        · MIT
+          Conoce al equipo
+        </Link>
+        <div className="mt-1 text-xs">
+          <a
+            href={RELEASE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-[var(--medi-secondary)] hover:underline"
+          >
+            v{APP_VERSION}
+          </a>{' '}
+          · MIT
+        </div>
       </footer>
     </main>
   )
