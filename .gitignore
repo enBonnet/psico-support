@@ -17,6 +17,7 @@ dev.db-bak
 dev.db.bak
 .claude/
 .agents/
+.cursor/
 .cursorrules
 
 # Local export — PII
