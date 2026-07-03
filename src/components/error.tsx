@@ -1,5 +1,7 @@
+import * as Sentry from '@sentry/tanstackstart-react'
 import { Link, useRouter } from '@tanstack/react-router'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import { useEffect } from 'react'
 
 // ponytail: router-level defaultErrorComponent. Without this, any uncaught
 // error (loader crash, server-fn failure, render throw) fell through to
@@ -11,13 +13,12 @@ import type { ErrorComponentProps } from '@tanstack/react-router'
 // blip on the worker, a flaky fetch) often clear on retry, so offering it
 // beats forcing a full navigate.
 //
-// Error reporting: Sentry here is server-side only (instrument.server.mjs),
-// so client errors aren't auto-captured. We console.error so a developer is
-// never left guessing why a user saw this page. Upgrade path: wrap getRouter
-// in withSentry + a client instrument to capture client throws, then this
-// console.error becomes redundant.
 export function DefaultErrorComponent({ error, reset }: ErrorComponentProps) {
   const router = useRouter()
+
+  useEffect(() => {
+    Sentry.captureException(error)
+  }, [error])
 
   // SSR-safe: console is available on both server and client.
   console.error('[route error]', error)

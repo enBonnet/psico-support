@@ -61,7 +61,7 @@ const PRO_FILTERS: { key: StatusFilter; label: string }[] = [
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: async () => {
-    // ponytail: use a server fn (reads request headers via __TSS_REQUEST__)
+    // ponytail: use a server fn (reads request headers via AsyncLocalStorage)
     // instead of authClient.getSession() — the client call does a cookieless
     // fetch during SSR, which always returned null and bounced to login.
     // Under CSR both calls are client→worker RPC; cookies flow on the real

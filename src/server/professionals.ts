@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import {
   eq,
@@ -1304,9 +1305,9 @@ export const amIAdmin = createServerFn({ method: 'GET' }).handler(
 // ponytail: session check for route guards. authClient.getSession() called
 // in beforeLoad during SSR does NOT forward the browser cookie, so every
 // SSR'd protected route saw null and bounced to login. This server fn reads
-// the request headers via the global __TSS_REQUEST__, which works both
-// during SSR (same request context) and client navigation (browser sends
-// the cookie on the fn fetch).
+// the request headers via TanStack Start's request-isolated AsyncLocalStorage,
+// which works both during SSR (same request context) and client navigation
+// (browser sends the cookie on the fn fetch).
 export const getCurrentUser = createServerFn({ method: 'GET' }).handler(
   async () => {
     const session = await getAuth().api.getSession({ headers: getHeaders() })
@@ -1961,10 +1962,15 @@ export const promoteToAdmin = createServerFn({ method: 'POST' })
   })
 
 function getHeaders(): Headers {
-  // ponytail: TanStack Start sets the incoming request on a global; auth
-  // needs cookies from the Cookie header. Falls back to empty headers
-  // when called outside a request (e.g. tests).
-  const req = (globalThis as unknown as { __TSS_REQUEST__?: Request })
-    .__TSS_REQUEST__
-  return req ? new Headers(req.headers) : new Headers()
+  // ponytail: TanStack Start stores the incoming request per-isolate via
+  // AsyncLocalStorage (eventStorage, set by createStartHandler → requestHandler),
+  // so getRequestHeaders() is safe under concurrent requests — unlike the old
+  // globalThis.__TSS_REQUEST__ which could leak cookies/headers across
+  // overlapping requests in the same isolate. try/catch keeps the empty-headers
+  // fallback for calls outside a request (e.g. tests).
+  try {
+    return getRequestHeaders()
+  } catch {
+    return new Headers()
+  }
 }

@@ -1,4 +1,5 @@
 import { createServerFn } from '@tanstack/react-start'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 import { z } from 'zod'
 import { and, eq, asc, inArray, count } from 'drizzle-orm'
 
@@ -15,9 +16,15 @@ import { getAuth, isAdminEmail } from '#/lib/auth'
 // Duplicated rather than cross-imported to keep the two domains decoupled;
 // extract to lib/auth.ts if a third fn module needs it.
 function getHeaders(): Headers {
-  const req = (globalThis as unknown as { __TSS_REQUEST__?: Request })
-    .__TSS_REQUEST__
-  return req ? new Headers(req.headers) : new Headers()
+  // ponytail: request-isolated via TanStack Start's AsyncLocalStorage — safe
+  // under concurrent requests (the old globalThis.__TSS_REQUEST__ leaked
+  // headers between overlapping requests in the same isolate). Empty-headers
+  // fallback for calls outside a request (e.g. tests).
+  try {
+    return getRequestHeaders()
+  } catch {
+    return new Headers()
+  }
 }
 
 // ponytail: audio mimes the recorder produces (WebM/Opus on Chrome+Firefox,

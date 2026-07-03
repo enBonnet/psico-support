@@ -27,9 +27,16 @@ jobs:
       # remote edge-preview proxy session (which needs an extra API scope not
       # in the standard Workers token template). The shell is static HTML;
       # remote bindings (email) only matter at runtime, not build time.
+      #
+      # VITE_SENTRY_DSN is read via import.meta.env (build-time substitution),
+      # so it must be in the BUILD env — the wrangler runtime secret of the same
+      # name is not consulted. SENTRY_AUTH_TOKEN gates source-map upload; if
+      # unset the build still succeeds, maps just won't upload.
       - run: npm run build
         env:
           CLOUDFLARE_VITE_FORCE_LOCAL: "true"
+          VITE_SENTRY_DSN: ${{ secrets.VITE_SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - run: npx wrangler deploy
         env:

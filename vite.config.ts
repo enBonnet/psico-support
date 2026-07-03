@@ -1,10 +1,12 @@
-import { defineConfig, type Plugin } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
+import type { Plugin } from 'vite'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { devtools } from '@tanstack/devtools-vite'
 import { paraglideVitePlugin } from '@inlang/paraglide-js'
 import { VitePWA } from 'vite-plugin-pwa'
+import { sentryTanstackStart } from '@sentry/tanstackstart-react/vite'
 
 import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
@@ -31,8 +33,9 @@ const APP_VERSION = JSON.parse(
 // ponytail: bake the package version into public/sw.js at build time.
 // public/ files are copied verbatim to disk by Vite's build-public plugin
 // and never enter the Rollup module graph — Vite's `transform` hook
-// doesn't fire on them, and `generateBundle`/`writeBundle` see the bundle
-// *before* public assets are written (so `bundle['sw.js']` is undefined).
+// doesn't fire on them, and even `generateBundle`/`writeBundle` would see
+// the bundle *before* public assets are written (so `bundle['sw.js']` is
+// undefined).
 // We use `closeBundle`, which runs after every asset (including public
 // assets) is on disk, to read dist/client/sw.js, replace `__SW_VERSION__`
 // with `JSON.stringify(version)`, and write it back. We pick closeBundle
@@ -63,78 +66,88 @@ function swVersionPlugin(version: string): Plugin {
   }
 }
 
-const config = defineConfig({
-  resolve: { tsconfigPaths: true },
-  define: {
-    __APP_VERSION__: JSON.stringify(APP_VERSION),
-  },
-  plugins: [
-    devtools(),
-    paraglideVitePlugin({
-      project: './project.inlang',
-      outdir: './src/paraglide',
-      strategy: ['url', 'baseLocale'],
-    }),
-    cloudflare({ viteEnvironment: { name: 'ssr' } }),
-    tailwindcss(),
-    // ponytail: SPA shell generation. spa.enabled triggers a post-build
-    // prerender of the maskPath (/) with header X-TSS_SHELL, which the SSR
-    // handler renders as an EMPTY shell (isShell=true, no route loaders run)
-    // and writes to dist/client/index.html. This gives the service worker a
-    // cacheable static shell to serve on cold-open offline. It is independent
-    // of per-route ssr:false/selective SSR — the profile route still SSRs for
-    // crawlers (verified post-build). Upgrade: crawlLinks/precache hashed
-    // assets if you want build-time precaching instead of runtime SWR.
-    tanstackStart({ spa: { enabled: true } }),
-    viteReact(),
-    // ponytail: precache the app shell so a 3G user who loaded once gets
-    // instant subsequent loads. Live data still flows via TanStack Query
-    // polling. Drop this plugin if offline support is no longer needed.
-    VitePWA({
-      registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico'],
-      manifest: {
-        // ponytail: both name + short_name are the brand handle so the
-        // installed-app label is consistent across platforms — Android uses
-        // `name` (install prompt, app drawer, home screen), iOS uses
-        // `short_name` (icon label). The descriptive "Red de Apoyo Psicológico
-        // Venezuela" still shows in the browser tab via <title> in __root.tsx.
-        name: 'Psicoayudaven',
-        short_name: 'Psicoayudaven',
-        description:
-          'Conecta a personas afectadas con psicólogos verificados en Venezuela.',
-        theme_color: '#13297e',
-        background_color: '#eff7fe',
-        display: 'standalone',
-        start_url: '/',
-        lang: 'es',
-        icons: [
-          { src: '/logo192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/logo512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          {
-            src: '/maskable-icon-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
-          },
-          {
-            src: '/favicon.ico',
-            sizes: '64x64 32x32 24x24 16x16',
-            type: 'image/x-icon',
-          },
-        ],
-      },
-      workbox: {
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
-        navigateFallback: '/index.html',
-      },
-      devOptions: { enabled: false },
-    }),
-    // ponytail: runs after vite-plugin-pwa. closeBundle fires after every
-    // asset (public + generated) is written, so sw.js is on disk and ready
-    // for the version rewrite.
-    swVersionPlugin(APP_VERSION),
-  ],
-})
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, process.cwd(), '')
 
-export default config
+  return {
+    resolve: { tsconfigPaths: true },
+    define: {
+      __APP_VERSION__: JSON.stringify(APP_VERSION),
+    },
+    plugins: [
+      devtools(),
+      paraglideVitePlugin({
+        project: './project.inlang',
+        outdir: './src/paraglide',
+        strategy: ['url', 'baseLocale'],
+      }),
+      cloudflare({ viteEnvironment: { name: 'ssr' } }),
+      tailwindcss(),
+      // ponytail: SPA shell generation. spa.enabled triggers a post-build
+      // prerender of the maskPath (/) with header X-TSS_SHELL, which the SSR
+      // handler renders as an EMPTY shell (isShell=true, no route loaders run)
+      // and writes to dist/client/index.html. This gives the service worker a
+      // cacheable static shell to serve on cold-open offline. It is independent
+      // of per-route ssr:false/selective SSR — the profile route still SSRs for
+      // crawlers (verified post-build). Upgrade: crawlLinks/precache hashed
+      // assets if you want build-time precaching instead of runtime SWR.
+      tanstackStart({ spa: { enabled: true } }),
+      viteReact(),
+      // ponytail: precache the app shell so a 3G user who loaded once gets
+      // instant subsequent loads. Live data still flows via TanStack Query
+      // polling. Drop this plugin if offline support is no longer needed.
+      VitePWA({
+        registerType: 'autoUpdate',
+        includeAssets: ['favicon.ico'],
+        manifest: {
+          // ponytail: both name + short_name are the brand handle so the
+          // installed-app label is consistent across platforms — Android uses
+          // `name` (install prompt, app drawer, home screen), iOS uses
+          // `short_name` (icon label). The descriptive "Red de Apoyo Psicológico
+          // Venezuela" still shows in the browser tab via <title> in __root.tsx.
+          name: 'Psicoayudaven',
+          short_name: 'Psicoayudaven',
+          description:
+            'Conecta a personas afectadas con psicólogos verificados en Venezuela.',
+          theme_color: '#13297e',
+          background_color: '#eff7fe',
+          display: 'standalone',
+          start_url: '/',
+          lang: 'es',
+          icons: [
+            { src: '/logo192.png', sizes: '192x192', type: 'image/png' },
+            { src: '/logo512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+            {
+              src: '/maskable-icon-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+            {
+              src: '/favicon.ico',
+              sizes: '64x64 32x32 24x24 16x16',
+              type: 'image/x-icon',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
+          navigateFallback: '/index.html',
+        },
+        devOptions: { enabled: false },
+      }),
+      // ponytail: runs after vite-plugin-pwa. closeBundle fires after every
+      // asset (public + generated) is written, so sw.js is on disk and ready
+      // for the version rewrite.
+      swVersionPlugin(APP_VERSION),
+      // ponytail: uploads source maps on deploy builds when SENTRY_AUTH_TOKEN is
+      // set. Org/project slugs come from .env.local or CI secrets. Plugin must
+      // be last. Without a token, builds still succeed — maps just won't upload.
+      sentryTanstackStart({
+        org: 'psico-ayuda-venezuela',
+        project: 'web',
+        authToken: env.SENTRY_AUTH_TOKEN,
+      }),
+    ],
+  }
+})
