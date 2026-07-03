@@ -95,7 +95,7 @@ export default defineConfig(({ mode }) => {
     // be last. Without a token, builds still succeed — maps just won't upload.
     sentryTanstackStart({
       org: 'psico-ayuda-venezuela',
-      project: 'javascript-tanstackstart-react',
+      project: 'web',
       authToken: env.SENTRY_AUTH_TOKEN,
     }),
   ],
