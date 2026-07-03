@@ -666,24 +666,32 @@ export const listProfessionals = createServerFn({ method: 'GET' })
     // availRows); total = rows.length and anyAvailableNow is derived here too.
     // O(n) per poll — same ceiling already accepted for availRows; denormalize
     // via a cron-kept `available` flag if the directory grows past ~1k rows.
-    const pool = await db
-      .select({
-        id: professionals.id,
-        name: professionals.name,
-        modality: professionals.modality,
-        country: professionals.country,
-        estado: professionals.estado,
-        ciudad: professionals.ciudad,
-        whatsapp: professionals.whatsapp,
-        availabilityMode: professionals.availabilityMode,
-        availabilityScheduleRaw: professionals.availabilitySchedule,
-        timezone: professionals.timezone,
-        populationRaw: professionals.population,
-        focusGroupsRaw: professionals.focusGroups,
-        practiceAreasRaw: professionals.practiceAreas,
-      })
-      .from(professionals)
-      .where(where)
+    //
+    // Wrapped in withD1Retry because the directory is the most-hit read path
+    // (every landing → directory navigation) and D1's backing DO occasionally
+    // resets ("Internal error while starting up D1 DB storage caused object to
+    // be reset"), surfacing a 500 on the public funnel (WEB-3). Same transient
+    // ceiling as countVerifiedProfessionals below — see src/db/index.ts.
+    const pool = await withD1Retry(() =>
+      db
+        .select({
+          id: professionals.id,
+          name: professionals.name,
+          modality: professionals.modality,
+          country: professionals.country,
+          estado: professionals.estado,
+          ciudad: professionals.ciudad,
+          whatsapp: professionals.whatsapp,
+          availabilityMode: professionals.availabilityMode,
+          availabilityScheduleRaw: professionals.availabilitySchedule,
+          timezone: professionals.timezone,
+          populationRaw: professionals.population,
+          focusGroupsRaw: professionals.focusGroups,
+          practiceAreasRaw: professionals.practiceAreas,
+        })
+        .from(professionals)
+        .where(where),
+    )
 
     const now = new Date()
     const ranked = pool
