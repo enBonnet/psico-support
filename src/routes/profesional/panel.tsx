@@ -100,7 +100,9 @@ function PanelPage() {
   const del = useMutation({
     mutationFn: () => deleteMyProfessional(),
     onSuccess: async () => {
-      track({ event: 'panel_delete_account', category: 'pro', actorId })
+      if (actorId) {
+        track({ event: 'panel_delete_account', category: 'pro', actorId })
+      }
       notify({
         type: 'success',
         title: 'Tu cuenta profesional fue eliminada',
@@ -122,6 +124,9 @@ function PanelPage() {
 
   async function signOut() {
     setSigningOut(true)
+    if (actorId) {
+      track({ event: 'auth_signout', category: 'auth', actorId })
+    }
     const { error } = await authClient.signOut()
     if (error) {
       setSigningOut(false)
@@ -132,7 +137,6 @@ function PanelPage() {
       })
       return
     }
-    track({ event: 'auth_signout', category: 'auth', actorId })
     window.location.href = '/'
   }
 

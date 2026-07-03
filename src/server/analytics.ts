@@ -208,6 +208,8 @@ export const track = createServerFn({ method: 'POST' })
   .validator(trackInputSchema)
   .handler(async ({ data }) =>
     Sentry.startSpan({ name: 'analytics track' }, async () => {
+      const env = getCloudflareEnv()
+      if (!env?.ANALYTICS) return { ok: true }
       const enriched = await enrichProContactEvent(data)
       writeEvent(enriched)
       return { ok: true }

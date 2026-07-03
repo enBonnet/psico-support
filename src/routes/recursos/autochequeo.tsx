@@ -140,7 +140,7 @@ function Autochequeo() {
         event: 'autochequeo_complete',
         category: 'public',
         value: finalScore,
-        param1: bandFor(finalScore),
+        param1: bandFor(finalScore).key,
       })
       setPhase('result')
     }

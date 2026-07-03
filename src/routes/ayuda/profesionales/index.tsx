@@ -137,6 +137,7 @@ function ProfessionalsList() {
   // 300ms matches typical "stopped typing" cadence; see use-debounced.ts.
   const debouncedQ = useDebounced(q)
   const searchTracked = useRef(false)
+  const viewedModality = useRef<string | null>(null)
 
   // ponytail: placeholderData: keepPreviousData keeps the previous rows on
   // screen while a new filter/page fetch is in flight, so the list never
@@ -177,13 +178,15 @@ function ProfessionalsList() {
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE_DEFAULT))
 
   useEffect(() => {
+    if (isLoading || viewedModality.current === modality) return
+    viewedModality.current = modality
     track({
       event: 'directory_view',
       category: 'public',
       param1: modality,
       value: total,
     })
-  }, [modality, total])
+  }, [modality, total, isLoading])
 
   useEffect(() => {
     if (!searchTracked.current) {

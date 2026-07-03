@@ -44,6 +44,10 @@ function CuentaPage() {
 
   async function signOut() {
     setSigningOut(true)
+    const actorId = me?.id
+    if (actorId) {
+      track({ event: 'auth_signout', category: 'auth', actorId })
+    }
     const { error } = await authClient.signOut()
     if (error) {
       setSigningOut(false)
@@ -54,7 +58,6 @@ function CuentaPage() {
       })
       return
     }
-    track({ event: 'auth_signout', category: 'auth', actorId: me?.id })
     window.location.href = '/'
   }
 

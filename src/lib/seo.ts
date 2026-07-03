@@ -9,7 +9,7 @@ export const SITE_DEFAULT_TITLE = `${SITE_BRAND} | ${SITE_TAGLINE}`
 const DEFAULT_IMAGE = `${SITE_URL}/logo512.png`
 
 type SeoInput = {
-  /** Page title without the brand suffix — omitted on `/` (uses SITE_DEFAULT_TITLE). */
+  /** Page title without the brand suffix — required, but ignored when path is `/` (uses SITE_DEFAULT_TITLE). */
   title: string
   description: string
   /** Canonical path, e.g. '/ayuda'. Must start with '/'. */

@@ -66,6 +66,11 @@ export function AudioStoryViewer({
   const currentPro = tray[proIndex]
   const currentClip = currentPro.clips[clipIndex]
 
+  const trayRef = useRef(tray)
+  const proIndexRef = useRef(proIndex)
+  trayRef.current = tray
+  proIndexRef.current = proIndex
+
   // ponytail: one cleanup fn so every close path (button, Escape, back, last-
   // clip-ends) funnels through it. Guarded by closedRef so a double-close
   // (e.g. Escape after the ✕ already popped history) is a no-op.
@@ -75,10 +80,12 @@ export function AudioStoryViewer({
     track({
       event: 'audio_close',
       category: 'public',
-      param1: String(tray[proIndex]?.professionalId ?? ''),
+      param1: String(
+        trayRef.current[proIndexRef.current]?.professionalId ?? '',
+      ),
     })
     onClose()
-  }, [onClose, tray, proIndex])
+  }, [onClose])
 
   // ponytail: advance one clip; if the pro's set is exhausted, advance to the
   // next pro; if the tray is exhausted, close. Returns false when there's
