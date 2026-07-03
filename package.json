@@ -20,7 +20,9 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "analytics": "tsx scripts/analytics.ts",
+    "analytics:dashboard": "tsx scripts/analytics-dashboard.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
