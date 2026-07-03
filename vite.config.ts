@@ -33,8 +33,9 @@ const APP_VERSION = JSON.parse(
 // ponytail: bake the package version into public/sw.js at build time.
 // public/ files are copied verbatim to disk by Vite's build-public plugin
 // and never enter the Rollup module graph — Vite's `transform` hook
-// doesn't fire on them, and `generateBundle`/`writeBundle` see the bundle
-// *before* public assets are written (so `bundle['sw.js']` is undefined).
+// doesn't fire on them, and even `generateBundle`/`writeBundle` would see
+// the bundle *before* public assets are written (so `bundle['sw.js']` is
+// undefined).
 // We use `closeBundle`, which runs after every asset (including public
 // assets) is on disk, to read dist/client/sw.js, replace `__SW_VERSION__`
 // with `JSON.stringify(version)`, and write it back. We pick closeBundle
