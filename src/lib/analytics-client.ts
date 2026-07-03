@@ -136,3 +136,30 @@ export function trackProContactRandom(args: {
     param2: args.modality,
   })
 }
+
+/**
+ * Track the landing's "Necesito ayuda ahora" auto-pick success (WhatsApp
+ * opened). userId resolved server-side like the other pro_contact events.
+ *
+ * Kept distinct from trackProContactRandom (the directory's random button) so
+ * the two entry points can be measured in isolation — the whole point of the
+ * direct-WhatsApp CTA is to see if it lifts total contacts vs the old
+ * landing → directory flow. Aggregate in SQL with:
+ *
+ *   SELECT blob4 AS pro_id, SUM(_sample_interval * double1) AS opens
+ *   FROM psico_events
+ *   WHERE blob1 IN ('pro_contact','pro_contact_random','pro_contact_help_now')
+ *   GROUP BY pro_id
+ *   ORDER BY opens DESC
+ */
+export function trackProContactHelpNow(args: {
+  proId: number | string
+  modality: string
+}): void {
+  track({
+    event: 'pro_contact_help_now',
+    category: 'public',
+    param1: String(args.proId),
+    param2: args.modality,
+  })
+}

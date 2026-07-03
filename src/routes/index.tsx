@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { HeartPulse, LifeBuoy, Stethoscope, UserCheck } from 'lucide-react'
-import { track, trackProContactRandom } from '#/lib/analytics-client'
+import { track, trackProContactHelpNow } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
@@ -84,7 +84,7 @@ function Landing() {
         window.location.assign('/ayuda/profesionales?modality=remote')
         return
       }
-      trackProContactRandom({ proId: picked.id, modality: 'remote' })
+      trackProContactHelpNow({ proId: picked.id, modality: 'remote' })
       const href = whatsappHref(picked.whatsapp, picked.name)
       if (!href) {
         notify({
