@@ -1310,23 +1310,27 @@ export const deleteMyProfessional = createServerFn({ method: 'POST' }).handler(
   },
 )
 
+// ponytail: getSession reads Better Auth's session table from D1. On a
+// transient D1 DO reset it throws APIError: Failed to get session and 500s
+// the route guard (WEB-5, WEB-7). Returning null here lets callers fail-soft
+// to "no session" — they redirect to login instead of 500ing, and the next
+// navigation retries normally. Non-transient failures are captured to Sentry
+// so they don't go invisible. Returns the typed session (or null) without the
+// `let`-without-initializer pattern that drops type inference.
+async function getSessionSafe() {
+  try {
+    return await withD1Retry(() =>
+      getAuth().api.getSession({ headers: getHeaders() }),
+    )
+  } catch (err) {
+    Sentry.captureException(err)
+    return null
+  }
+}
+
 export const amIAdmin = createServerFn({ method: 'GET' }).handler(
   async () => {
-    // ponytail: getSession reads from D1 (Better Auth's session table). On a
-    // transient D1 DO reset it throws APIError: Failed to get session and
-    // 500s the route guard (WEB-7). Fail-soft to "no session" — a reset
-    // during an admin check briefly bounces to login instead of 500ing,
-    // and the next navigation retries normally. Same transient ceiling as
-    // the directory queries; see src/db/index.ts.
-    let session
-    try {
-      session = await withD1Retry(() =>
-        getAuth().api.getSession({ headers: getHeaders() }),
-      )
-    } catch (err) {
-      Sentry.captureException(err)
-      return false
-    }
+    const session = await getSessionSafe()
     if (!session?.user) return false
     return isAdminEmail(session.user.email)
   },
@@ -1340,19 +1344,7 @@ export const amIAdmin = createServerFn({ method: 'GET' }).handler(
 // (browser sends the cookie on the fn fetch).
 export const getCurrentUser = createServerFn({ method: 'GET' }).handler(
   async () => {
-    // ponytail: same transient D1 ceiling as amIAdmin — getSession reads the
-    // session table and can throw APIError on a DO reset (WEB-5). Fail-soft
-    // to null so the route guard redirects to login instead of 500ing; the
-    // next navigation retries.
-    let session
-    try {
-      session = await withD1Retry(() =>
-        getAuth().api.getSession({ headers: getHeaders() }),
-      )
-    } catch (err) {
-      Sentry.captureException(err)
-      return null
-    }
+    const session = await getSessionSafe()
     return session?.user ?? null
   },
 )
