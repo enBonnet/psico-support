@@ -46,8 +46,19 @@ export const TRACKED_EVENTS = [
   'profile_view',
   // pro_contact: param1=proId, param2=source (directory|profile), param3=userId (server-resolved)
   'pro_contact',
-  // pro_contact_random: param1=proId, param2=modality, param3=userId (server-resolved)
+  // pro_contact_random: param1=proId, param2=modality, param3=userId (server-resolved).
+  // Directory's "Contactar al azar" button only. The landing CTA used to fire
+  // this too, but that conflated the two entry points — use pro_contact_help_now
+  // for the landing so attribution stays clean (gotcha #10: immutable contract).
   'pro_contact_random',
+  // pro_contact_help_now: param1=proId, param2=modality, param3=userId (server-resolved).
+  // Landing's "Necesito ayuda ahora" auto-pick success. Distinct from
+  // pro_contact_random so the new direct-WhatsApp funnel can be measured in
+  // isolation: cta_click(help_now) → pro_contact_help_now (success) |
+  // cta_click(help_now_fallback) (no pro contactable). Total WhatsApp contacts
+  // across all entry points = SUM(pro_contact) + SUM(pro_contact_random)
+  // + SUM(pro_contact_help_now).
+  'pro_contact_help_now',
   'profile_share',
   'profile_social_click',
   // --- Auth & professional acquisition (auth) ---
@@ -150,7 +161,11 @@ async function userIdForPro(proId: string): Promise<string | undefined> {
 }
 
 async function enrichProContactEvent(data: TrackInput): Promise<TrackInput> {
-  if (data.event !== 'pro_contact' && data.event !== 'pro_contact_random') {
+  if (
+    data.event !== 'pro_contact' &&
+    data.event !== 'pro_contact_random' &&
+    data.event !== 'pro_contact_help_now'
+  ) {
     return data
   }
   if (!data.param1) return data

@@ -1,16 +1,15 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { useEffect } from 'react'
-import {
-  HeartPulse,
-  LifeBuoy,
-  Stethoscope,
-  Headphones,
-  UserCheck,
-} from 'lucide-react'
-import { track } from '#/lib/analytics-client'
+import { useEffect, useState } from 'react'
+import { HeartPulse, LifeBuoy, Stethoscope, UserCheck } from 'lucide-react'
+import { track, trackProContactHelpNow } from '#/lib/analytics-client'
+import { notify } from '#/lib/notifications'
 import { seoHead } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
-import { countVerifiedProfessionals } from '#/server/professionals'
+import { whatsappHref } from '#/lib/whatsapp'
+import {
+  countVerifiedProfessionals,
+  pickRandomProfessional,
+} from '#/server/professionals'
 
 export const Route = createFileRoute('/')({
   // ponytail: loader declared before head — declaring head first collapses
@@ -19,9 +18,13 @@ export const Route = createFileRoute('/')({
   loader: async () => ({ count: await countVerifiedProfessionals() }),
   head: () =>
     seoHead({
-      title: 'Red de apoyo psicológico',
+      // ponytail: title is ignored for path '/' (seoHead falls back to
+      // SITE_DEFAULT_TITLE — "Psico Ayuda Venezuela · Red de apoyo gratuito
+      // ante la contingencia"), but kept here as a self-documenting hint and
+      // for callers that read this route's head config directly.
+      title: 'Psico Ayuda Venezuela · Red de apoyo gratuito ante la contingencia',
       description:
-        'Conectamos a personas afectadas con psicólogos verificados. Apoyo presencial y online por WhatsApp, gratuito y confidencial.',
+        'Red de apoyo psicológico gratuito para personas afectadas por los terremotos en Venezuela. Te conectamos con psicólogos verificados, por WhatsApp o de forma presencial. Servicio confidencial.',
       path: '/',
     }),
   component: Landing,
@@ -36,26 +39,91 @@ function Landing() {
   // to 5 for finer granularity once the directory grows.
   const STEP = 10
   const claim = Math.floor(count / STEP) * STEP
+  const [picking, setPicking] = useState(false)
   // ponytail: landing_view fires once per mount (CSR hydrate), not on every
   // SSR render — the component effect runs only client-side. route is implicit
   // (the helper defaults to location.pathname).
   useEffect(() => {
     track({ event: 'landing_view', category: 'public' })
   }, [])
+
+  // ponytail: the primary CTA used to deep-link to the directory, which lost
+  // ~96% of the funnel (500 landings → 20 contacts). Now it auto-picks a pro
+  // who is contactable right now (same pool as the directory's "Contactar al
+  // azar") and drops the user straight into a WhatsApp chat — one tap from the
+  // hero. If nobody is contactable at the moment (e.g. 3am), fall back to the
+  // directory via a notify + navigate so the user still has a path. modality
+  // is 'remote' — WhatsApp is the only on-demand modality (in-person = brigades).
+  async function helpNow() {
+    if (picking) return
+    // ponytail: fire intent up front so the funnel is measurable end-to-end:
+    // cta_click(help_now) = tapped the button; pro_contact_help_now = WhatsApp
+    // opened; cta_click(help_now_fallback) = no pro contactable. The gap
+    // between help_now and (pro_contact_help_now + help_now_fallback) is the
+    // error/abandon slice.
+    track({ event: 'cta_click', category: 'public', param1: 'help_now' })
+    setPicking(true)
+    try {
+      const picked = await pickRandomProfessional({
+        data: { modality: 'remote' },
+      })
+      if (!picked) {
+        notify({
+          type: 'info',
+          title: 'Nadie disponible en este momento',
+          body: 'Te llevamos al directorio para que veas horarios y escribas cuando quieras.',
+        })
+        track({
+          event: 'cta_click',
+          category: 'public',
+          param1: 'help_now_fallback',
+        })
+        // ponytail: window.location so it works regardless of router state —
+        // this is a one-shot escape from the SSR landing into the CSR
+        // directory, not an in-app navigation that needs to preserve history.
+        window.location.assign('/ayuda/profesionales?modality=remote')
+        return
+      }
+      const href = whatsappHref(picked.whatsapp, picked.name)
+      if (!href) {
+        notify({
+          type: 'error',
+          title: 'Algo salió mal',
+          body: 'No pudimos abrir WhatsApp. Inténtalo de nuevo.',
+        })
+        return
+      }
+      // ponytail: fire success only once we know WhatsApp can actually open —
+      // a null href above returns early, so reaching here means we have a real
+      // wa.me link. Counting it before the null check would overstate the
+      // success metric.
+      trackProContactHelpNow({ proId: picked.id, modality: 'remote' })
+      window.open(href, '_blank', 'noopener,noreferrer')
+    } catch {
+      notify({
+        type: 'error',
+        title: 'Algo salió mal',
+        body: 'No pudimos buscar un profesional. Inténtalo de nuevo.',
+      })
+    } finally {
+      setPicking(false)
+    }
+  }
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col justify-between py-8">
       <header className="text-center">
         <p className="section-kicker">Venezuela</p>
         <h1 className="mt-2 text-3xl font-bold leading-tight text-[var(--medi-primary)] sm:text-4xl">
-          Red de apoyo psicológico
+          Apoyo psicológico ante los terremotos
         </h1>
         <div className="section-underline mx-auto mt-3" />
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-          Conectamos a personas afectadas con psicólogos verificados.
+          Red gratuita y confidencial para personas afectadas por la
+          contingencia.
         </p>
         {claim >= STEP && (
           <p className="mt-1 text-sm font-medium text-[var(--medi-secondary)]">
-            Más de {claim} profesionales verificados
+            Más de {claim} profesionales en la red
           </p>
         )}
       </header>
@@ -79,26 +147,49 @@ function Landing() {
       </div>
 
       <nav className="mt-10 flex flex-col gap-4">
-      {/* ponytail: "Ahora" = immediate → straight to the remote directory
-          (WhatsApp is the only on-demand modality; in-person is brigades).
-          The modality-selection page (/ayuda) stays reachable via the Ayuda
-          nav tab for users who specifically want in-person brigades. */}
+      {/* ponytail: "Ahora" = immediate. Auto-picks a professional who is
+          contactable right now and opens WhatsApp directly — one tap from the
+          hero instead of funneling through the directory (which was bleeding
+          ~96% of landings). The directory stays reachable via the "ver todos"
+          link below this CTA and via the Ayuda nav tab.
+          Rendered as a real <a> (href to the directory) so it still works
+          without JS / before hydration — the landing is SSR'd, so the hero
+          ships as real HTML. helpNow intercepts the click to run the auto-pick
+          and preventDefault on success; if JS is off or hydration hasn't run,
+          the link is a plain navigation to the directory (the same URL
+          helpNow itself falls back to when no pro is contactable). */}
+      <a
+        href="/ayuda/profesionales?modality=remote"
+        onClick={(e) => {
+          // ponytail: only intercept as a JS click (left/middle click on a
+          // real anchor still works for open-in-new-tab etc.). Modifier
+          // clicks are the browser's to handle.
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+          e.preventDefault()
+          helpNow()
+        }}
+        aria-disabled={picking}
+        className="glass-primary flex min-h-16 cursor-pointer items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] aria-disabled:cursor-progress aria-disabled:opacity-80"
+      >
+        <LifeBuoy aria-hidden="true" className="size-5" />
+        {picking ? 'Buscando un profesional…' : 'Necesito ayuda ahora'}
+      </a>
+      {/* ponytail: secondary escape hatch for users who want to browse / pick
+          themselves. Kept small so the auto-pick stays the dominant CTA, but
+          present so the directory is never more than one tap away. */}
       <Link
         to="/ayuda/profesionales"
         search={{ modality: 'remote' }}
-        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'help_now' })}
-        className="glass-primary flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        onClick={() =>
+          track({
+            event: 'cta_click',
+            category: 'public',
+            param1: 'help_now_browse',
+          })
+        }
+        className="self-center text-sm font-medium text-[var(--medi-secondary)] underline-offset-2 hover:underline"
       >
-        <LifeBuoy aria-hidden="true" className="size-5" />
-        Necesito ayuda ahora
-      </Link>
-      <Link
-        to="/apoyo"
-        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'voces' })}
-        className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <Headphones aria-hidden="true" className="size-5" />
-        Voces que acompañan
+        O ver todos los profesionales
       </Link>
       <Link
         to="/recursos"
@@ -114,7 +205,7 @@ function Landing() {
         className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         <Stethoscope aria-hidden="true" className="size-5" />
-        Ofrezco ayuda (soy psicólogo)
+        Soy psicólogo, quiero ayudar
       </Link>
       </nav>
 
@@ -122,7 +213,7 @@ function Landing() {
 
       <Link
         to="/como-funciona"
-        aria-label="Cómo funciona PsicoAyudaVen"
+        aria-label="Cómo funciona Psico Ayuda Venezuela"
         className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         ¿Primera vez aquí?{' '}
@@ -133,33 +224,12 @@ function Landing() {
 
       <Link
         to="/acerca-de"
-        aria-label="Acerca de PsicoAyudaVen"
+        aria-label="Acerca de Psico Ayuda Venezuela"
         className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         Servicio gratuito y confidencial.{' '}
         <span className="font-medium text-[var(--medi-secondary)]">
-          Acerca de PsicoAyudaVen
-        </span>
-      </Link>
-
-      <Link
-        to="/equipo"
-        aria-label="Equipo de PsicoAyudaVen"
-        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        Las personas detrás del proyecto.{' '}
-        <span className="font-medium text-[var(--medi-secondary)]">
-          Equipo
-        </span>
-      </Link>
-
-      <Link
-        to="/terminos"
-        aria-label="Términos para profesionales"
-        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <span className="font-medium text-[var(--medi-secondary)]">
-          Términos para profesionales
+          Acerca de Psico Ayuda Venezuela
         </span>
       </Link>
     </main>

@@ -32,6 +32,7 @@ import { VENEZUELA_ESTADOS, ESTADO_CIUDADES } from '#/server/locations'
 import { notify } from '#/lib/notifications'
 import { track, trackProContact, trackProContactRandom } from '#/lib/analytics-client'
 import { useDebounced } from '#/lib/hooks/use-debounced'
+import { whatsappHref } from '#/lib/whatsapp'
 import { seoHead } from '#/lib/seo'
 import { Skeleton } from '#/components/ui/skeleton'
 
@@ -286,15 +287,16 @@ function ProfessionalsList() {
         proId: picked.id,
         modality,
       })
-      const digits = picked.whatsapp.replace(/\D/g, '')
-      const text = encodeURIComponent(
-        'Hola, te escribo por medio de PsicoAyudaVen.',
-      )
-      window.open(
-        `https://wa.me/${digits}?text=${text}`,
-        '_blank',
-        'noopener,noreferrer',
-      )
+      const href = whatsappHref(picked.whatsapp, picked.name)
+      if (!href) {
+        notify({
+          type: 'error',
+          title: 'Algo salió mal',
+          body: 'No pudimos abrir WhatsApp. Inténtalo de nuevo.',
+        })
+        return
+      }
+      window.open(href, '_blank', 'noopener,noreferrer')
     } catch {
       notify({
         type: 'error',
@@ -639,12 +641,13 @@ function ProfessionalsList() {
 }
 
 function ProfessionalCard({ p }: { p: PublicProfessional }) {
-  // ponytail: wa.me wants digits only (no +, no spaces). Stored format is
-  // "+58 1234567890", so strip everything but \d. Default message pre-fills
-  // the chat so the professional knows where the lead came from.
-  const digits = p.whatsapp.replace(/\D/g, '')
-  const text = encodeURIComponent('Hola, te escribo por medio de PsicoAyudaVen.')
-  const href = `https://wa.me/${digits}?text=${text}`
+  // ponytail: wa.me deep-link + pre-filled message. See src/lib/whatsapp.ts —
+  // single source of truth for the copy and URL shape across all four contact
+  // entry points. Non-null: verified pros pass a validated whatsapp (≥8
+  // digits) at registration, so whatsappHref can't return null here in
+  // practice. contactable gates the link: inactive / fuera de horario →
+  // disabled; the badge on the card already shows when they'll be back.
+  const href = whatsappHref(p.whatsapp, p.name)!
   // ponytail: el contacto se habilita solo si el pro es contactable ahora
   // (always | scheduled dentro de horario). inactive / fuera de horario →
   // deshabilitado; el badge de la tarjeta ya muestra cuándo vuelve a estar.

@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
-import { Wind, HandHeart, Brain, LifeBuoy, ClipboardCheck } from 'lucide-react'
+import { Wind, HandHeart, Brain, LifeBuoy, ClipboardCheck, Headphones } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { seoHead } from '#/lib/seo'
 
@@ -61,6 +61,13 @@ const TOOLS: readonly Tool[] = [
     desc: 'Cómo acompañar a alguien en crisis (mirar, escuchar, conectar).',
     audience: 'Para ayudar a otros',
     icon: LifeBuoy,
+  },
+  {
+    to: '/apoyo',
+    title: 'Voces que acompañan',
+    desc: 'Mensajes en voz de psicólogos verificados, para cuando necesites escuchar algo.',
+    audience: 'Para ti',
+    icon: Headphones,
   },
 ]
 
