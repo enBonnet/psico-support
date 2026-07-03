@@ -1,5 +1,7 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
 
+import { trackVanityRedirect } from '#/server/analytics'
+
 // ponytail: canonical "remote directory, no filters" search object — the
 // normalized form the directory's validateSearch expects, passed explicitly so
 // every vanity redirect (/psicologos, /ayudame, /ya) lands on the exact same
@@ -33,6 +35,7 @@ export const REMOTE_DIRECTORY_SEARCH = {
 // entry-server.tsx, like httpsRedirect.)
 export const Route = createFileRoute('/psicologos')({
   beforeLoad: () => {
+    trackVanityRedirect('psicologos', '/psicologos')
     throw redirect({
       to: '/ayuda/profesionales',
       search: REMOTE_DIRECTORY_SEARCH,

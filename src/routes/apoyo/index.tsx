@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Headphones, Play } from 'lucide-react'
@@ -6,6 +6,7 @@ import { Headphones, Play } from 'lucide-react'
 import { listStoryTray } from '#/server/audio-stories'
 import type { StoryTrayPro } from '#/server/audio-stories'
 import { AudioStoryViewer } from '#/components/audio-story-viewer'
+import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/apoyo/')({
@@ -33,6 +34,10 @@ function ApoyoPage() {
   // The viewer owns its own clip-advance + close-on-exhaustion logic; this
   // state just gates whether it's mounted and where it starts.
   const [viewerStart, setViewerStart] = useState<number | null>(null)
+
+  useEffect(() => {
+    track({ event: 'apoyo_view', category: 'public' })
+  }, [])
 
   const totalClips = tray.reduce((n, p) => n + p.clips.length, 0)
 
@@ -94,7 +99,10 @@ function ApoyoPage() {
           {/* Catch-all: lean-back "I don't know what I need, just play me something" */}
           <button
             type="button"
-            onClick={() => setViewerStart(0)}
+            onClick={() => {
+              track({ event: 'audio_play_all', category: 'public' })
+              setViewerStart(0)
+            }}
             className="glass-primary mt-6 flex min-h-16 items-center justify-center gap-3 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold !text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
           >
             <Play className="size-5" aria-hidden="true" />
@@ -113,7 +121,18 @@ function ApoyoPage() {
           <ul className="mt-4 flex gap-4 overflow-x-auto pb-4">
             {tray.map((pro, i) => (
               <li key={pro.professionalId} className="shrink-0">
-                <TrayAvatar pro={pro} onClick={() => setViewerStart(i)} />
+                <TrayAvatar
+                  pro={pro}
+                  onClick={() => {
+                    track({
+                      event: 'audio_play_pro',
+                      category: 'public',
+                      param1: String(pro.professionalId),
+                      value: i,
+                    })
+                    setViewerStart(i)
+                  }}
+                />
               </li>
             ))}
           </ul>

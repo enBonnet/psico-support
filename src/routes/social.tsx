@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { seoHead, SITE_URL } from '#/lib/seo'
+import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 
 // ponytail: SSR (default) so OG/Twitter meta lands in the initial HTML for
@@ -49,6 +50,7 @@ function SocialPage() {
         text: SHARE_TEXT,
         url: SHARE_URL,
       })
+      track({ event: 'social_share', category: 'public', param1: 'native' })
     } catch {
       // user dismissed the sheet — no-op
     }
@@ -57,6 +59,7 @@ function SocialPage() {
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(SHARE_URL)
+      track({ event: 'social_share', category: 'public', param1: 'copy' })
       notify({ type: 'success', title: 'Enlace copiado' })
     } catch {
       notify({ type: 'warning', title: 'No se pudo copiar', body: SHARE_URL })
@@ -124,6 +127,9 @@ function SocialPage() {
             <a
               href={SHARE_LINKS.whatsapp}
               {...EXTERNAL}
+              onClick={() =>
+                track({ event: 'social_share', category: 'public', param1: 'whatsapp' })
+              }
               className="glass-card-soft flex min-h-12 items-center justify-center rounded-[var(--glass-radius-sm)] px-4 py-3 text-sm font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px]"
             >
               WhatsApp
@@ -131,6 +137,9 @@ function SocialPage() {
             <a
               href={SHARE_LINKS.twitter}
               {...EXTERNAL}
+              onClick={() =>
+                track({ event: 'social_share', category: 'public', param1: 'twitter' })
+              }
               className="glass-card-soft flex min-h-12 items-center justify-center rounded-[var(--glass-radius-sm)] px-4 py-3 text-sm font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px]"
             >
               X / Twitter
@@ -138,6 +147,9 @@ function SocialPage() {
             <a
               href={SHARE_LINKS.facebook}
               {...EXTERNAL}
+              onClick={() =>
+                track({ event: 'social_share', category: 'public', param1: 'facebook' })
+              }
               className="glass-card-soft flex min-h-12 items-center justify-center rounded-[var(--glass-radius-sm)] px-4 py-3 text-sm font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px]"
             >
               Facebook

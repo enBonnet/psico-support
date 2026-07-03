@@ -2,6 +2,7 @@ import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
@@ -82,6 +83,11 @@ function AudiosPage() {
 // as certificates; delete hard-deletes the row + its R2 object.
 function MyStoriesSection({ verified }: { verified: boolean }) {
   const qc = useQueryClient()
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = user?.id
   const [title, setTitle] = useState('')
   const [audio, setAudio] = useState<StoryAudioValue | null>(null)
 
@@ -108,6 +114,9 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
         },
       }),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'pro_audio_submit', category: 'pro', actorId })
+      }
       notify({
         type: 'success',
         title: 'Audio enviado',
@@ -128,6 +137,9 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
   const del = useMutation({
     mutationFn: (id: number) => deleteMyStory({ data: { id } }),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'pro_audio_delete', category: 'pro', actorId })
+      }
       notify({ type: 'success', title: 'Audio eliminado' })
       qc.invalidateQueries({ queryKey: ['my-stories'] })
     },

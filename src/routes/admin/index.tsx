@@ -10,6 +10,7 @@ import { useDebounced } from '#/lib/hooks/use-debounced'
 import { Search, MessageCircle } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Switch } from '#/components/ui/switch'
 import {
@@ -84,6 +85,10 @@ function AdminPage() {
     queryKey: ['verified-count'],
     queryFn: () => countVerifiedProfessionals(),
   })
+  const { data: adminUser } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
 
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
@@ -93,6 +98,13 @@ function AdminPage() {
         </h1>
         <button
           onClick={async () => {
+            if (adminUser?.id) {
+              track({
+                event: 'auth_signout',
+                category: 'auth',
+                actorId: adminUser.id,
+              })
+            }
             await authClient.signOut()
             window.location.href = '/'
           }}
@@ -196,6 +208,11 @@ function Pager({
 
 function ProfessionalsAuditSection() {
   const qc = useQueryClient()
+  const { data: adminUser } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = adminUser?.id
   const [q, setQ] = useState('')
   const [status, setStatus] = useState<StatusFilter>(undefined)
   const [page, setPage] = useState(1)
@@ -262,6 +279,15 @@ function ProfessionalsAuditSection() {
         body: 'Inténtalo de nuevo.',
       }),
     onSuccess: (_d, vars) => {
+      if (actorId) {
+        track({
+          event: 'admin_pro_review',
+          category: 'admin',
+          actorId,
+          param1: vars.status,
+          param2: String(vars.id),
+        })
+      }
       qc.invalidateQueries({ queryKey: ['admin-professionals'] })
       qc.invalidateQueries({ queryKey: ['verified-count'] })
       const M = {
@@ -307,6 +333,15 @@ function ProfessionalsAuditSection() {
         body: 'Inténtalo de nuevo.',
       }),
     onSuccess: (_d, vars) => {
+      if (actorId) {
+        track({
+          event: 'admin_pro_toggle_service',
+          category: 'admin',
+          actorId,
+          param1: String(vars.id),
+          param2: String(vars.providesService),
+        })
+      }
       qc.invalidateQueries({ queryKey: ['admin-professionals'] })
       qc.invalidateQueries({ queryKey: ['verified-count'] })
       notify({
@@ -677,6 +712,11 @@ function ProCard({
 
 function AudioStoriesSection() {
   const qc = useQueryClient()
+  const { data: adminUser } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = adminUser?.id
   const { data: pendingStories = [], isLoading: storiesLoading } = useQuery({
     queryKey: ['pending-stories'],
     queryFn: () => listPendingStories(),
@@ -704,6 +744,15 @@ function AudioStoriesSection() {
       })
     },
     onSuccess: (_d, vars) => {
+      if (actorId) {
+        track({
+          event: 'admin_audio_review',
+          category: 'admin',
+          actorId,
+          param1: vars.status,
+          param2: String(vars.storyId),
+        })
+      }
       qc.invalidateQueries({ queryKey: ['pending-stories'] })
       qc.invalidateQueries({ queryKey: ['story-tray'] })
       notify({
@@ -786,6 +835,11 @@ function AudioStoriesSection() {
 
 function UsersSection() {
   const qc = useQueryClient()
+  const { data: adminUser } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = adminUser?.id
   const [q, setQ] = useState('')
   const [page, setPage] = useState(1)
   const debouncedQ = useDebounced(q)
@@ -801,7 +855,15 @@ function UsersSection() {
 
   const promote = useMutation({
     mutationFn: (userId: string) => promoteToAdmin({ data: { userId } }),
-    onSuccess: () => {
+    onSuccess: (_d, userId) => {
+      if (actorId) {
+        track({
+          event: 'admin_user_promote',
+          category: 'admin',
+          actorId,
+          param1: userId,
+        })
+      }
       qc.invalidateQueries({ queryKey: ['admin-users'] })
       notify({
         type: 'success',

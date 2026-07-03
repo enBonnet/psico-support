@@ -1,6 +1,8 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useEffect } from 'react'
 import { Eye, Ear, Link2 } from 'lucide-react'
 import { seoHead } from '#/lib/seo'
+import { track } from '#/lib/analytics-client'
 import { CrisisBanner } from '#/components/crisis-banner'
 import { ProCta } from '#/components/pro-cta'
 
@@ -59,6 +61,14 @@ const PFA: readonly PfaStep[] = [
 ]
 
 function PrimerosAuxilios() {
+  useEffect(() => {
+    track({
+      event: 'recursos_tool_view',
+      category: 'public',
+      param1: 'primeros-auxilios',
+    })
+  }, [])
+
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
       <Link

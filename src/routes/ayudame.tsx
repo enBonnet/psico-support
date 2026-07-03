@@ -1,4 +1,6 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
+
+import { trackVanityRedirect } from '#/server/analytics'
 import { REMOTE_DIRECTORY_SEARCH } from './psicologos'
 
 // ponytail: short vanity → remote directory. Shares REMOTE_DIRECTORY_SEARCH
@@ -8,6 +10,7 @@ import { REMOTE_DIRECTORY_SEARCH } from './psicologos'
 // beforeLoad throws before render.
 export const Route = createFileRoute('/ayudame')({
   beforeLoad: () => {
+    trackVanityRedirect('ayudame', '/ayudame')
     throw redirect({
       to: '/ayuda/profesionales',
       search: REMOTE_DIRECTORY_SEARCH,

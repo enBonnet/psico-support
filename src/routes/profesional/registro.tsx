@@ -4,7 +4,7 @@ import {
   Link,
   useNavigate,
 } from '@tanstack/react-router'
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -34,6 +34,7 @@ import {
 import type { SupportDocValue } from '#/components/professional-form'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 
 export const Route = createFileRoute('/profesional/registro')({
   beforeLoad: async () => {
@@ -95,9 +96,14 @@ function RegisterPage() {
   const [attempted, setAttempted] = useState(false)
   const [termsAccepted, setTermsAccepted] = useState(false)
 
+  useEffect(() => {
+    track({ event: 'pro_registro_view', category: 'auth' })
+  }, [])
+
   const mutation = useMutation({
     mutationFn: (vars: RegisterInput) => registerProfessional({ data: vars }),
     onSuccess: async (_data, vars) => {
+      track({ event: 'pro_register_submit', category: 'auth' })
       // ponytail: registerProfessional creates the account + pro row but does
       // NOT establish a session. Sign in on the client so the pro lands on
       // their panel instead of getting bounced to login. The form already
@@ -109,6 +115,7 @@ function RegisterPage() {
           password: vars.password,
         })
         if (signInErr) throw signInErr
+        track({ event: 'auth_signin', category: 'auth' })
         await authClient.getSession()
         qc.invalidateQueries({ queryKey: ['me'] })
         qc.invalidateQueries({ queryKey: ['my-professional'] })
@@ -183,6 +190,7 @@ function RegisterPage() {
           return
         }
         setAttempted(false)
+        track({ event: 'pro_registro_step_continue', category: 'auth', param1: '2' })
         setStep(2)
         return
       }
@@ -297,7 +305,13 @@ function RegisterPage() {
               <input
                 type="checkbox"
                 checked={termsAccepted}
-                onChange={(e) => setTermsAccepted(e.target.checked)}
+                onChange={(e) => {
+                  const checked = e.target.checked
+                  setTermsAccepted(checked)
+                  if (checked) {
+                    track({ event: 'pro_terms_accept', category: 'auth' })
+                  }
+                }}
                 className="mt-1 size-4 shrink-0 accent-[var(--medi-secondary)]"
               />
               <span>

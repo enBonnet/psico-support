@@ -7,6 +7,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
+import { track } from '#/lib/analytics-client'
 import { getCurrentUser } from '#/server/professionals'
 
 export const Route = createFileRoute('/signup')({
@@ -65,6 +66,7 @@ function SignupPage() {
       // row) belongs on /cuenta, not the panel.
       await authClient.getSession()
       qc.invalidateQueries({ queryKey: ['me'] })
+      track({ event: 'auth_signup', category: 'auth' })
       await navigate({ to: '/cuenta' })
     } finally {
       setLoading(false)

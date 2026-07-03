@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 
 import { authClient } from '#/lib/auth-client'
+import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 
 export const Route = createFileRoute('/recuperar')({
@@ -66,6 +67,7 @@ function RequestResetView() {
       // response whether or not the email exists (timing-attack protected), so
       // we mirror that here and never reveal account existence.
       setSent(true)
+      track({ event: 'password_reset_request', category: 'auth' })
     } finally {
       setLoading(false)
     }
@@ -176,6 +178,7 @@ function ResetPasswordView({ token }: { token: string }) {
         )
         return
       }
+      track({ event: 'password_reset_submit', category: 'auth' })
       // revokeSessionsOnPasswordReset invalidates all sessions, so the user is
       // logged out everywhere — send them to login, not /cuenta. Toast tells
       // them the reset worked; without it they'd land on a bare login page.

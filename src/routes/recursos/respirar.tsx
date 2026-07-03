@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { seoHead } from '#/lib/seo'
+import { track } from '#/lib/analytics-client'
 import { CrisisBanner } from '#/components/crisis-banner'
 import { ProCta } from '#/components/pro-cta'
 
@@ -41,6 +42,14 @@ function Respiration() {
   const [phaseIdx, setPhaseIdx] = useState(0)
   const [count, setCount] = useState(PHASES[0].seconds)
 
+  useEffect(() => {
+    track({
+      event: 'recursos_tool_view',
+      category: 'public',
+      param1: 'respirar',
+    })
+  }, [])
+
   // ponytail: single timeout per tick, cleared by the returned cleanup. Deps
   // include count + phaseIdx so each render schedules exactly one next tick
   // with fresh values (no stale closures). When running flips false the effect
@@ -66,6 +75,7 @@ function Respiration() {
     }
     setPhaseIdx(0)
     setCount(PHASES[0].seconds)
+    track({ event: 'respirar_start', category: 'public' })
     setRunning(true)
   }
 

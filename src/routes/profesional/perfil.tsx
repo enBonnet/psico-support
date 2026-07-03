@@ -2,6 +2,7 @@ import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState, useRef } from 'react'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import {
@@ -98,6 +99,11 @@ function PerfilPage() {
 // Changing certification number/country resets verifiedStatus → 'pending'.
 function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
   const qc = useQueryClient()
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = user?.id
   const [name, setName] = useState(me.name)
   const [certificationNumber, setCertificationNumber] = useState(
     me.certificationNumber,
@@ -125,6 +131,9 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
   const save = useMutation({
     mutationFn: (vars: ProfileEditInput) => updateMyProfile({ data: vars }),
     onSuccess: (data) => {
+      if (actorId) {
+        track({ event: 'pro_profile_save', category: 'pro', actorId })
+      }
       qc.invalidateQueries({ queryKey: ['my-professional'] })
       notify({
         type: 'success',
@@ -405,6 +414,11 @@ const SUPPORT_DOC_ACCEPT = '.pdf,.jpg,.jpeg,image/jpeg,image/png,image/webp'
 function MySupportDocsSection() {
   const qc = useQueryClient()
   const inputRef = useRef<HTMLInputElement>(null)
+  const { data: user } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const actorId = user?.id
 
   const { data: docs = [] } = useQuery({
     queryKey: ['my-support-docs'],
@@ -415,6 +429,9 @@ function MySupportDocsSection() {
     mutationFn: (vars: { data: string; type: CertificateMime; name: string }) =>
       addMySupportDoc({ data: vars }),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'pro_supportdoc_add', category: 'pro', actorId })
+      }
       notify({ type: 'success', title: 'Documento guardado' })
       qc.invalidateQueries({ queryKey: ['my-support-docs'] })
     },
@@ -429,6 +446,9 @@ function MySupportDocsSection() {
   const del = useMutation({
     mutationFn: (id: number) => removeMySupportDoc({ data: { id } }),
     onSuccess: () => {
+      if (actorId) {
+        track({ event: 'pro_supportdoc_remove', category: 'pro', actorId })
+      }
       notify({ type: 'success', title: 'Documento eliminado' })
       qc.invalidateQueries({ queryKey: ['my-support-docs'] })
     },

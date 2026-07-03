@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { useQuery, keepPreviousData } from '@tanstack/react-query'
@@ -30,6 +30,7 @@ import type {
 } from '#/server/professionals'
 import { VENEZUELA_ESTADOS, ESTADO_CIUDADES } from '#/server/locations'
 import { notify } from '#/lib/notifications'
+import { track, trackProContact, trackProContactRandom } from '#/lib/analytics-client'
 import { useDebounced } from '#/lib/hooks/use-debounced'
 import { seoHead } from '#/lib/seo'
 import { Skeleton } from '#/components/ui/skeleton'
@@ -135,6 +136,8 @@ function ProfessionalsList() {
   // ponytail: debounce only the free-text search (dropdowns commit at once).
   // 300ms matches typical "stopped typing" cadence; see use-debounced.ts.
   const debouncedQ = useDebounced(q)
+  const searchTracked = useRef(false)
+  const viewedModality = useRef<string | null>(null)
 
   // ponytail: placeholderData: keepPreviousData keeps the previous rows on
   // screen while a new filter/page fetch is in flight, so the list never
@@ -173,6 +176,32 @@ function ProfessionalsList() {
 
   const total = data?.total ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE_DEFAULT))
+
+  useEffect(() => {
+    if (isLoading || viewedModality.current === modality) return
+    viewedModality.current = modality
+    track({
+      event: 'directory_view',
+      category: 'public',
+      param1: modality,
+      value: total,
+    })
+  }, [modality, total, isLoading])
+
+  useEffect(() => {
+    if (!searchTracked.current) {
+      searchTracked.current = true
+      return
+    }
+    if (debouncedQ) {
+      track({
+        event: 'directory_search',
+        category: 'public',
+        param1: debouncedQ,
+      })
+    }
+  }, [debouncedQ])
+
   const hasActiveFilters =
     q ||
     estado ||
@@ -197,6 +226,15 @@ function ProfessionalsList() {
   // for shareability, also write `page` into the URL.
   function patchFilter(patch: Partial<Omit<Filters, 'page'>>) {
     setPage(1)
+    for (const [key, value] of Object.entries(patch)) {
+      if (key === 'q' || !value) continue
+      track({
+        event: 'directory_filter',
+        category: 'public',
+        param1: key,
+        param2: String(value),
+      })
+    }
     if (patch.q !== undefined) setQ(patch.q)
     if (patch.estado !== undefined) setEstado(patch.estado)
     if (patch.ciudad !== undefined) setCiudad(patch.ciudad)
@@ -205,6 +243,7 @@ function ProfessionalsList() {
     if (patch.practiceAreas !== undefined) setPracticeAreas(patch.practiceAreas)
   }
   function clearFilters() {
+    track({ event: 'directory_clear', category: 'public' })
     setQ('')
     setEstado('')
     setCiudad('')
@@ -214,6 +253,7 @@ function ProfessionalsList() {
     setPage(1)
   }
   function goPage(next: number) {
+    track({ event: 'directory_page', category: 'public', value: next })
     setPage(next)
     // ponytail: page is the only filter kept shareable in the URL — lets a
     // user land on a specific page of results. modality already lives there.
@@ -242,6 +282,10 @@ function ProfessionalsList() {
         })
         return
       }
+      trackProContactRandom({
+        proId: picked.id,
+        modality,
+      })
       const digits = picked.whatsapp.replace(/\D/g, '')
       const text = encodeURIComponent(
         'Hola, te escribo por medio de PsicoAyudaVen.',
@@ -660,6 +704,12 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
           href={href}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() =>
+            trackProContact({
+              proId: p.id,
+              source: 'directory',
+            })
+          }
           // ponytail: !important so white wins over the unlayered `a { color }`
           // rule in styles.css (unlayered beats layered utilities in tw v4),
           // in both default and hover states.

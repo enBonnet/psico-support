@@ -15,6 +15,7 @@ import { getLocale } from '#/paraglide/runtime'
 import appCss from '../styles.css?url'
 
 import { NotificationStack } from '#/lib/notifications'
+import { SITE_DEFAULT_TITLE } from '#/lib/seo'
 import { BottomTabs, DesktopNav } from '#/components/bottom-tabs'
 
 import type { QueryClient } from '@tanstack/react-query'
@@ -46,7 +47,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         content: '#13297e',
       },
       {
-        title: 'Red de apoyo psicológico Venezuela',
+        title: SITE_DEFAULT_TITLE,
       },
     ],
     links: [

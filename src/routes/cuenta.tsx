@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { LifeBuoy, LogIn, LogOut, ShieldCheck, UserPlus } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
+import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 import { APP_VERSION } from '#/lib/version'
 import { Skeleton } from '#/components/ui/skeleton'
@@ -43,6 +44,10 @@ function CuentaPage() {
 
   async function signOut() {
     setSigningOut(true)
+    const actorId = me?.id
+    if (actorId) {
+      track({ event: 'auth_signout', category: 'auth', actorId })
+    }
     const { error } = await authClient.signOut()
     if (error) {
       setSigningOut(false)

@@ -1,7 +1,10 @@
+import * as Sentry from '@sentry/tanstackstart-react'
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
-import { getCloudflareEnv } from '#/db'
+import { getCloudflareEnv, getDb } from '#/db'
+import { professionals } from '#/db/schema'
+import { eq } from 'drizzle-orm'
 
 // ============================================================================
 // Analytics Engine — event catalog & track() server fn
@@ -41,7 +44,9 @@ export const TRACKED_EVENTS = [
   'directory_clear',
   'directory_page',
   'profile_view',
+  // pro_contact: param1=proId, param2=source (directory|profile), param3=userId (server-resolved)
   'pro_contact',
+  // pro_contact_random: param1=proId, param2=modality, param3=userId (server-resolved)
   'pro_contact_random',
   'profile_share',
   'profile_social_click',
@@ -116,6 +121,43 @@ const trackInputSchema = z.object({
 
 export type TrackInput = z.infer<typeof trackInputSchema>
 
+/** Server-side vanity-route hit (no client mount). */
+export function trackVanityRedirect(vanity: string, route: string): void {
+  writeEvent({
+    event: 'vanity_redirect',
+    category: 'public',
+    actorId: 'anonymous',
+    route,
+    param1: vanity,
+  })
+}
+
+/** Resolve the platform user id for a professional row (analytics only). */
+async function userIdForPro(proId: string): Promise<string | undefined> {
+  const id = Number(proId)
+  if (!Number.isFinite(id) || id <= 0) return undefined
+  try {
+    const db = getDb()
+    const row = await db
+      .select({ userId: professionals.userId })
+      .from(professionals)
+      .where(eq(professionals.id, id))
+      .limit(1)
+    return row[0]?.userId
+  } catch {
+    return undefined
+  }
+}
+
+async function enrichProContactEvent(data: TrackInput): Promise<TrackInput> {
+  if (data.event !== 'pro_contact' && data.event !== 'pro_contact_random') {
+    return data
+  }
+  if (!data.param1) return data
+  const userId = await userIdForPro(data.param1)
+  return userId ? { ...data, param3: userId } : data
+}
+
 /**
  * Write a single data point to Analytics Engine. Fire-and-forget — never
  * awaited by callers (writeDataPoint returns void). Silently no-ops when the
@@ -164,7 +206,12 @@ export function writeEvent(input: TrackInput): void {
  */
 export const track = createServerFn({ method: 'POST' })
   .validator(trackInputSchema)
-  .handler(async ({ data }) => {
-    writeEvent(data)
-    return { ok: true }
-  })
+  .handler(async ({ data }) =>
+    Sentry.startSpan({ name: 'analytics track' }, async () => {
+      const env = getCloudflareEnv()
+      if (!env?.ANALYTICS) return { ok: true }
+      const enriched = await enrichProContactEvent(data)
+      writeEvent(enriched)
+      return { ok: true }
+    }),
+  )
