@@ -752,31 +752,38 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
   .validator(getOneSchema)
   .handler(async ({ data }) => {
     const db = getDb()
-    const rows = await db
-      .select({
-        id: professionals.id,
-        name: professionals.name,
-        modality: professionals.modality,
-        country: professionals.country,
-        estado: professionals.estado,
-        ciudad: professionals.ciudad,
-        whatsapp: professionals.whatsapp,
-        availabilityMode: professionals.availabilityMode,
-        availabilityScheduleRaw: professionals.availabilitySchedule,
-        timezone: professionals.timezone,
-        populationRaw: professionals.population,
-        focusGroupsRaw: professionals.focusGroups,
-        practiceAreasRaw: professionals.practiceAreas,
-        verifiedStatus: professionals.verifiedStatus,
-        providesService: professionals.providesService,
-        avatarKey: professionals.avatarKey,
-        socialX: professionals.socialX,
-        socialInstagram: professionals.socialInstagram,
-        socialTikTok: professionals.socialTikTok,
-      })
-      .from(professionals)
-      .where(eq(professionals.id, data.id))
-      .limit(1)
+    // Wrapped in withD1Retry for the same transient D1 DO reset ceiling as
+    // listProfessionals / countVerifiedProfessionals (WEB-4). Unlike the
+    // decorative counter, this is load-bearing (SSR profile page + share
+    // previews), so a failure after all retries still throws — failing soft
+    // to null here would wrongly 404 a real pro during a transient hiccup.
+    const rows = await withD1Retry(() =>
+      db
+        .select({
+          id: professionals.id,
+          name: professionals.name,
+          modality: professionals.modality,
+          country: professionals.country,
+          estado: professionals.estado,
+          ciudad: professionals.ciudad,
+          whatsapp: professionals.whatsapp,
+          availabilityMode: professionals.availabilityMode,
+          availabilityScheduleRaw: professionals.availabilitySchedule,
+          timezone: professionals.timezone,
+          populationRaw: professionals.population,
+          focusGroupsRaw: professionals.focusGroups,
+          practiceAreasRaw: professionals.practiceAreas,
+          verifiedStatus: professionals.verifiedStatus,
+          providesService: professionals.providesService,
+          avatarKey: professionals.avatarKey,
+          socialX: professionals.socialX,
+          socialInstagram: professionals.socialInstagram,
+          socialTikTok: professionals.socialTikTok,
+        })
+        .from(professionals)
+        .where(eq(professionals.id, data.id))
+        .limit(1),
+    )
     // ponytail: .at(0) is type-honest (T | undefined) without needing
     // noUncheckedIndexedAccess; rows[0] would type as always-present.
     const r = rows.at(0)
@@ -1305,7 +1312,21 @@ export const deleteMyProfessional = createServerFn({ method: 'POST' }).handler(
 
 export const amIAdmin = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    // ponytail: getSession reads from D1 (Better Auth's session table). On a
+    // transient D1 DO reset it throws APIError: Failed to get session and
+    // 500s the route guard (WEB-7). Fail-soft to "no session" — a reset
+    // during an admin check briefly bounces to login instead of 500ing,
+    // and the next navigation retries normally. Same transient ceiling as
+    // the directory queries; see src/db/index.ts.
+    let session
+    try {
+      session = await withD1Retry(() =>
+        getAuth().api.getSession({ headers: getHeaders() }),
+      )
+    } catch (err) {
+      Sentry.captureException(err)
+      return false
+    }
     if (!session?.user) return false
     return isAdminEmail(session.user.email)
   },
@@ -1319,7 +1340,19 @@ export const amIAdmin = createServerFn({ method: 'GET' }).handler(
 // (browser sends the cookie on the fn fetch).
 export const getCurrentUser = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    // ponytail: same transient D1 ceiling as amIAdmin — getSession reads the
+    // session table and can throw APIError on a DO reset (WEB-5). Fail-soft
+    // to null so the route guard redirects to login instead of 500ing; the
+    // next navigation retries.
+    let session
+    try {
+      session = await withD1Retry(() =>
+        getAuth().api.getSession({ headers: getHeaders() }),
+      )
+    } catch (err) {
+      Sentry.captureException(err)
+      return null
+    }
     return session?.user ?? null
   },
 )
