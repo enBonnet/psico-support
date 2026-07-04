@@ -273,6 +273,18 @@ the `proId`, so anonymous visitors can still be tracked but contacts can still
 be attributed per account. Reading the dataset back is via the SQL API with an
 account-level API token (the binding is **write-only**).
 
+## Outbound communications
+
+`docs/professional-communications.md` is the log of every broadcast message
+sent to the verified psychologists (WhatsApp release notes, support-group
+invites, incident comms, etc.). **Read it before drafting any new message to
+professionals** — it records what they've already been told, the tone we use
+(non-technical, warm, Spanish), and any open commitments (e.g. the
+natural-disaster support group promised on 2026-07-03 that still needs a
+follow-up when it launches). Add a new entry at the top each time we send one;
+never re-announce a shipped feature as "new" or contradict a commitment
+already made there.
+
 ## Project layout
 
 ```
