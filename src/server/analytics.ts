@@ -57,8 +57,22 @@ export const TRACKED_EVENTS = [
   // isolation: cta_click(help_now) → pro_contact_help_now (success) |
   // cta_click(help_now_fallback) (no pro contactable). Total WhatsApp contacts
   // across all entry points = SUM(pro_contact) + SUM(pro_contact_random)
-  // + SUM(pro_contact_help_now).
+  // + SUM(pro_contact_help_now) + SUM(pro_contact_ahora).
   'pro_contact_help_now',
+  // ahora_view: /ahora route mounted (funnel entry for the share-link
+  // auto-connect route). Funnel attribution in SQL:
+  //   SELECT blob1, SUM(_sample_interval * double1)
+  //   FROM psico_events
+  //   WHERE blob1 IN ('ahora_view','pro_contact_ahora')
+  //   GROUP BY blob1
+  // Drop-off = ahora_view − pro_contact_ahora (includes "no pro contactable",
+  // popup-blocked, and abandon).
+  'ahora_view',
+  // pro_contact_ahora: param1=proId, param2=modality, param3=userId (server-resolved).
+  // /ahora route's WhatsApp-opened success. Kept distinct from
+  // pro_contact_help_now (the landing's auto-pick) so the share-link funnel
+  // can be measured in isolation from the landing funnel.
+  'pro_contact_ahora',
   'profile_share',
   'profile_social_click',
   // --- Auth & professional acquisition (auth) ---
@@ -164,7 +178,8 @@ async function enrichProContactEvent(data: TrackInput): Promise<TrackInput> {
   if (
     data.event !== 'pro_contact' &&
     data.event !== 'pro_contact_random' &&
-    data.event !== 'pro_contact_help_now'
+    data.event !== 'pro_contact_help_now' &&
+    data.event !== 'pro_contact_ahora'
   ) {
     return data
   }

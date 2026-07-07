@@ -163,3 +163,21 @@ export function trackProContactHelpNow(args: {
     param2: args.modality,
   })
 }
+
+/**
+ * Track the /ahora route's WhatsApp-opened success (auto-connect share link).
+ * userId resolved server-side like the other pro_contact events. Kept distinct
+ * from trackProContactHelpNow (landing's auto-pick) so the share-link funnel
+ * can be measured in isolation.
+ */
+export function trackProContactAhora(args: {
+  proId: number | string
+  modality: string
+}): void {
+  track({
+    event: 'pro_contact_ahora',
+    category: 'public',
+    param1: String(args.proId),
+    param2: args.modality,
+  })
+}
