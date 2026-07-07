@@ -33,8 +33,16 @@ const CACHE = `psico-support-${__SW_VERSION__}`
 // offline and as the navigation fallback. Use the canonical /_shell URL (the
 // .html form 307-redirects to this); avoids the SW caching a redirect.
 const SHELL = '/_shell'
+// ponytail: static Spanish fallback served when navigation OR a build-hashed
+// asset (/assets/*.{js,css}) fails to load after a deploy. The classic broken-
+// PWA symptom — dead chunk URL → blank/500 with no UI — is intercepted here
+// before it reaches React. The page auto-reloads to '/' (meta-refresh + JS),
+// by which point the new SW has finished activating + precaching the new
+// shell. See public/actualizando.html for the page itself.
+const FALLBACK = '/actualizando.html'
 const PRECACHE = [
   SHELL,
+  FALLBACK,
   '/manifest.webmanifest',
   '/logo192.png',
   '/logo512.png',
@@ -106,6 +114,11 @@ self.addEventListener('fetch', (event) => {
   // the app boot offline from a cold start. Online navigations to SSR routes
   // (the profile page) still go to the worker first and get cached by the
   // SWR branch below on success.
+  //
+  // If the network rejects AND there's no per-URL cache AND the shell isn't
+  // cached (e.g. brand-new install where install hasn't completed, or all
+  // caches were just evicted by activate), serve the static Spanish fallback
+  // page — never let the navigation fail to the browser's offline/blank page.
   if (req.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -113,13 +126,64 @@ self.addEventListener('fetch', (event) => {
         // Prefer a cached response for THIS exact URL (e.g. a visited SSR
         // profile), else fall back to the shell so the app still mounts.
         const cached = (await cache.match(req)) || (await cache.match(SHELL))
+        const fallback =
+          cached || (await cache.match(FALLBACK)) || Response.error()
         const network = fetch(req)
           .then((res) => {
             if (res && res.status === 200) cache.put(req, res.clone())
             return res
           })
-          .catch(() => cached)
+          .catch(() => fallback)
         return cached || network
+      })(),
+    )
+    return
+  }
+
+  // ponytail: build-hashed asset chunks (/assets/*.{js,css}) are the failure
+  // point after a deploy that bumped build hashes — the OLD app shell still
+  // running in an open tab requests an /assets/ URL that no longer exists on
+  // the origin. Without intercepting this, the dynamic import rejects, React
+  // never mounts the error boundary, and the user sees a blank/500 page. We
+  // detect that case (asset fetch failed AND no cached copy) and serve the
+  // static fallback instead — it auto-reloads to '/', by which point the new
+  // SW has precached the new shell + chunks.
+  const isHashedAsset =
+    /^\/assets\//.test(new URL(req.url).pathname) &&
+    /\.(?:js|css)$/.test(new URL(req.url).pathname)
+  if (isHashedAsset) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE)
+        const cached = await cache.match(req)
+        if (cached) return cached
+        try {
+          const res = await fetch(req)
+          if (res && res.status === 200) cache.put(req, res.clone())
+          // 404 on a hashed asset = stale client asking for a dead chunk.
+          // Serve the fallback so the tab reloads into the new build.
+          if (res && res.status === 404) {
+            const fb = await cache.match(FALLBACK)
+            if (fb) {
+              return new Response(fb.body, {
+                status: 200,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+              })
+            }
+          }
+          return res
+        } catch {
+          // Offline + no cache for a hashed asset: serve fallback if we have
+          // it, else let the request fail (genuine offline, nothing to serve).
+          const fb = await cache.match(FALLBACK)
+          if (fb) {
+            return new Response(fb.body, {
+              status: 200,
+              headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            })
+          }
+          return Response.error()
+        }
       })(),
     )
     return

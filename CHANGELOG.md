@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.1] - 2026-07-07
+
+### Fixed
+- **PWA se rompe tras cada deploy (enlaces rotos + 500 sin mensaje)**: tras un deploy que cambia los hashes de build, una pestaña abierta seguía ejecutando JS antiguo que lazy-importa chunks `/assets/*.{js,css}` que ya no existen en el origen → 404 → el router lanzaba → la página caía en blanco o un 500 sin UI (el error ocurría en el import dinámico, antes de que React monte el `DefaultErrorComponent`). Tres defensas en capas, todas PROD-only: (1) `src/lib/pwa-update.ts` registra el SW con `updateViaCache: 'none'`, hace **reload silencioso** cuando un nuevo SW toma control (`controllerchange` solo en reemplazo, no en primera instalación), lanza `registration.update()` en cada `visibilitychange → visible` (propagación en "próxima apertura", no el default de hasta 24h del navegador), y captura errores de import dinámico ("Failed to fetch dynamically imported module") recargando **una vez** (guardado en `sessionStorage` para evitar loops si el build nuevo también está roto). (2) `public/sw.js` intercepta requests a `/assets/*.{js,css}`: si el fetch da 404 o falla y no hay copia cacheada, sirve la página estática de fallback en su lugar — intercepta el chunk muerto **antes** de que llegue a React; la rama de navegación también cae al fallback cuando ni red ni cache sirven. (3) `public/actualizando.html` — página estática autocontenida (CSS inline, sin assets externos, brand tokens, dark-mode) con `meta-refresh` + JS que recarga a `/` tras 2s (copy: "Estamos actualizando Psicoayudaven. Recargando automáticamente…"). El `__SW_VERSION__` existente ya bump-ea la clave de caché con cada `npm version`, así que este release invalida todos los clientes PWA instalados de una sola vez. Sin prompt/toast — elección deliberada para una app de respuesta a crisis donde los prompts añaden fricción; el reload es silencioso.
+
 ## [1.21.0] - 2026-07-07
 
 ### Changed

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#13297e" />
+    <meta name="robots" content="noindex" />
+    <title>Actualizando Psicoayudaven…</title>
+    <!-- ponytail: meta-refresh as the primary reload mechanism. Paired with the
+         JS below for browsers that honor it; meta-refresh covers the case where
+         JS itself failed to load (which is the whole reason we're here). 2s
+         gives the new SW time to finish activating + the new shell to install. -->
+    <meta http-equiv="refresh" content="2;url=/" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        min-height: 100dvh;
+      }
+      body {
+        background:
+          radial-gradient(
+            120% 80% at 50% 0%,
+            rgba(19, 41, 126, 0.12),
+            transparent 60%
+          ),
+          #eff7fe;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        font-family:
+          system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, sans-serif;
+        color: #13297e;
+        text-align: center;
+        -webkit-font-smoothing: antialiased;
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(19, 41, 126, 0.18);
+        border-top-color: #13297e;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+        margin-bottom: 1.25rem;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      h1 {
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem;
+        line-height: 1.3;
+      }
+      p {
+        font-size: 0.95rem;
+        line-height: 1.5;
+        margin: 0;
+        max-width: 26rem;
+        opacity: 0.78;
+      }
+      a {
+        display: inline-block;
+        margin-top: 1.25rem;
+        padding: 0.7rem 1.25rem;
+        background: #13297e;
+        color: #fff;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+      }
+      @media (prefers-color-scheme: dark) {
+        body {
+          background:
+            radial-gradient(
+              120% 80% at 50% 0%,
+              rgba(255, 255, 255, 0.06),
+              transparent 60%
+            ),
+            #0b1538;
+          color: #eff7fe;
+        }
+        .spinner {
+          border-color: rgba(255, 255, 255, 0.18);
+          border-top-color: #eff7fe;
+        }
+        a {
+          background: #eff7fe;
+          color: #13297e;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="spinner" aria-hidden="true"></div>
+    <h1>Estamos actualizando Psicoayudaven</h1>
+    <p>Recargando automáticamente en unos segundos…</p>
+    <a href="/">Abrir la app ahora</a>
+    <script>
+      // ponytail: belt-and-suspenders with the meta-refresh above. We do NOT
+      // reload immediately — the 2s delay matches the meta-refresh so the new
+      // SW has time to finish activating + precaching the new shell. Using
+      // location.replace (not assign) so the broken page isn't kept in
+      // history: back button lands on the working app, not on this fallback.
+      window.setTimeout(function () {
+        window.location.replace('/')
+      }, 2000)
+    </script>
+  </body>
+</html>

@@ -16,6 +16,7 @@ import appCss from '../styles.css?url'
 
 import { NotificationStack } from '#/lib/notifications'
 import { SITE_DEFAULT_TITLE } from '#/lib/seo'
+import { registerPwaUpdate } from '#/lib/pwa-update'
 import { BottomTabs, DesktopNav } from '#/components/bottom-tabs'
 
 import type { QueryClient } from '@tanstack/react-query'
@@ -82,11 +83,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation()
   // ponytail: register the service worker so the app is installable + the
   // precached shell loads offline. VitePWA's devOptions.enabled=false means
-  // no SW in dev, so gate on PROD. Manual register is more reliable with
-  // TanStack Start SSR than VitePWA's HTML inline injection.
+  // no SW in dev, so gate on PROD. registerPwaUpdate() (lib/pwa-update.ts)
+  // also wires the silent reload on controller change (force-update on
+  // deploy) + foreground update polling + dead-chunk recovery — see the
+  // module doc for the full rationale.
   useEffect(() => {
-    if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    if (import.meta.env.PROD) {
+      registerPwaUpdate()
     }
   }, [])
   return (
