@@ -20,6 +20,7 @@ import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
 import { Route as AyudameRouteImport } from './routes/ayudame'
 import { Route as AppRouteImport } from './routes/app'
+import { Route as AhoraRouteImport } from './routes/ahora'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
@@ -40,6 +41,7 @@ import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login
 import { Route as ProfesionalDisponibilidadRouteImport } from './routes/profesional/disponibilidad'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as ProfesionalAudiosRouteImport } from './routes/profesional/audios'
+import { Route as AdminAnaliticaRouteImport } from './routes/admin/analitica'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
 import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
 import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
@@ -101,6 +103,11 @@ const AyudameRoute = AyudameRouteImport.update({
 const AppRoute = AppRouteImport.update({
   id: '/app',
   path: '/app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AhoraRoute = AhoraRouteImport.update({
+  id: '/ahora',
+  path: '/ahora',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcercaDeRoute = AcercaDeRouteImport.update({
@@ -206,6 +213,11 @@ const ProfesionalAudiosRoute = ProfesionalAudiosRouteImport.update({
   path: '/profesional/audios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAnaliticaRoute = AdminAnaliticaRouteImport.update({
+  id: '/admin/analitica',
+  path: '/admin/analitica',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   id: '/ayuda/profesionales/',
   path: '/ayuda/profesionales/',
@@ -245,6 +257,7 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/ahora': typeof AhoraRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
@@ -256,6 +269,7 @@ export interface FileRoutesByFullPath {
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
   '/ya': typeof YaRoute
+  '/admin/analitica': typeof AdminAnaliticaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -285,6 +299,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/ahora': typeof AhoraRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
@@ -296,6 +311,7 @@ export interface FileRoutesByTo {
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
   '/ya': typeof YaRoute
+  '/admin/analitica': typeof AdminAnaliticaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -326,6 +342,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/ahora': typeof AhoraRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
@@ -337,6 +354,7 @@ export interface FileRoutesById {
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
   '/ya': typeof YaRoute
+  '/admin/analitica': typeof AdminAnaliticaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -368,6 +386,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/acerca-de'
+    | '/ahora'
     | '/app'
     | '/ayudame'
     | '/como-funciona'
@@ -379,6 +398,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/terminos'
     | '/ya'
+    | '/admin/analitica'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -408,6 +428,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/acerca-de'
+    | '/ahora'
     | '/app'
     | '/ayudame'
     | '/como-funciona'
@@ -419,6 +440,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/terminos'
     | '/ya'
+    | '/admin/analitica'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -448,6 +470,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/acerca-de'
+    | '/ahora'
     | '/app'
     | '/ayudame'
     | '/como-funciona'
@@ -459,6 +482,7 @@ export interface FileRouteTypes {
     | '/social'
     | '/terminos'
     | '/ya'
+    | '/admin/analitica'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -489,6 +513,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcercaDeRoute: typeof AcercaDeRoute
+  AhoraRoute: typeof AhoraRoute
   AppRoute: typeof AppRoute
   AyudameRoute: typeof AyudameRoute
   ComoFuncionaRoute: typeof ComoFuncionaRoute
@@ -500,6 +525,7 @@ export interface RootRouteChildren {
   SocialRoute: typeof SocialRoute
   TerminosRoute: typeof TerminosRoute
   YaRoute: typeof YaRoute
+  AdminAnaliticaRoute: typeof AdminAnaliticaRoute
   ProfesionalAudiosRoute: typeof ProfesionalAudiosRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
   ProfesionalDisponibilidadRoute: typeof ProfesionalDisponibilidadRoute
@@ -604,6 +630,13 @@ declare module '@tanstack/react-router' {
       path: '/app'
       fullPath: '/app'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ahora': {
+      id: '/ahora'
+      path: '/ahora'
+      fullPath: '/ahora'
+      preLoaderRoute: typeof AhoraRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/acerca-de': {
@@ -746,6 +779,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfesionalAudiosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/analitica': {
+      id: '/admin/analitica'
+      path: '/admin/analitica'
+      fullPath: '/admin/analitica'
+      preLoaderRoute: typeof AdminAnaliticaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ayuda/profesionales/': {
       id: '/ayuda/profesionales/'
       path: '/ayuda/profesionales'
@@ -801,6 +841,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcercaDeRoute: AcercaDeRoute,
+  AhoraRoute: AhoraRoute,
   AppRoute: AppRoute,
   AyudameRoute: AyudameRoute,
   ComoFuncionaRoute: ComoFuncionaRoute,
@@ -812,6 +853,7 @@ const rootRouteChildren: RootRouteChildren = {
   SocialRoute: SocialRoute,
   TerminosRoute: TerminosRoute,
   YaRoute: YaRoute,
+  AdminAnaliticaRoute: AdminAnaliticaRoute,
   ProfesionalAudiosRoute: ProfesionalAudiosRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
   ProfesionalDisponibilidadRoute: ProfesionalDisponibilidadRoute,
