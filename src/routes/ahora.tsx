@@ -99,6 +99,12 @@ function Ahora() {
   // a `let cancelled = false` to literal `false` at the post-await check, which
   // both misleads and trips @typescript-eslint/no-unnecessary-condition. A ref
   // has a wider type, so the check reads honestly.
+  //
+  // StrictMode in dev mounts → unmounts → remounts. The cleanup must reset
+  // startedRef too, otherwise the remount sees startedRef=true, skips the
+  // effect, and the cancelled first run leaves phase='loading' forever — the
+  // infinite spinner. In prod (no StrictMode double-invoke) this just behaves
+  // as a normal mount/cleanup.
   const cancelledRef = useRef(false)
   useEffect(() => {
     if (startedRef.current) return
@@ -159,6 +165,9 @@ function Ahora() {
 
     return () => {
       cancelledRef.current = true
+      // Reset so a StrictMode remount (or HMR) can start a fresh pick instead
+      // of skipping the effect and leaving phase='loading' forever.
+      startedRef.current = false
     }
   }, [navigate])
 
