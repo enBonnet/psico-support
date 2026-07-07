@@ -29,10 +29,12 @@ import { pickRandomProfessional } from '#/server/professionals'
 //   FROM psico_events
 //   WHERE blob1 IN ('ahora_view','pro_contact_ahora')
 //   GROUP BY blob1
-// Drop-off = ahora_view − pro_contact_ahora (includes "no pro contactable",
-// popup-blocked, and abandon). If the no-pro slice needs to be measured
-// separately later, add an ahora_no_pro event — derive first, instrument if
-// noisy.
+// Drop-off = ahora_view − pro_contact_ahora (includes "no pro contactable"
+// and abandon). popup-blocked is NOT in drop-off: a blocked window.open falls
+// back to same-tab navigation (window.location.assign), which still connects
+// the user and still fires pro_contact_ahora. If the no-pro slice needs to be
+// measured separately later, add an ahora_no_pro event — derive first,
+// instrument if noisy.
 export const Route = createFileRoute('/ahora')({
   // ponytail: CSR (ssr:false) — same selective-SSR pattern as the directory
   // and the auth routes (gotcha #6). The pick happens client-side and opens a
@@ -143,22 +145,39 @@ function Ahora() {
         return
       }
 
-      // ponytail: try the auto-open. window.open may be blocked by Safari/iOS
-      // because navigating to /ahora isn't a user gesture. Whether it opens or
-      // is blocked, we land in the same success UI: it surfaces a big "Abrir
-      // WhatsApp" button the user can tap (that tap IS a user gesture, so the
-      // open always works) and keeps /ahora on screen as the "you've been
-      // connected" surface (the WhatsApp tab is the user's actual destination).
-      //
-      // Only count pro_contact_ahora when a window actually opened — mirrors
-      // the landing's helpNow counting rule and keeps the funnel honest (the
-      // top-of-file contract says drop-off includes popup-blocked). If blocked,
-      // the user still has the manual "Abrir WhatsApp" button below; that tap
-      // IS a user gesture so window.open always works on retry.
-      const opened = window.open(href, '_blank', 'noopener,noreferrer')
-      if (opened) trackProContactAhora({ proId: picked.id, modality: 'remote' })
-      setWaHref(href)
-      setPhase('success')
+      // ponytail: open WhatsApp automatically once the pick resolves. Two
+      // strategies because /ahora has no user-gesture context (the user tapped
+      // a shared link/QR; by the time JS runs, the browser has expired the
+      // gesture token, so popup blockers kill window.open):
+      //   1. Try window.open(_blank) — preserves this tab on desktop, where
+      //      Chrome is lenient about post-navigation popups.
+      //   2. If it returns null (blocked — Safari/iOS, or the 1.5s loading
+      //      floor blew past the gesture grace window), fall back to a same-tab
+      //      window.location.assign. Same-tab nav can't be blocked and on
+      //      mobile opens the WhatsApp app via the wa.me deep link regardless.
+      // The MIN_LOADING_MS delay is safe here because same-tab navigation
+      // doesn't need a gesture — it just routes the current tab.
+      let opened = false
+      try {
+        opened = Boolean(window.open(href, '_blank', 'noopener,noreferrer'))
+      } catch {
+        opened = false
+      }
+      if (opened) {
+        trackProContactAhora({ proId: picked.id, modality: 'remote' })
+        setWaHref(href)
+        setPhase('success')
+      } else {
+        // ponytail: popup blocked — navigate this tab to WhatsApp instead.
+        // Count as funnel success (the connection happened; same-tab nav is
+        // the primary path on mobile anyway). The success UI is unreachable
+        // here because we leave the page, but keep setPhase for the rare case
+        // the assign is delayed by a WhatsApp-app handoff on desktop.
+        trackProContactAhora({ proId: picked.id, modality: 'remote' })
+        setWaHref(href)
+        setPhase('success')
+        window.location.assign(href)
+      }
     })().catch(() => {
       if (!cancelledRef.current) setPhase('error')
     })
@@ -210,7 +229,7 @@ function Ahora() {
             Te conectamos con un profesional
           </p>
           <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
-            Abrimos WhatsApp en una nueva ventana. Si no apareció, tócalo aquí:
+            Te llevamos a WhatsApp. Si no se abrió, tócalo aquí:
           </p>
           {waHref && (
             <a
