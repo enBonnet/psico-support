@@ -140,56 +140,19 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // ponytail: build-hashed asset chunks (/assets/*.{js,css}) are the failure
-  // point after a deploy that bumped build hashes — the OLD app shell still
-  // running in an open tab requests an /assets/ URL that no longer exists on
-  // the origin. Without intercepting this, the dynamic import rejects, React
-  // never mounts the error boundary, and the user sees a blank/500 page. We
-  // detect that case (asset fetch failed AND no cached copy) and serve the
-  // static fallback instead — it auto-reloads to '/', by which point the new
-  // SW has precached the new shell + chunks.
-  const isHashedAsset =
-    /^\/assets\//.test(new URL(req.url).pathname) &&
-    /\.(?:js|css)$/.test(new URL(req.url).pathname)
-  if (isHashedAsset) {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(CACHE)
-        const cached = await cache.match(req)
-        if (cached) return cached
-        try {
-          const res = await fetch(req)
-          if (res && res.status === 200) cache.put(req, res.clone())
-          // 404 on a hashed asset = stale client asking for a dead chunk.
-          // Serve the fallback so the tab reloads into the new build.
-          if (res && res.status === 404) {
-            const fb = await cache.match(FALLBACK)
-            if (fb) {
-              return new Response(fb.body, {
-                status: 200,
-                headers: { 'Content-Type': 'text/html; charset=utf-8' },
-              })
-            }
-          }
-          return res
-        } catch {
-          // Offline + no cache for a hashed asset: serve fallback if we have
-          // it, else let the request fail (genuine offline, nothing to serve).
-          const fb = await cache.match(FALLBACK)
-          if (fb) {
-            return new Response(fb.body, {
-              status: 200,
-              headers: { 'Content-Type': 'text/html; charset=utf-8' },
-            })
-          }
-          return Response.error()
-        }
-      })(),
-    )
-    return
-  }
-
   // ponytail: everything else (assets, GET server-fn RPC) — runtime SWR.
+  //
+  // NOTE: dead /assets/*.{js,css} chunks after a deploy (the OLD app shell
+  // still running in an open tab asking for a hashed URL that no longer
+  // exists on the origin) are intentionally NOT special-cased here. The
+  // runtime SWR branch below returns the 404 (or network error) unchanged;
+  // the dynamic-import promise then rejects with "Failed to fetch dynamically
+  // imported module" / "Unable to preload CSS for …", and the client-side
+  // recovery in src/lib/pwa-update.ts (CHUNK_ERR_PATTERNS + the Vite
+  // `vite:preloadError` event listener) catches it and reloads once onto
+  // the new build. Returning an HTML fallback for a script-style request
+  // would change the error to a MIME-mismatch message that doesn't match
+  // the recovery patterns — actively defeating the client handler.
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE)

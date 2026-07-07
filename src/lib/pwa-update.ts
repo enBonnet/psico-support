@@ -36,10 +36,26 @@
 // swap the controllerchange handler for an event emission + UI surface. The
 // detection logic stays the same.
 
+// ponytail: error-message substrings that indicate a deploy-rotted dynamic
+// import. The list is deliberately permissive (substring match) — false
+// positives here just trigger a guarded one-time reload, while a false
+// negative strands the user on a blank page after a deploy. Patterns:
+//   - "Failed to fetch dynamically imported module" — Chrome/Edge, JS chunk
+//   - "error loading dynamically imported module" — Firefox, JS chunk
+//   - "Importing a module script failed" — Safari, JS chunk
+//   - "Unable to preload CSS for" — Vite's __vitePreload helper, CSS chunk
+//     (Vite fetches a chunk's CSS deps before evaluating the JS; if the
+//     CSS URL is dead post-deploy, the import rejects with this message
+//     instead of the JS-module message above)
+//   - "Failed to load module script" — defensive catch-all for MIME-mismatch
+//     and other module-script load failures (e.g. if the SW or origin ever
+//     serves the wrong Content-Type for a hashed asset)
 const CHUNK_ERR_PATTERNS = [
   'Failed to fetch dynamically imported module',
   'error loading dynamically imported module',
   'Importing a module script failed',
+  'Unable to preload CSS for',
+  'Failed to load module script',
 ]
 
 const RELOADED_ONCE_KEY = '__pwa_reloaded_once'
@@ -92,6 +108,18 @@ export function registerPwaUpdate() {
     if (isChunkLoadError(event.reason)) {
       reloadOnceForChunkError()
     }
+  })
+
+  // ponytail: Vite's canonical preload-failure signal. Vite wraps dynamic
+  // imports in __vitePreload, which fetches the chunk's CSS deps before
+  // evaluating the JS; if any dep URL is dead post-deploy, Vite dispatches
+  // `vite:preloadError` on window (in addition to rejecting the import
+  // promise, which the listeners above already cover). Listening here is
+  // more reliable than message-string matching because the event fires
+  // even when the rejection is swallowed by a framework's error boundary
+  // before reaching `unhandledrejection`. See vitejs/vite#18046.
+  window.addEventListener('vite:preloadError', () => {
+    reloadOnceForChunkError()
   })
 
   // Reload only on controller REPLACEMENT, not the first install. Before
