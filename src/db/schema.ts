@@ -168,6 +168,22 @@ export const professionals = sqliteTable(
     providesService: integer('provides_service', { mode: 'boolean' })
       .notNull()
       .default(true),
+    // ponytail: denormalized contact counter for weighted-random pick. Bumped
+    // from pickRandomProfessional after a successful pick (server-controlled
+    // proId — NOT bumped from the auth-free track() server fn, which would let
+    // any client poison any pro's count; see Copilot PR #29). Counts
+    // SYSTEM-mediated picks only (random button, landing help-now CTA, /ahora
+    // share-link) — NOT direct WhatsApp clicks from directory/profile cards,
+    // because those reflect user preference, not load the system imposed, and
+    // so shouldn't depress that pro's chance of being picked randomly.
+    // Best-effort: a missed bump only slightly skews weights (gotcha #10).
+    // Ceiling note: never reset, so a long-tenured pro with no recent contacts
+    // slowly drifts back toward equal weight with new pros (weight =
+    // 1/(count+1); if that becomes unfair in practice, switch to a recency
+    // window).
+    contactCount: integer('contact_count', { mode: 'number' })
+      .notNull()
+      .default(0),
     // ponytail: three-state availability (F1). 'always' = Siempre disponible
     // (always on); 'scheduled' = available during availability_schedule blocks
     // (live-derived via isActiveNow in the pro's timezone); 'inactive' = No

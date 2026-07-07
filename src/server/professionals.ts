@@ -27,6 +27,7 @@ import {
   VENEZUELA,
   VENEZUELA_ESTADOS,
 } from './locations'
+import { bumpContactCount } from './analytics'
 
 // ponytail: target demographics a professional serves. Multi-select, stored
 // as a JSON text array. Spanish labels are the stored keys (single-language app).
@@ -811,10 +812,28 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
     }
   })
 
+// ponytail: weighted random pick. weight = 1/(contactCount+1) — pros with
+// fewer contacts are more likely but not guaranteed, so refreshes still vary.
+// When all counts are equal this reduces to uniform random (the prior
+// behavior). Tunable: raise the exponent (e.g. 1/(count+1)^2) for stronger
+// fairness if a pro starts dominating despite the weight.
+function weightedPick<T extends { contactCount: number }>(items: T[]): T {
+  const weights = items.map((i) => 1 / (i.contactCount + 1))
+  const total = weights.reduce((a, b) => a + b, 0)
+  let r = Math.random() * total
+  for (let i = 0; i < items.length; i++) {
+    r -= weights[i]
+    if (r <= 0) return items[i]
+  }
+  return items[items.length - 1] // float-rounding fallback
+}
+
 // ponytail: "contact a random professional" — same filter pool as the list,
-// any verified pro (NOT restricted to available=1, per product decision).
-// ORDER BY RANDOM() is fine while the directory is <~1k rows; if it grows,
-// switch to a count-based random offset (pick n in [0,count), LIMIT 1 OFFSET n).
+// any verified pro (NOT restricted to available=1, per product decision). Pick
+// is weighted by contact_count (weight = 1/(count+1)) so pros with fewer recent
+// contacts are picked more often — load-balanced, not pure random. Variety is
+// preserved: the same pro isn't guaranteed even with the lowest count, so two
+// users hitting "al azar" at once can still get different pros.
 export const pickRandomProfessional = createServerFn({ method: 'GET' })
   .validator(
     z.object({
@@ -842,6 +861,7 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
         availabilityMode: professionals.availabilityMode,
         availabilityScheduleRaw: professionals.availabilitySchedule,
         timezone: professionals.timezone,
+        contactCount: professionals.contactCount,
       })
       .from(professionals)
       .where(buildProfessionalWhere(data))
@@ -853,7 +873,13 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
       ),
     )
     if (contactable.length === 0) return null
-    const picked = contactable[Math.floor(Math.random() * contactable.length)]
+    const picked = weightedPick(contactable)
+    // ponytail: bump the picked pro's contact counter so future picks favor
+    // pros with fewer contacts. Server-controlled proId (not client input), so
+    // no poisoning surface — unlike track() which is auth-free and must never
+    // touch D1 (Copilot PR #29). Fire-and-forget: a missed bump only slightly
+    // skews future weights, never breaks this contact.
+    void bumpContactCount(picked.id).catch(() => {})
     return { id: picked.id, name: picked.name, whatsapp: picked.whatsapp }
   })
 

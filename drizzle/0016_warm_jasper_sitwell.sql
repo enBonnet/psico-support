@@ -1,0 +1,1 @@
+ALTER TABLE `professionals` ADD `contact_count` integer DEFAULT 0 NOT NULL;
