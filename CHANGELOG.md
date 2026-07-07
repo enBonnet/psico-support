@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Reparto equitativo en la selección al azar**: el botón "Contactar al azar" del directorio, el CTA "Necesito ayuda ahora" del landing y la ruta `/ahora` ahora favorecen a los profesionales con **menos contactos** en lugar de elegir uniformemente al azar. El peso de cada pro es `1/(contactos+1)`, así quien lleva pocos contactos tiene más probabilidad de salir, pero sin ser garantizado — el reparto sigue variando entre recargas (no es round-robin estricto). Cuando todos tienen el mismo conteo, el comportamiento es idéntico al azar puro anterior. Objetivo: equilibrio de carga entre los profesionales verificados disponibles, no atribución exacta. El conteo se incrementa desde el mismo flujo de analítica `pro_contact*` (directo desde la tarjeta/perfil, al azar del directorio, help-now y ahora) en `src/server/analytics.ts track()`, fire-and-forget como la propia analítica (gotcha #10): un fallo de incremento solo sesga ligeramente los pesos, nunca rompe un contacto. Nueva columna D1 `professionals.contact_count` (default 0; migración `0016_warm_jasper_sitwell.sql`). **Recuerde aplicar la migración remota tras el deploy** (`npx wrangler d1 migrations apply psico-support-db --remote` + `migrations list --remote` — gotcha #1), o cada `UPDATE` fallará con `no such column`.
+
 ## [1.20.0] - 2026-07-07
 
 ### Added

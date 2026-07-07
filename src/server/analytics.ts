@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { getCloudflareEnv, getDb } from '#/db'
 import { professionals } from '#/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 
 // ============================================================================
 // Analytics Engine — event catalog & track() server fn
@@ -174,18 +174,37 @@ async function userIdForPro(proId: string): Promise<string | undefined> {
   }
 }
 
+/** Whether an event represents a WhatsApp contact to a professional. */
+function isProContactEvent(data: TrackInput): boolean {
+  return (
+    data.event === 'pro_contact' ||
+    data.event === 'pro_contact_random' ||
+    data.event === 'pro_contact_help_now' ||
+    data.event === 'pro_contact_ahora'
+  )
+}
+
 async function enrichProContactEvent(data: TrackInput): Promise<TrackInput> {
-  if (
-    data.event !== 'pro_contact' &&
-    data.event !== 'pro_contact_random' &&
-    data.event !== 'pro_contact_help_now' &&
-    data.event !== 'pro_contact_ahora'
-  ) {
-    return data
-  }
+  if (!isProContactEvent(data)) return data
   if (!data.param1) return data
   const userId = await userIdForPro(data.param1)
   return userId ? { ...data, param3: userId } : data
+}
+
+/**
+ * Increment the denormalized contact counter used by weighted-random picks.
+ * Best-effort like analytics itself — callers must `.catch(() => {})` so a
+ * failed bump never breaks the feature it's instrumenting (gotcha #10). Uses
+ * `contact_count + 1` SQL so concurrent contacts don't clobber each other.
+ */
+async function bumpContactCount(proId: string): Promise<void> {
+  const id = Number(proId)
+  if (!Number.isFinite(id) || id <= 0) return
+  const db = getDb()
+  await db
+    .update(professionals)
+    .set({ contactCount: sql`${professionals.contactCount} + 1` })
+    .where(eq(professionals.id, id))
 }
 
 /**
@@ -242,6 +261,14 @@ export const track = createServerFn({ method: 'POST' })
       if (!env?.ANALYTICS) return { ok: true }
       const enriched = await enrichProContactEvent(data)
       writeEvent(enriched)
+      // ponytail: bump the denormalized contact counter for load-balanced
+      // random picks. Best-effort like analytics itself — a missed bump only
+      // slightly skews the weights, never breaks a contact (gotcha #10).
+      // Same event-name gate as enrichProContactEvent so non-contact events
+      // skip it. param1 is the proId on all pro_contact* events.
+      if (isProContactEvent(enriched) && enriched.param1) {
+        await bumpContactCount(enriched.param1).catch(() => {})
+      }
       return { ok: true }
     }),
   )

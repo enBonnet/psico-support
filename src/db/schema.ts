@@ -168,6 +168,20 @@ export const professionals = sqliteTable(
     providesService: integer('provides_service', { mode: 'boolean' })
       .notNull()
       .default(true),
+    // ponytail: denormalized contact counter for weighted-random pick. Bumped
+    // best-effort from the pro_contact* analytics flow
+    // (src/server/analytics.ts track()). The Analytics Engine binding is
+    // write-only, so this is the only way the pick can read back per-pro
+    // contact volume at request time. May under-count if a bump fails
+    // (fire-and-forget, like analytics) — that's acceptable: we want load
+    // balancing, not exact attribution. Ceiling for completeness: never reset,
+    // so a long-tenured pro with no recent contacts slowly drifts back toward
+    // equal weight with new pros (weight = 1/(count+1), so a pro with 1000
+    // contacts is still ~1000x less likely than a fresh one; if that becomes
+    // unfair in practice, switch to a recency window).
+    contactCount: integer('contact_count', { mode: 'number' })
+      .notNull()
+      .default(0),
     // ponytail: three-state availability (F1). 'always' = Siempre disponible
     // (always on); 'scheduled' = available during availability_schedule blocks
     // (live-derived via isActiveNow in the pro's timezone); 'inactive' = No
