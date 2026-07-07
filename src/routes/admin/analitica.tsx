@@ -173,16 +173,15 @@ function useTopEvents(days: number) {
 }
 
 function usePrevPeriodTopEvents(days: number) {
-  // ponytail: period-over-period delta. We fetch the same `top-events` query
-  // for the prior equivalent window (e.g. if main is 7d, prior is the 7d
-  // before that). The runAnalyticsQuery cache is keyed on days, not on a
-  // window offset, so we can't get a "previous 7d" slice from it directly —
-  // Analytics Engine doesn't let us pin a start date either. Ceiling: this
-  // approximation reuses the rolling 7d as a proxy. Good enough to spot
-  // trends; revisit with a date-range picker if precision matters.
+  // Period-over-period delta: fetch the same `top-events` shape for the
+  // immediately prior window (e.g. if main is 7d, this is the 7d before
+  // that). The `top-events-prev` query in the catalog uses a BETWEEN
+  // timestamp predicate to pin that prior window — the runAnalyticsQuery
+  // cache is keyed on (queryId, days), so this is a distinct cache entry
+  // from the rolling-window `top-events`.
   return useQuery({
     queryKey: ['analytics', 'top-events-prev', days],
-    queryFn: () => runAnalyticsQuery({ data: { id: 'top-events', days } }),
+    queryFn: () => runAnalyticsQuery({ data: { id: 'top-events-prev', days } }),
     // Don't refetch on every focus — prior period is just for delta context.
     staleTime: 5 * 60_000,
   })

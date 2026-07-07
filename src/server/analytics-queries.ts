@@ -197,8 +197,10 @@ export const QUERIES: QueryDef[] = [
         blob1 AS event,
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
-      WHERE blob1 = 'cta_click' AND blob4 IN ('help_now', 'help_now_fallback')
+      WHERE (
+        (blob1 = 'cta_click' AND blob4 IN ('help_now', 'help_now_fallback'))
         OR blob1 = 'pro_contact_help_now'
+      )
       AND timestamp > NOW() - INTERVAL '${days}' DAY
       GROUP BY step, event
       HAVING step IS NOT NULL
@@ -626,6 +628,32 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
       WHERE timestamp > NOW() - INTERVAL '${days}' DAY
+      GROUP BY event, category
+      ORDER BY total DESC
+    `,
+  },
+  {
+    // Prior equivalent window for period-over-period deltas in the KPI strip.
+    // Same shape as `top-events` but pinned to [NOW()-2*days, NOW()-days] so
+    // the KPI "deltaPct" compares this window against the immediately prior
+    // one (e.g. last 7d vs the 7d before). days is clamped upstream, and we
+    // double it for the lower bound — Analytics Engine SQL supports arbitrary
+    // timestamp predicates, so the prior ponytail ceiling ("can't pin a start
+    // date") was wrong.
+    id: 'top-events-prev',
+    title: 'Top eventos (período previo)',
+    description: 'Ventana inmediatamente anterior para deltas period-over-period',
+    columns: ['event', 'category', 'total'],
+    render: 'table',
+    group: 'Operacional',
+    sql: ({ days }) => `
+      SELECT
+        blob1 AS event,
+        blob2 AS category,
+        SUM(_sample_interval * double1) AS total
+      FROM ${DATASET}
+      WHERE timestamp BETWEEN NOW() - INTERVAL '${days * 2}' DAY
+                          AND NOW() - INTERVAL '${days}' DAY
       GROUP BY event, category
       ORDER BY total DESC
     `,

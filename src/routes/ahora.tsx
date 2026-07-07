@@ -137,17 +137,20 @@ function Ahora() {
         return
       }
 
-      // ponytail: fire success only once we know WhatsApp can actually open —
-      // mirrors the landing's helpNow counting rule (don't overstate the
-      // success metric).
-      trackProContactAhora({ proId: picked.id, modality: 'remote' })
       // ponytail: try the auto-open. window.open may be blocked by Safari/iOS
       // because navigating to /ahora isn't a user gesture. Whether it opens or
       // is blocked, we land in the same success UI: it surfaces a big "Abrir
       // WhatsApp" button the user can tap (that tap IS a user gesture, so the
       // open always works) and keeps /ahora on screen as the "you've been
       // connected" surface (the WhatsApp tab is the user's actual destination).
-      window.open(href, '_blank', 'noopener,noreferrer')
+      //
+      // Only count pro_contact_ahora when a window actually opened — mirrors
+      // the landing's helpNow counting rule and keeps the funnel honest (the
+      // top-of-file contract says drop-off includes popup-blocked). If blocked,
+      // the user still has the manual "Abrir WhatsApp" button below; that tap
+      // IS a user gesture so window.open always works on retry.
+      const opened = window.open(href, '_blank', 'noopener,noreferrer')
+      if (opened) trackProContactAhora({ proId: picked.id, modality: 'remote' })
       setWaHref(href)
       setPhase('success')
     })().catch(() => {
