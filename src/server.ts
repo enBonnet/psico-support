@@ -7,16 +7,8 @@ import {
 import { createServerEntry } from '@tanstack/react-start/server-entry'
 
 import { setCloudflareEnv } from '#/db'
+import type { CloudflareEnv } from '#/db'
 import { getSentryInitOptions } from '#/lib/sentry'
-
-type CloudflareEnv = {
-  DB: D1Database
-  MEDIA: R2Bucket
-  EMAIL: SendEmail
-  ANALYTICS: AnalyticsEngineDataset
-  CF_ACCOUNT_ID?: string
-  CF_ANALYTICS_TOKEN?: string
-}
 
 const handler = createStartHandler(defaultStreamHandler)
 

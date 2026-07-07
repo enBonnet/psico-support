@@ -22,6 +22,7 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { notify } from '#/lib/notifications'
 import { TRACKED_EVENTS  } from '#/server/analytics'
 import type {TrackedEvent} from '#/server/analytics';
+import type { QueryId } from '#/server/analytics-queries';
 
 // =============================================================================
 // /admin/analitica — in-app analytics dashboard
@@ -89,7 +90,7 @@ function AnalyticsPage() {
       </header>
       <div className="section-underline mt-2" />
 
-      <NotConfiguredBanner />
+      <NotConfiguredBanner days={days} />
 
       <KpiStrip days={days} />
       <FunnelSection days={days} />
@@ -144,14 +145,16 @@ function PresetSelector({
 
 // ── Not-configured banner ───────────────────────────────────────────────────
 
-function NotConfiguredBanner() {
+function NotConfiguredBanner({ days }: { days: number }) {
   // The warning comes back from each analytics query; we surface it once at
   // the top if the most recent query returned one. Using the top-events query
-  // as a canary since the KPI strip always loads it.
+  // as a canary since the KPI strip always loads it — and now keyed on the
+  // same `days` so it shares the cache entry instead of firing a wasted 7d
+  // request whenever the user picks a different preset.
   const { data } = useQuery({
-    queryKey: ['analytics', 'top-events', 7],
+    queryKey: ['analytics', 'top-events', days],
     queryFn: () =>
-      runAnalyticsQuery({ data: { id: 'top-events', days: 7 } }),
+      runAnalyticsQuery({ data: { id: 'top-events', days } }),
   })
   if (!data?.warning) return null
   return (
@@ -257,7 +260,7 @@ function KpiStrip({ days }: { days: number }) {
 // ── Generic Analytics query card ────────────────────────────────────────────
 
 function useAnalyticsQuery(
-  id: string,
+  id: QueryId,
   days: number,
   opts?: { event?: TrackedEvent; eventB?: TrackedEvent },
 ) {

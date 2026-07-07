@@ -2,7 +2,7 @@ import { drizzle } from 'drizzle-orm/d1'
 
 import * as schema from './schema.ts'
 
-type CloudflareEnv = {
+export type CloudflareEnv = {
   DB: D1Database
   MEDIA: R2Bucket
   EMAIL: SendEmail

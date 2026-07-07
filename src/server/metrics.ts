@@ -20,18 +20,10 @@
 import * as Sentry from '@sentry/tanstackstart-react'
 import { createServerFn } from '@tanstack/react-start'
 import { and, count, eq, gte, sql } from 'drizzle-orm'
-import { getRequestHeaders } from '@tanstack/react-start/server'
 
 import { getDb, withD1Retry } from '#/db'
 import { audioStories, followUps, professionals, user } from '#/db/schema'
-import { getAuth, isAdminEmail } from '#/lib/auth'
-
-async function requireAdmin(): Promise<void> {
-  const session = await getAuth().api.getSession({ headers: getRequestHeaders() })
-  if (!session?.user || !(await isAdminEmail(session.user.email))) {
-    throw new Error('Acción solo para administradores.')
-  }
-}
+import { requireAdmin } from '#/lib/auth'
 
 export type ProStatusBreakdown = {
   status: string

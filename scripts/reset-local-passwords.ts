@@ -46,10 +46,27 @@ function parseArgs(argv: string[]): Args {
 	let email: string | undefined
 	let dryRun = false
 
+	// Validate that a value-taking flag actually has a following value and that
+	// the value isn't itself another flag — otherwise `args[++i]` is undefined
+	// or swallows the next flag, which would crash normalize() or silently
+	// broaden the reset scope to every credential account.
+	// NOTE: args[i+1] is typed `string` (no noUncheckedIndexedAccess), but at
+	// runtime it can be undefined when the flag is the last token. The length
+	// check is what makes this real — keep it even though TS doesn't see it.
+	const readValue = (i: number, flag: string): [number, string] => {
+		const j = i + 1
+		const v = args[j]
+		if (j >= args.length || v.startsWith('-')) {
+			console.error(`Missing value for ${flag}`)
+			process.exit(1)
+		}
+		return [j, v]
+	}
+
 	for (let i = 0; i < args.length; i++) {
 		const a = args[i]
-		if (a === '--password' || a === '-p') password = args[++i]
-		else if (a === '--email' || a === '-e') email = args[++i]
+		if (a === '--password' || a === '-p') [i, password] = readValue(i, a)
+		else if (a === '--email' || a === '-e') [i, email] = readValue(i, a)
 		else if (a === '--dry-run' || a === '-n') dryRun = true
 		else if (a === '--help' || a === '-h') {
 			console.log(
@@ -115,8 +132,8 @@ async function main() {
 	const dbPath = findLocalDb()
 	console.log(`DB:     ${dbPath}`)
 	console.log(`Mode:   ${dryRun ? 'DRY RUN (no writes)' : 'write'}`)
-	console.log(`Target: ${email ?? 'all credential accounts'}`)
-	console.log(`Pass:   ${password}`)
+	console.log(`Target: ${email ? 'single account' : 'all credential accounts'}`)
+	console.log('Pass:   [redacted — pass via --password]')
 	console.log()
 
 	const salt = randomBytes(16).toString('hex')

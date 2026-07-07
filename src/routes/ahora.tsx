@@ -76,10 +76,11 @@ function Ahora() {
   // because navigating to /ahora isn't a user gesture — the on-page button is
   // a real tap, so it always works as the manual fallback.
   const [waHref, setWaHref] = useState<string | null>(null)
-  // ponytail: guard so a StrictMode double-mount (or HMR) doesn't fire two
-  // picks. The ref survives re-renders; once a run is in flight, ignore the
-  // second effect invocation.
-  const startedRef = useRef(false)
+  // ponytail: drive the main effect off a retry counter instead of a stable
+  // [navigate] dep. The error UI's "Reintentar" button increments this to
+  // re-fire the effect; without it, the effect only ran on mount and retry()
+  // was dead (phase reset to 'loading' but the pick never restarted).
+  const [retryToken, setRetryToken] = useState(0)
 
   // ponytail: rotate the loading submessage every 900ms so the wait feels
   // active, not frozen. Two messages is enough — more would feel jittery.
@@ -92,25 +93,22 @@ function Ahora() {
     return () => clearInterval(t)
   }, [phase])
 
-  // ponytail: the main effect fires once per mount (guarded by startedRef).
-  // Track ahora_view up front so every visit is measurable regardless of
-  // outcome. Race the pick RPC against the MIN_LOADING_MS floor so we never
-  // open WhatsApp before the loading message has had time to register.
+  // ponytail: the main effect fires once per mount AND once per retry (the
+  // retryToken dep drives re-runs). Track ahora_view up front so every visit
+  // and every retry is measurable. Race the pick RPC against the MIN_LOADING_MS
+  // floor so we never open WhatsApp before the loading message has had time
+  // to register.
   //
   // Cancellation uses a ref (not a `let cancelled` boolean) because TS narrows
   // a `let cancelled = false` to literal `false` at the post-await check, which
   // both misleads and trips @typescript-eslint/no-unnecessary-condition. A ref
   // has a wider type, so the check reads honestly.
   //
-  // StrictMode in dev mounts → unmounts → remounts. The cleanup must reset
-  // startedRef too, otherwise the remount sees startedRef=true, skips the
-  // effect, and the cancelled first run leaves phase='loading' forever — the
-  // infinite spinner. In prod (no StrictMode double-invoke) this just behaves
-  // as a normal mount/cleanup.
+  // StrictMode in dev mounts → unmounts → remounts; each remount re-runs the
+  // effect (same as a retry). The cancelledRef guard ensures the superseded
+  // run doesn't mutate state after the new one resolves.
   const cancelledRef = useRef(false)
   useEffect(() => {
-    if (startedRef.current) return
-    startedRef.current = true
     track({ event: 'ahora_view', category: 'public', route: '/ahora' })
 
     cancelledRef.current = false
@@ -145,37 +143,34 @@ function Ahora() {
         return
       }
 
-      // ponytail: open WhatsApp automatically once the pick resolves. Two
-      // strategies because /ahora has no user-gesture context (the user tapped
-      // a shared link/QR; by the time JS runs, the browser has expired the
-      // gesture token, so popup blockers kill window.open):
-      //   1. Try window.open(_blank) — preserves this tab on desktop, where
-      //      Chrome is lenient about post-navigation popups.
-      //   2. If it returns null (blocked — Safari/iOS, or the 1.5s loading
-      //      floor blew past the gesture grace window), fall back to a same-tab
+      // ponytail: open WhatsApp automatically once the pick resolves. /ahora
+      // has no user-gesture context (the user tapped a shared link/QR; by the
+      // time JS runs + the 1.5s loading floor elapses, the gesture token has
+      // expired, so popup blockers kill window.open). Two strategies:
+      //   1. Try window.open(_blank) WITHOUT 'noopener' in the feature string
+      //      — MDN documents that noopener makes window.open return null even
+      //      on success (the browser severs the opener reference by returning
+      //      null instead of a Window handle). We still want the security of
+      //      noopener, so we manually set opened.opener = null after opening.
+      //      This preserves /ahora on desktop, where Chrome is lenient about
+      //      post-navigation popups.
+      //   2. If window.open returns null (blocked — Safari/iOS, or the loading
+      //      floor blew past the gesture grace window), fall back to same-tab
       //      window.location.assign. Same-tab nav can't be blocked and on
       //      mobile opens the WhatsApp app via the wa.me deep link regardless.
-      // The MIN_LOADING_MS delay is safe here because same-tab navigation
-      // doesn't need a gesture — it just routes the current tab.
-      let opened = false
+      let opened: Window | null = null
       try {
-        opened = Boolean(window.open(href, '_blank', 'noopener,noreferrer'))
+        opened = window.open(href, '_blank')
+        if (opened) opened.opener = null
       } catch {
-        opened = false
+        opened = null
       }
-      if (opened) {
-        trackProContactAhora({ proId: picked.id, modality: 'remote' })
-        setWaHref(href)
-        setPhase('success')
-      } else {
+      trackProContactAhora({ proId: picked.id, modality: 'remote' })
+      setWaHref(href)
+      setPhase('success')
+      if (!opened) {
         // ponytail: popup blocked — navigate this tab to WhatsApp instead.
-        // Count as funnel success (the connection happened; same-tab nav is
-        // the primary path on mobile anyway). The success UI is unreachable
-        // here because we leave the page, but keep setPhase for the rare case
-        // the assign is delayed by a WhatsApp-app handoff on desktop.
-        trackProContactAhora({ proId: picked.id, modality: 'remote' })
-        setWaHref(href)
-        setPhase('success')
+        // The connection still happened, so count it as funnel success above.
         window.location.assign(href)
       }
     })().catch(() => {
@@ -184,16 +179,13 @@ function Ahora() {
 
     return () => {
       cancelledRef.current = true
-      // Reset so a StrictMode remount (or HMR) can start a fresh pick instead
-      // of skipping the effect and leaving phase='loading' forever.
-      startedRef.current = false
     }
-  }, [navigate])
+  }, [retryToken, navigate])
 
-  // ponytail: retry resets the guard + phase so the effect re-fires. Used by
-  // the error UI's "Reintentar" button.
+  // ponytail: retry resets the loading state and bumps retryToken so the main
+  // effect re-fires. Used by the error UI's "Reintentar" button.
   function retry() {
-    startedRef.current = false
+    setRetryToken((n) => n + 1)
     setPhase('loading')
     setMessageIdx(0)
   }

@@ -26,7 +26,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 
 import { getCloudflareEnv } from '#/db'
-import { getAuth, isAdminEmail } from '#/lib/auth'
+import { requireAdmin } from '#/lib/auth'
 import {
   TRACKED_EVENTS,
 } from '#/server/analytics'
@@ -39,7 +39,6 @@ import {
   
 } from '#/server/analytics-queries'
 import type {AnalyticsReadEnv, QueryContext} from '#/server/analytics-queries';
-import { getRequestHeaders } from '@tanstack/react-start/server'
 
 const eventEnum = z.enum(TRACKED_EVENTS)
 
@@ -130,10 +129,7 @@ export const runAnalyticsQuery = createServerFn({ method: 'GET' })
   .validator(queryInputSchema)
   .handler(async ({ data }) =>
     Sentry.startSpan({ name: 'analytics runAnalyticsQuery' }, async () => {
-      const session = await getAuth().api.getSession({ headers: getRequestHeaders() })
-      if (!session?.user || !(await isAdminEmail(session.user.email))) {
-        throw new Error('Acción solo para administradores.')
-      }
+      await requireAdmin()
 
       const def = findQuery(data.id)
       if (!def) {

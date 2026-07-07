@@ -85,6 +85,27 @@ export function sqlLiteral(s: string): string {
   return `'${s.replace(/'/g, "''")}'`
 }
 
+/**
+ * Recurring `timestamp > NOW() - INTERVAL '${days}' DAY` fragment. Centralizing
+ * it is what made the help-now-funnel precedence bug possible to miss — the
+ * clause was hand-rolled ~20× across the catalog and one of those hand-rolls
+ * mis-grouped AND/OR. Use this everywhere so the clause is maintained in one
+ * place. `days` is interpolated raw because QueryContext.days is clamped by
+ * clampDays() upstream (1–90, integer) — not user input.
+ */
+export function sinceDays(days: number): string {
+  return `timestamp > NOW() - INTERVAL '${days}' DAY`
+}
+
+/**
+ * Prior-period variant: `timestamp BETWEEN NOW()-2*days AND NOW()-days`. Used
+ * by the period-over-period KPI deltas. Same clamping contract as sinceDays.
+ */
+export function prevRangeDays(days: number): string {
+  return `timestamp BETWEEN NOW() - INTERVAL '${days * 2}' DAY
+                      AND NOW() - INTERVAL '${days}' DAY`
+}
+
 // -----------------------------------------------------------------------------
 // Pre-built query catalog
 // -----------------------------------------------------------------------------
@@ -105,7 +126,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
       WHERE blob2 = 'public'
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event, category
       ORDER BY total DESC
     `,
@@ -123,7 +144,7 @@ export const QUERIES: QueryDef[] = [
         SELECT blob1 AS event,
                SUM(_sample_interval * double1) AS total
         FROM ${DATASET}
-        WHERE timestamp > NOW() - INTERVAL '${days}' DAY
+        WHERE ${sinceDays(days)}
         GROUP BY blob1
       ),
       ordered AS (
@@ -174,7 +195,7 @@ export const QUERIES: QueryDef[] = [
         'pro_contact', 'pro_contact_random',
         'pro_contact_help_now', 'pro_contact_ahora'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -201,7 +222,7 @@ export const QUERIES: QueryDef[] = [
         (blob1 = 'cta_click' AND blob4 IN ('help_now', 'help_now_fallback'))
         OR blob1 = 'pro_contact_help_now'
       )
-      AND timestamp > NOW() - INTERVAL '${days}' DAY
+      AND ${sinceDays(days)}
       GROUP BY step, event
       HAVING step IS NOT NULL
       ORDER BY step
@@ -225,7 +246,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
       WHERE blob1 IN ('ahora_view', 'pro_contact_ahora')
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY step, event
       ORDER BY step
     `,
@@ -248,7 +269,7 @@ export const QUERIES: QueryDef[] = [
           'pro_registro_view', 'pro_registro_step_continue',
           'pro_terms_accept', 'pro_register_submit', 'auth_signup'
         )
-          AND timestamp > NOW() - INTERVAL '${days}' DAY
+          AND ${sinceDays(days)}
         GROUP BY blob1
       ),
       ordered AS (
@@ -278,7 +299,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
       WHERE blob1 IN ('pro_contact', 'pro_contact_random')
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -298,7 +319,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS clicks
       FROM ${DATASET}
       WHERE blob1 = 'pro_contact'
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY pro_id, user_id, source
       ORDER BY clicks DESC
       LIMIT 20
@@ -318,7 +339,7 @@ export const QUERIES: QueryDef[] = [
       FROM ${DATASET}
       WHERE blob1 = 'profile_view'
         AND blob4 != ''
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY pro_id
       ORDER BY views DESC
       LIMIT 15
@@ -337,7 +358,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS clicks
       FROM ${DATASET}
       WHERE blob1 = 'pro_contact'
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY source
       ORDER BY clicks DESC
     `,
@@ -359,7 +380,7 @@ export const QUERIES: QueryDef[] = [
         'audio_play_all', 'audio_play_pro',
         'audio_attribution_click', 'audio_close'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -382,7 +403,7 @@ export const QUERIES: QueryDef[] = [
         'autochequeo_gate_response', 'recursos_tool_view',
         'crisis_cta_click'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -402,7 +423,7 @@ export const QUERIES: QueryDef[] = [
       WHERE blob1 IN (
         'install_prompt_trigger', 'install_prompt_dismiss', 'app_installed'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -447,7 +468,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS count
       FROM ${DATASET}
       WHERE blob1 = ${sqlLiteral(event ?? 'pro_contact')}
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY day
       ORDER BY day ASC
     `,
@@ -468,7 +489,7 @@ export const QUERIES: QueryDef[] = [
                  THEN _sample_interval * double1 ELSE 0 END) AS b_count
       FROM ${DATASET}
       WHERE blob1 IN (${sqlLiteral(event ?? 'pro_contact')}, ${sqlLiteral(eventB ?? 'profile_view')})
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY day
       ORDER BY day ASC
     `,
@@ -486,7 +507,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS count
       FROM ${DATASET}
       WHERE blob1 = ${sqlLiteral(event ?? 'pro_contact')}
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY hour
       ORDER BY hour ASC
     `,
@@ -515,7 +536,7 @@ export const QUERIES: QueryDef[] = [
         'pro_audio_submit', 'pro_audio_delete',
         'panel_delete_account'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -539,7 +560,7 @@ export const QUERIES: QueryDef[] = [
         'directory_search', 'directory_clear', 'directory_page',
         'vanity_redirect'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -561,7 +582,7 @@ export const QUERIES: QueryDef[] = [
       WHERE blob1 IN (
         'profile_share', 'profile_social_click', 'pro_cta_click'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -584,7 +605,7 @@ export const QUERIES: QueryDef[] = [
         'auth_signin', 'auth_signout',
         'password_reset_request', 'password_reset_submit'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -607,7 +628,7 @@ export const QUERIES: QueryDef[] = [
         'admin_pro_review', 'admin_pro_toggle_service',
         'admin_audio_review', 'admin_user_promote'
       )
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY event
       ORDER BY total DESC
     `,
@@ -627,7 +648,7 @@ export const QUERIES: QueryDef[] = [
         blob2 AS category,
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
-      WHERE timestamp > NOW() - INTERVAL '${days}' DAY
+      WHERE ${sinceDays(days)}
       GROUP BY event, category
       ORDER BY total DESC
     `,
@@ -652,8 +673,7 @@ export const QUERIES: QueryDef[] = [
         blob2 AS category,
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
-      WHERE timestamp BETWEEN NOW() - INTERVAL '${days * 2}' DAY
-                          AND NOW() - INTERVAL '${days}' DAY
+      WHERE ${prevRangeDays(days)}
       GROUP BY event, category
       ORDER BY total DESC
     `,
@@ -670,7 +690,7 @@ export const QUERIES: QueryDef[] = [
         SUM(_sample_interval * double1) AS events
       FROM ${DATASET}
       WHERE blob3 != ''
-        AND timestamp > NOW() - INTERVAL '${days}' DAY
+        AND ${sinceDays(days)}
       GROUP BY route
       ORDER BY events DESC
       LIMIT 15
@@ -687,6 +707,13 @@ export function findQuery(id: string): QueryDef | undefined {
  * arbitrary SQL from the client.
  */
 export const QUERY_IDS: readonly string[] = QUERIES.map((q) => q.id)
+
+/**
+ * The union of valid query ids. Use this to type call sites so a typo in
+ * `useAnalyticsQuery('...', days)` fails at compile time instead of at the
+ * server's `findQuery` runtime check.
+ */
+export type QueryId = (typeof QUERIES)[number]['id']
 
 export type SqlResult = {
   data?: Array<Record<string, string | number | boolean | null>>
@@ -709,6 +736,11 @@ export async function runSql(
   // (NOT a JSON {"sql":"..."} object — that yields HTTP 422 "Expected an SQL
   // statement, found: {"). See the cURL example in the SQL API docs which uses
   // `--data "SELECT ..."`.
+  //
+  // Hard 10s timeout: this runs on the admin dashboard's request path. Without
+  // a bound, a stalled Analytics Engine call hangs the admin UI indefinitely
+  // (the platform's own execution limit is much higher than a human will wait
+  // for a dashboard tile). The error surfaces as a normal query error per-card.
   const res = await fetch(
     `https://api.cloudflare.com/client/v4/accounts/${env.accountId}/analytics_engine/sql`,
     {
@@ -718,6 +750,7 @@ export async function runSql(
         'content-type': 'text/plain',
       },
       body: sql,
+      signal: AbortSignal.timeout(10_000),
     },
   )
 

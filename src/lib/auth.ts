@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { eq } from 'drizzle-orm'
+import { getRequestHeaders } from '@tanstack/react-start/server'
 
 import { getDb } from '#/db'
 import * as schema from '#/db/schema'
@@ -92,4 +93,17 @@ export async function isAdminEmail(
     .where(eq(userTable.email, email))
     .limit(1)
   return rows[0]?.role === 'admin'
+}
+
+// ponytail: shared admin guard for server fns. Reads the session via
+// getRequestHeaders (per-request isolation — see AGENTS.md gotcha #9; never
+// stash the request on globalThis). The try/catch in getRequestHeaders
+// returns empty headers outside a request context (tests/scripts), so this
+// will correctly throw "no session" there. Ceiling: if a fn needs the
+// session.user.id beyond the gate, call getSession directly instead of this.
+export async function requireAdmin(): Promise<void> {
+  const session = await getAuth().api.getSession({ headers: getRequestHeaders() })
+  if (!session?.user || !(await isAdminEmail(session.user.email))) {
+    throw new Error('Acción solo para administradores.')
+  }
 }
