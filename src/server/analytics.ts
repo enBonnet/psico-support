@@ -196,15 +196,21 @@ async function enrichProContactEvent(data: TrackInput): Promise<TrackInput> {
  * Best-effort like analytics itself — callers must `.catch(() => {})` so a
  * failed bump never breaks the feature it's instrumenting (gotcha #10). Uses
  * `contact_count + 1` SQL so concurrent contacts don't clobber each other.
+ *
+ * Exported (not inlined in pickRandomProfessional) so the bump stays colocated
+ * with the other professionals-table writes in this module. Called from inside
+ * pickRandomProfessional after the pick — NOT from the auth-free track() server
+ * fn, because that would let an anonymous client drive D1 writes against any
+ * proId it supplies (Copilot PR #29: load-balancing poisoning vector). The
+ * picker is server-controlled, so the proId here is trusted.
  */
-async function bumpContactCount(proId: string): Promise<void> {
-  const id = Number(proId)
-  if (!Number.isFinite(id) || id <= 0) return
+export async function bumpContactCount(proId: number): Promise<void> {
+  if (!Number.isFinite(proId) || proId <= 0) return
   const db = getDb()
   await db
     .update(professionals)
     .set({ contactCount: sql`${professionals.contactCount} + 1` })
-    .where(eq(professionals.id, id))
+    .where(eq(professionals.id, proId))
 }
 
 /**
@@ -261,14 +267,12 @@ export const track = createServerFn({ method: 'POST' })
       if (!env?.ANALYTICS) return { ok: true }
       const enriched = await enrichProContactEvent(data)
       writeEvent(enriched)
-      // ponytail: bump the denormalized contact counter for load-balanced
-      // random picks. Best-effort like analytics itself — a missed bump only
-      // slightly skews the weights, never breaks a contact (gotcha #10).
-      // Same event-name gate as enrichProContactEvent so non-contact events
-      // skip it. param1 is the proId on all pro_contact* events.
-      if (isProContactEvent(enriched) && enriched.param1) {
-        await bumpContactCount(enriched.param1).catch(() => {})
-      }
+      // ponytail: track() stays strictly write-only to Analytics Engine — it
+      // must NEVER mutate D1. The auth-free contract (gotcha #10) means a
+      // client controls param1; if we wrote to D1 here, an attacker could
+      // poison any pro's contact_count and tank their pick weight. The contact
+      // counter is bumped from server-controlled pick paths only
+      // (see pickRandomProfessional in src/server/professionals.ts).
       return { ok: true }
     }),
   )

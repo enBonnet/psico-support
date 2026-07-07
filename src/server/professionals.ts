@@ -27,6 +27,7 @@ import {
   VENEZUELA,
   VENEZUELA_ESTADOS,
 } from './locations'
+import { bumpContactCount } from './analytics'
 
 // ponytail: target demographics a professional serves. Multi-select, stored
 // as a JSON text array. Spanish labels are the stored keys (single-language app).
@@ -873,6 +874,12 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
     )
     if (contactable.length === 0) return null
     const picked = weightedPick(contactable)
+    // ponytail: bump the picked pro's contact counter so future picks favor
+    // pros with fewer contacts. Server-controlled proId (not client input), so
+    // no poisoning surface — unlike track() which is auth-free and must never
+    // touch D1 (Copilot PR #29). Fire-and-forget: a missed bump only slightly
+    // skews future weights, never breaks this contact.
+    void bumpContactCount(picked.id).catch(() => {})
     return { id: picked.id, name: picked.name, whatsapp: picked.whatsapp }
   })
 
