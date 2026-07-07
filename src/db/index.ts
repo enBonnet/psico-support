@@ -7,6 +7,12 @@ type CloudflareEnv = {
   MEDIA: R2Bucket
   EMAIL: SendEmail
   ANALYTICS: AnalyticsEngineDataset
+  // ponytail: wrangler secrets (not bindings) for the Analytics Engine SQL
+  // REST API read path (src/server/analytics-read.ts). Optional — the admin
+  // analytics route shows a "no configurada" banner when absent. Set with
+  // `npx wrangler secret put CF_ACCOUNT_ID` / `CF_ANALYTICS_TOKEN`.
+  CF_ACCOUNT_ID?: string
+  CF_ANALYTICS_TOKEN?: string
 }
 
 let _env: CloudflareEnv | null = null
