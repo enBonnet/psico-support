@@ -21,6 +21,7 @@
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
+    "db:reset-passwords": "tsx scripts/reset-local-passwords.ts",
     "analytics": "tsx scripts/analytics.ts",
     "analytics:dashboard": "tsx scripts/analytics-dashboard.ts"
   },
