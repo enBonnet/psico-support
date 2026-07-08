@@ -144,7 +144,7 @@ function ProfessionalsList() {
   // screen while a new filter/page fetch is in flight, so the list never
   // blanks or suspends to a spinner during refinement — the core UX fix.
   // refetchInterval keeps availability badges fresh (20s poll), unchanged.
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: [
       'professionals',
       modality,
@@ -170,6 +170,13 @@ function ProfessionalsList() {
           pageSize: PAGE_SIZE_DEFAULT,
         },
       }),
+    // ponytail: refetchInterval only refetches after a successful fetch, so a
+    // transient D1 timeout (WEB-3) left the directory stuck on infinite
+    // skeletons with no auto-retry. retry: 3 closes that gap — TanStack Query
+    // retries the failed query a few times (with backoff) before declaring
+    // isError, turning most D1 DO resets into a delayed-but-successful load
+    // instead of a stuck page. The isError branch below handles the rest.
+    retry: 3,
     placeholderData: keepPreviousData,
     refetchInterval: 20_000,
     staleTime: 15_000,
@@ -522,7 +529,37 @@ function ProfessionalsList() {
 
       {/* ── Resultados ── */}
       <ul className="mt-4 grid grid-cols-1 gap-3 pb-8 md:grid-cols-2">
-        {isLoading || !data ? (
+        {isError && !data ? (
+          // ponytail: cold-load failure (e.g. transient D1 DO reset, WEB-3).
+          // keepPreviousData isn't available on the very first fetch, so without
+          // this branch the directory fell through to the skeleton branch below
+          // and stayed there forever — refetchInterval doesn't fire on failed
+          // queries, leaving a help-seeker staring at a stuck loading grid with
+          // no path forward. Offer an explicit retry (refetch()) plus a fallback
+          // to self-care tools so nobody leaves empty-handed during an outage.
+          <li className="glass-card-soft p-5 text-center md:col-span-2">
+            <p className="text-[var(--medi-text-secondary)]">
+              No pudimos cargar el directorio. Revisa tu conexión e inténtalo de
+              nuevo.
+            </p>
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="glass-primary inline-flex min-h-12 items-center justify-center rounded-[var(--glass-radius)] px-6 py-3 text-base font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+              >
+                Reintentar
+              </button>
+              <Link
+                to="/recursos"
+                className="inline-flex items-center gap-2 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2.5 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+              >
+                <Wind className="size-4" aria-hidden="true" />
+                Probar herramientas de autocuidado
+              </Link>
+            </div>
+          </li>
+        ) : isLoading || !data ? (
           // ponytail: only on the very first load (no placeholderData yet).
           // Any later filter/page change keeps the previous rows via
           // keepPreviousData, so skeletons never reappear during refinement.
