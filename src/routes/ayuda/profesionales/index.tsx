@@ -144,7 +144,7 @@ function ProfessionalsList() {
   // screen while a new filter/page fetch is in flight, so the list never
   // blanks or suspends to a spinner during refinement — the core UX fix.
   // refetchInterval keeps availability badges fresh (20s poll), unchanged.
-  const { data, isLoading, isError, refetch } = useQuery({
+  const { data, isLoading, isError, isFetching, refetch } = useQuery({
     queryKey: [
       'professionals',
       modality,
@@ -545,10 +545,14 @@ function ProfessionalsList() {
             <div className="mt-4 flex flex-col items-center gap-3">
               <button
                 type="button"
-                onClick={() => refetch()}
-                className="glass-primary inline-flex min-h-12 items-center justify-center rounded-[var(--glass-radius)] px-6 py-3 text-base font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+                disabled={isFetching}
+                onClick={() => {
+                  track({ event: 'directory_retry', category: 'public' })
+                  refetch()
+                }}
+                className="glass-primary inline-flex min-h-12 items-center justify-center rounded-[var(--glass-radius)] px-6 py-3 text-base font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Reintentar
+                {isFetching ? 'Reintentando…' : 'Reintentar'}
               </button>
               <Link
                 to="/recursos"
