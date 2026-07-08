@@ -33,8 +33,16 @@ const CACHE = `psico-support-${__SW_VERSION__}`
 // offline and as the navigation fallback. Use the canonical /_shell URL (the
 // .html form 307-redirects to this); avoids the SW caching a redirect.
 const SHELL = '/_shell'
+// ponytail: static Spanish fallback served when navigation OR a build-hashed
+// asset (/assets/*.{js,css}) fails to load after a deploy. The classic broken-
+// PWA symptom — dead chunk URL → blank/500 with no UI — is intercepted here
+// before it reaches React. The page auto-reloads to '/' (meta-refresh + JS),
+// by which point the new SW has finished activating + precaching the new
+// shell. See public/actualizando.html for the page itself.
+const FALLBACK = '/actualizando.html'
 const PRECACHE = [
   SHELL,
+  FALLBACK,
   '/manifest.webmanifest',
   '/logo192.png',
   '/logo512.png',
@@ -106,6 +114,11 @@ self.addEventListener('fetch', (event) => {
   // the app boot offline from a cold start. Online navigations to SSR routes
   // (the profile page) still go to the worker first and get cached by the
   // SWR branch below on success.
+  //
+  // If the network rejects AND there's no per-URL cache AND the shell isn't
+  // cached (e.g. brand-new install where install hasn't completed, or all
+  // caches were just evicted by activate), serve the static Spanish fallback
+  // page — never let the navigation fail to the browser's offline/blank page.
   if (req.mode === 'navigate') {
     event.respondWith(
       (async () => {
@@ -113,12 +126,14 @@ self.addEventListener('fetch', (event) => {
         // Prefer a cached response for THIS exact URL (e.g. a visited SSR
         // profile), else fall back to the shell so the app still mounts.
         const cached = (await cache.match(req)) || (await cache.match(SHELL))
+        const fallback =
+          cached || (await cache.match(FALLBACK)) || Response.error()
         const network = fetch(req)
           .then((res) => {
             if (res && res.status === 200) cache.put(req, res.clone())
             return res
           })
-          .catch(() => cached)
+          .catch(() => fallback)
         return cached || network
       })(),
     )
@@ -126,6 +141,18 @@ self.addEventListener('fetch', (event) => {
   }
 
   // ponytail: everything else (assets, GET server-fn RPC) — runtime SWR.
+  //
+  // NOTE: dead /assets/*.{js,css} chunks after a deploy (the OLD app shell
+  // still running in an open tab asking for a hashed URL that no longer
+  // exists on the origin) are intentionally NOT special-cased here. The
+  // runtime SWR branch below returns the 404 (or network error) unchanged;
+  // the dynamic-import promise then rejects with "Failed to fetch dynamically
+  // imported module" / "Unable to preload CSS for …", and the client-side
+  // recovery in src/lib/pwa-update.ts (CHUNK_ERR_PATTERNS + the Vite
+  // `vite:preloadError` event listener) catches it and reloads once onto
+  // the new build. Returning an HTML fallback for a script-style request
+  // would change the error to a MIME-mismatch message that doesn't match
+  // the recovery patterns — actively defeating the client handler.
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE)
