@@ -11,8 +11,8 @@ const FROM_NAME = 'PsicoAyudaVen'
 
 // Mirrors Medicall tokens in src/styles.css — inline only (no CSS vars in mail).
 const EMAIL = {
-  primary: '#13297e',
-  secondary: '#178cef',
+  primary: '#112a8d',
+  secondary: '#199bee',
   bg: '#eff7fe',
   text: '#252525',
   textMuted: '#606060',
@@ -88,7 +88,7 @@ function emailLayout({ title, body }: EmailLayoutInput): string {
             </td>
           </tr>
           <tr>
-            <td style="background:${EMAIL.white};border:1px solid rgba(19,41,126,0.12);border-radius:16px;padding:32px 28px;box-shadow:0 12px 32px rgba(19,41,126,0.12)">
+            <td style="background:${EMAIL.white};border:1px solid rgba(17,42,141,0.12);border-radius:16px;padding:32px 28px;box-shadow:0 12px 32px rgba(17,42,141,0.12)">
               <p style="margin:0 0 8px;font-size:13px;font-weight:700;color:${EMAIL.primary};letter-spacing:0.01em">${escapeAttr(SITE_NAME)}</p>
               <h1 style="margin:0 0 12px;font-size:22px;line-height:1.35;font-weight:700;color:${EMAIL.primary}">${escapeAttr(title)}</h1>
               <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 24px">
@@ -116,7 +116,7 @@ function emailPrimaryButton(href: string, label: string): string {
   const safeHref = escapeAttr(href)
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto">
     <tr>
-      <td align="center" style="border-radius:12px;background:linear-gradient(180deg,#1a3088 0%,${EMAIL.primary} 100%);border:1px solid rgba(19,41,126,0.35)">
+      <td align="center" style="border-radius:12px;background:linear-gradient(180deg,#1a3088 0%,${EMAIL.primary} 100%);border:1px solid rgba(17,42,141,0.35)">
         <a href="${safeHref}" style="display:inline-block;padding:14px 28px;font-size:16px;font-weight:600;line-height:1.2;color:${EMAIL.white};text-decoration:none;border-radius:12px">${escapeAttr(label)}</a>
       </td>
     </tr>
@@ -126,7 +126,7 @@ function emailPrimaryButton(href: string, label: string): string {
 function emailSoftNote(html: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0">
     <tr>
-      <td style="background:${EMAIL.cardSoft};border:1px solid rgba(19,41,126,0.12);border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.55;color:${EMAIL.textMuted}">
+      <td style="background:${EMAIL.cardSoft};border:1px solid rgba(17,42,141,0.12);border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.55;color:${EMAIL.textMuted}">
         ${html}
       </td>
     </tr>

@@ -7,10 +7,11 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Medicall palette — deep medical blue + bright blue accent */
-  --medi-primary: #13297e;
+  /* Medicall palette — deep medical blue + bright blue accent.
+     Tracks the logo (public/favicon.svg) exactly: navy #112a8d + cyan #199bee. */
+  --medi-primary: #112a8d;
   --medi-primary-hover: #1e3ebd;
-  --medi-secondary: #178cef;
+  --medi-secondary: #199bee;
   --medi-white: #ffffff;
   --medi-text-primary: #252525;
   --medi-text-secondary: #606060;
@@ -25,23 +26,23 @@
   /* Legacy aliases (kept so existing decorative CSS keeps working) */
   --sea-ink: #252525;
   --sea-ink-soft: #606060;
-  --lagoon: #178cef;
-  --lagoon-deep: #13297e;
-  --palm: #13297e;
+  --lagoon: #199bee;
+  --lagoon-deep: #112a8d;
+  --palm: #112a8d;
   --sand: #eff7fe;
   --foam: #eff7fe;
   --surface: rgba(255, 255, 255, 0.74);
   --surface-strong: rgba(255, 255, 255, 0.9);
-  --line: rgba(19, 41, 126, 0.14);
+  --line: rgba(17, 42, 141, 0.14);
   --inset-glint: rgba(255, 255, 255, 0.82);
-  --kicker: #13297e;
+  --kicker: #112a8d;
   --bg-base: #eff7fe;
   --header-bg: rgba(255, 255, 255, 0.84);
   --chip-bg: rgba(255, 255, 255, 0.8);
-  --chip-line: rgba(19, 41, 126, 0.18);
+  --chip-line: rgba(17, 42, 141, 0.18);
   --link-bg-hover: rgba(255, 255, 255, 0.9);
-  --hero-a: rgba(23, 140, 239, 0.18);
-  --hero-b: rgba(19, 41, 126, 0.1);
+  --hero-a: rgba(25, 155, 238, 0.18);
+  --hero-b: rgba(17, 42, 141, 0.1);
 
   /* Liquid glass — Apple iOS 26 / macOS Tahoe material language.
      Translucent layered surfaces with backdrop blur, saturation boost,
@@ -53,7 +54,7 @@
   --glass-edge: rgba(255, 255, 255, 0.6);
   --glass-edge-dim: rgba(255, 255, 255, 0.28);
   --glass-specular: rgba(255, 255, 255, 0.9);
-  --glass-stroke: rgba(19, 41, 126, 0.12);
+  --glass-stroke: rgba(17, 42, 141, 0.12);
   --glass-blur: 22px;
   --glass-saturate: 180%;
   --glass-brightness: 108%;
@@ -63,11 +64,11 @@
   --glass-shadow:
     0 1px 0 0 var(--glass-specular) inset,
     0 1px 1px 0 rgba(255, 255, 255, 0.55) inset,
-    0 18px 40px -12px rgba(19, 41, 126, 0.28),
-    0 6px 16px -8px rgba(19, 41, 126, 0.18);
+    0 18px 40px -12px rgba(17, 42, 141, 0.28),
+    0 6px 16px -8px rgba(17, 42, 141, 0.18);
   --glass-shadow-pressed:
     0 1px 0 0 var(--glass-edge-dim) inset,
-    0 8px 20px -10px rgba(19, 41, 126, 0.22);
+    0 8px 20px -10px rgba(17, 42, 141, 0.22);
 
   /* shadcn semantic tokens mapped to Medicall */
   --background: oklch(1 0 0);
@@ -241,7 +242,7 @@ body {
     radial-gradient(1050px 620px at 112% -12%, var(--hero-b), transparent 62%),
     radial-gradient(
       720px 380px at 50% 115%,
-      rgba(23, 140, 239, 0.08),
+      rgba(25, 155, 238, 0.08),
       transparent 68%
     ),
     linear-gradient(
@@ -269,10 +270,10 @@ body::before {
     ),
     radial-gradient(
       circle at 78% 26%,
-      rgba(23, 140, 239, 0.18),
+      rgba(25, 155, 238, 0.18),
       transparent 42%
     ),
-    radial-gradient(circle at 42% 82%, rgba(19, 41, 126, 0.1), transparent 36%);
+    radial-gradient(circle at 42% 82%, rgba(17, 42, 141, 0.1), transparent 36%);
 }
 
 body::after {
@@ -291,7 +292,7 @@ body::after {
 
 a {
   color: var(--medi-secondary);
-  text-decoration-color: rgba(23, 140, 239, 0.4);
+  text-decoration-color: rgba(25, 155, 238, 0.4);
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
 }
@@ -354,7 +355,7 @@ pre code {
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    #178cef 0,
+    #199bee 0,
     #349bef 26.56%,
     #76b9f0 55.21%,
     #8fc5f1 80.21%,
@@ -478,7 +479,7 @@ pre code {
   );
   box-shadow:
     0 1px 0 0 var(--glass-specular) inset,
-    0 6px 14px -8px rgba(19, 41, 126, 0.22);
+    0 6px 14px -8px rgba(17, 42, 141, 0.22);
   backdrop-filter: blur(12px) saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(12px) saturate(var(--glass-saturate));
   border-radius: var(--glass-radius-pill);
@@ -495,7 +496,7 @@ pre code {
   );
   box-shadow:
     0 1px 0 0 var(--glass-specular) inset,
-    0 12px 30px -16px rgba(19, 41, 126, 0.3);
+    0 12px 30px -16px rgba(17, 42, 141, 0.3);
   backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
     saturate(var(--glass-saturate));
   -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
@@ -545,8 +546,8 @@ pre code {
   );
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.35) inset,
-    0 14px 30px -10px rgba(19, 41, 126, 0.5),
-    0 4px 10px -6px rgba(19, 41, 126, 0.35);
+    0 14px 30px -10px rgba(17, 42, 141, 0.5),
+    0 4px 10px -6px rgba(17, 42, 141, 0.35);
   backdrop-filter: blur(6px) saturate(140%);
   -webkit-backdrop-filter: blur(6px) saturate(140%);
   color: #fff;
@@ -616,7 +617,7 @@ a {
   height: 2px;
   transform: scaleX(0);
   transform-origin: left;
-  background: linear-gradient(90deg, #178cef, #b0d6f5);
+  background: linear-gradient(90deg, #199bee, #b0d6f5);
   transition: transform 170ms ease;
 }
 
@@ -880,7 +881,7 @@ a {
     );
     box-shadow:
       0 1px 0 0 var(--glass-specular) inset,
-      0 12px 30px -16px rgba(19, 41, 126, 0.3);
+      0 12px 30px -16px rgba(17, 42, 141, 0.3);
     backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
       saturate(var(--glass-saturate));
     -webkit-backdrop-filter: blur(calc(var(--glass-blur) * 1.2))
