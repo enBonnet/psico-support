@@ -19,9 +19,9 @@ every component inherits the look without per-component styling.
 
 | Token                   | Value     | Role                                                   |
 | ----------------------- | --------- | ------------------------------------------------------ |
-| `--medi-primary`        | `#13297e` | Deep medical blue — buttons, headings, primary actions |
+| `--medi-primary`        | `#112a8d` | Deep medical blue — buttons, headings, primary actions |
 | `--medi-primary-hover`  | `#1e3ebd` | Primary hover state                                    |
-| `--medi-secondary`      | `#178cef` | Bright blue accent — links, icons, gradients           |
+| `--medi-secondary`      | `#199bee` | Bright blue accent — links, icons, gradients           |
 | `--medi-white`          | `#ffffff` | Surfaces, cards                                        |
 | `--medi-text-primary`   | `#252525` | Body text, headings                                    |
 | `--medi-text-secondary` | `#606060` | Muted text, descriptions                               |
@@ -56,7 +56,7 @@ Gradient stops (exact from the theme):
 ```css
 linear-gradient(
   90deg,
-  #178cef 0,
+  #199bee 0,
   #349bef 26.56%,
   #76b9f0 55.21%,
   #8fc5f1 80.21%,
@@ -66,7 +66,7 @@ linear-gradient(
 
 Dimensions: `100px × 6px`, rounded ends.
 
-Pair with `.section-kicker` (capitalized, 700, `#13297e`, `1.125rem`) for the
+Pair with `.section-kicker` (capitalized, 700, `#112a8d`, `1.125rem`) for the
 small label above a section heading.
 
 ## shadcn semantic mapping
@@ -76,9 +76,9 @@ components (`Button`, `Card`, `Input`, etc.) render in-theme automatically:
 
 | shadcn token              | Mapped to                                        |
 | ------------------------- | ------------------------------------------------ |
-| `--primary`               | deep blue (`oklch(0.32 0.17 264)` ≈ `#13297e`)   |
+| `--primary`               | deep blue (`oklch(0.32 0.17 264)` ≈ `#112a8d`)   |
 | `--primary-foreground`    | white                                            |
-| `--accent` / `--ring`     | bright blue (`oklch(0.62 0.19 244)` ≈ `#178cef`) |
+| `--accent` / `--ring`     | bright blue (`oklch(0.62 0.19 244)` ≈ `#199bee`) |
 | `--muted-foreground`      | grey (`#606060`)                                 |
 | `--border` / `--input`    | `#ececec`                                        |
 | `--background` / `--card` | white                                            |
@@ -123,7 +123,7 @@ prefer these over the legacy `--surface*` aliases.
 | `--glass-edge`           | `rgba(255,255,255,0.6)`  | Inner edge highlight                                      |
 | `--glass-edge-dim`       | `rgba(255,255,255,0.28)` | Bottom/right rim light                                    |
 | `--glass-specular`       | `rgba(255,255,255,0.9)`  | Top-left specular catch (pseudo-element highlight)        |
-| `--glass-stroke`         | `rgba(19,41,126,0.12)`   | 1px satin border (blue-tinted, not flat grey)             |
+| `--glass-stroke`         | `rgba(17,42,141,0.12)`   | 1px satin border (blue-tinted, not flat grey)             |
 | `--glass-blur`           | `22px`                   | `backdrop-filter` blur radius (bars use 1.2×, pills 12px) |
 | `--glass-saturate`       | `180%`                   | Saturation boost on the blurred backdrop                  |
 | `--glass-brightness`     | `108%`                   | Brightness lift on the blurred backdrop                   |

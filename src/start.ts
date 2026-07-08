@@ -2,8 +2,7 @@ import {
   sentryGlobalFunctionMiddleware,
   sentryGlobalRequestMiddleware,
 } from '@sentry/tanstackstart-react'
-import { createStart } from '@tanstack/react-start'
-import { createCsrfMiddleware } from '@tanstack/start-client-core'
+import { createCsrfMiddleware, createStart } from '@tanstack/react-start'
 
 // ponytail: CSRF protection for server fns. Server fns are same-origin RPC
 // endpoints (POST /_serverFn/...) and a cross-site attacker could otherwise
@@ -21,10 +20,10 @@ import { createCsrfMiddleware } from '@tanstack/start-client-core'
 // and requests with no origin info at all are rejected. All sensible for
 // a same-origin-only app like this one.
 //
-// Dev note: Better Auth's `trustedOrigins` (loopback wildcards in dev, the
-// prod domain in prod) covers /api/auth/* — this middleware covers
-// everything else that talks to server fns. Together they close the
-// cross-site request surface.
+// Dev note: Better Auth's `trustedOrigins` in src/lib/auth.ts lists only
+// loopback wildcards (dev); in prod it relies on the request's own origin
+// matching the deployment URL (Better Auth's default behavior). This
+// middleware is the explicit CSRF gate for server fns in both environments.
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === 'serverFn',
 })
