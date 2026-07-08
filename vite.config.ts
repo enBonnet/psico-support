@@ -109,7 +109,7 @@ export default defineConfig(({ mode }) => {
           short_name: 'Psicoayudaven',
           description:
             'Conecta a personas afectadas con psicólogos verificados en Venezuela.',
-          theme_color: '#13297e',
+          theme_color: '#112a8d',
           background_color: '#eff7fe',
           display: 'standalone',
           start_url: '/',

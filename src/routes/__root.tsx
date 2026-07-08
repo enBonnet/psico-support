@@ -45,7 +45,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       },
       {
         name: 'theme-color',
-        content: '#13297e',
+        content: '#112a8d',
       },
       {
         title: SITE_DEFAULT_TITLE,

@@ -11,8 +11,8 @@ const FROM_NAME = 'PsicoAyudaVen'
 
 // Mirrors Medicall tokens in src/styles.css — inline only (no CSS vars in mail).
 const EMAIL = {
-  primary: '#13297e',
-  secondary: '#178cef',
+  primary: '#112a8d',
+  secondary: '#199bee',
   bg: '#eff7fe',
   text: '#252525',
   textMuted: '#606060',

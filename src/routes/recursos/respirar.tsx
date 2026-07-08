@@ -106,14 +106,14 @@ function Respiration() {
           <div
             aria-hidden="true"
             className="absolute inset-0 rounded-full"
-            style={{ backgroundColor: 'rgba(23, 140, 239, 0.08)' }}
+            style={{ backgroundColor: 'rgba(25, 155, 238, 0.08)' }}
           />
           {/* breathing orb */}
           <div
             aria-hidden="true"
             className="absolute size-44 rounded-full"
             style={{
-              backgroundColor: 'rgba(23, 140, 239, 0.32)',
+              backgroundColor: 'rgba(25, 155, 238, 0.32)',
               transform: `scale(${running ? phase.scale : 0.72})`,
               transition: `transform ${phase.seconds}s ease-in-out`,
             }}

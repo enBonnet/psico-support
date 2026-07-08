@@ -108,7 +108,7 @@ function Enraizamiento() {
         <div
           className="mt-2 flex h-1.5 overflow-hidden rounded-full"
           aria-hidden="true"
-          style={{ backgroundColor: 'rgba(19, 41, 126, 0.1)' }}
+          style={{ backgroundColor: 'rgba(17, 42, 141, 0.1)' }}
         >
           <div
             className="h-full rounded-full transition-all"
