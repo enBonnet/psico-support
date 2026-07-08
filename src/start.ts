@@ -3,10 +3,35 @@ import {
   sentryGlobalRequestMiddleware,
 } from '@sentry/tanstackstart-react'
 import { createStart } from '@tanstack/react-start'
+import { createCsrfMiddleware } from '@tanstack/start-client-core'
+
+// ponytail: CSRF protection for server fns. Server fns are same-origin RPC
+// endpoints (POST /_serverFn/...) and a cross-site attacker could otherwise
+// fire them via a form auto-submit. The middleware validates the standard
+// Origin / Sec-Fetch-Site / Referer signals that browsers set on
+// same-origin fetches, returning 403 when they're missing or cross-site.
+//
+// `filter: handlerType === 'serverFn'` scopes the check to server-fn RPC
+// requests only — Better Auth's /api/auth/* routes have their own CSRF
+// handling (trustedOrigins in src/lib/auth.ts), and SSR route loaders run
+// as same-origin navigations so they don't need this gate.
+//
+// Defaults (from createCsrfMiddleware): Sec-Fetch-Site must be same-origin,
+// Referer is used as a fallback when Origin + Sec-Fetch-Site are absent,
+// and requests with no origin info at all are rejected. All sensible for
+// a same-origin-only app like this one.
+//
+// Dev note: Better Auth's `trustedOrigins` (loopback wildcards in dev, the
+// prod domain in prod) covers /api/auth/* — this middleware covers
+// everything else that talks to server fns. Together they close the
+// cross-site request surface.
+const csrfMiddleware = createCsrfMiddleware({
+  filter: (ctx) => ctx.handlerType === 'serverFn',
+})
 
 export const startInstance = createStart(() => {
   return {
-    requestMiddleware: [sentryGlobalRequestMiddleware],
+    requestMiddleware: [csrfMiddleware, sentryGlobalRequestMiddleware],
     functionMiddleware: [sentryGlobalFunctionMiddleware],
   }
 })
