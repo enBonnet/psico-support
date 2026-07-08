@@ -43,6 +43,10 @@ export const TRACKED_EVENTS = [
   'directory_search',
   'directory_clear',
   'directory_page',
+  // directory_retry: fired when a help-seeker taps "Reintentar" after a cold-load
+  // failure of listProfessionals (e.g. transient D1 DO reset, WEB-3). Gauges how
+  // often the recovery state is reached in prod and whether retries help.
+  'directory_retry',
   'profile_view',
   // pro_contact: param1=proId, param2=source (directory|profile), param3=userId (server-resolved)
   'pro_contact',

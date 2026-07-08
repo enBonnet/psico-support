@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.2] - 2026-07-08
+
+### Fixed
+- **Directorio se queda en esqueletos de carga infinitos tras un error D1 transitorio (WEB-3)**: cuando `listProfessionals` fallaba en una carga en frío (p. ej. un reset transitorio del Durable Object que respalda D1 — `D1 DB storage operation exceeded timeout which caused object to be reset`, incidente de Cloudflare en ENAM del 3–7 de julio), el `useQuery` del directorio nunca manejaba el estado de error (`isError` no estaba destructureado, `refetch` no se usaba). Como `refetchInterval` solo reintenta tras un fetch exitoso y `keepPreviousData` no existe en la primera carga, el directorio caía en una grilla de skeletons perpetua — sin reintentar, sin mensaje, sin salida. Impacto real: usuarios help-seeker en Chile (Chrome/Windows, Samsung Internet/Android) vieron la página clave del embudo (landing → modalidad → **directorio** → contacto) atascada en carga durante los resets de D1. Dos defensas en capas: (1) `retry: 3` en el `useQuery` para que TanStack Query reintente con backoff antes de declarar error — la mayoría de los resets de D1 (que Cloudflare documenta como "unos cuantos cada varias horas") se resuelven en una carga tardía pero exitosa en vez de una página atascada; (2) nueva rama `isError && !data` que renderiza un estado de error reintentable con un botón "Reintentar" (`refetch()`) y el mismo CTA a `/recursos` (autocuidado) que usan los estados vacío/sin-disponibilidad, así nadie se va con las manos vacías durante un outage. La capa server-side `withD1Retry` (4 intentos con backoff jittered) y el client-side `retry: 3` ahora se complementan. El caso de refinamiento posterior (`isError && data` vía `keepPreviousData`) queda sin cambios: la lista anterior sigue visible. No afecta el contador del landing (`countVerifiedProfessionals` ya es fail-soft a 0).
+
 ## [1.21.1] - 2026-07-07
 
 ### Fixed
