@@ -78,10 +78,18 @@ export const followUpUpdateSchema = z
 export type FollowUpInput = z.infer<typeof followUpCreateSchema>
 
 // ponytail: resolve the pro id from the session, not the client. Returns null
-// when the user has no pro row — used by read-only queries (badge counts, list)
-// so a bare-account user on /profesional/panel doesn't throw an uncaught error
-// (WEB-G: an expected UX state was surfacing as a production error). Mutations
-// use requireMyProId() below, which throws.
+// when the user has no session OR no pro row. Used by read-only queries (badge
+// counts, list) so a bare-account user on /profesional/panel doesn't throw an
+// uncaught error (WEB-G: an expected UX state was surfacing as a production
+// error).
+//
+// Returning null for no-session is safe here (not a privilege escalation): the
+// read-only callers (countMyOpenFollowUps, listMyFollowUps) are mounted behind
+// route beforeLoad guards that redirect unauthenticated users to /profesional/
+// login, so an unauthenticated call returning 0/[] is a defense-in-depth edge
+// case, not a live path — and it returns NOTHING (the caller's own data, or
+// empty), never another user's data. Mutations use requireMyProId(), which
+// throws on no-session.
 async function getMyProId(): Promise<number | null> {
   const session = await getAuth().api.getSession({ headers: getHeaders() })
   if (!session?.user) return null
@@ -94,25 +102,19 @@ async function getMyProId(): Promise<number | null> {
   return rows.at(0)?.id ?? null
 }
 
-// ponytail: strict variant for mutations (create/update/delete). A missing pro
-// row on a write is a real error (the UI gates it, but the server re-checks)
-// — the throw surfaces a friendly Spanish message.
+// ponytail: strict variant for mutations (create/update/delete). Delegates the
+// pro-row lookup to getMyProId() (single source of truth for the query) and
+// surfaces friendly Spanish errors for the two auth/posture failures. On the
+// happy path this is one session fetch + one DB lookup (same as getMyProId);
+// the session is re-fetched only in the null path to disambiguate the error.
 async function requireMyProId(): Promise<number> {
+  const proId = await getMyProId()
+  if (proId !== null) return proId
   const session = await getAuth().api.getSession({ headers: getHeaders() })
   if (!session?.user) {
     throw new Error('Debes iniciar sesión.')
   }
-  const db = getDb()
-  const rows = await db
-    .select({ id: professionals.id })
-    .from(professionals)
-    .where(eq(professionals.userId, session.user.id))
-    .limit(1)
-  const pro = rows.at(0)
-  if (!pro) {
-    throw new Error('Completa tu perfil profesional primero.')
-  }
-  return pro.id
+  throw new Error('Completa tu perfil profesional primero.')
 }
 
 // ponytail: 'YYYY-MM-DD' -> UTC-midnight Date, or null. Stored on the
