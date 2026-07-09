@@ -78,7 +78,25 @@ export const followUpUpdateSchema = z
 export type FollowUpInput = z.infer<typeof followUpCreateSchema>
 
 // ponytail: resolve the pro id from the session, not the client. Returns null
-// when the user has no pro row (the UI gates this, but the server re-checks).
+// when the user has no pro row — used by read-only queries (badge counts, list)
+// so a bare-account user on /profesional/panel doesn't throw an uncaught error
+// (WEB-G: an expected UX state was surfacing as a production error). Mutations
+// use requireMyProId() below, which throws.
+async function getMyProId(): Promise<number | null> {
+  const session = await getAuth().api.getSession({ headers: getHeaders() })
+  if (!session?.user) return null
+  const db = getDb()
+  const rows = await db
+    .select({ id: professionals.id })
+    .from(professionals)
+    .where(eq(professionals.userId, session.user.id))
+    .limit(1)
+  return rows.at(0)?.id ?? null
+}
+
+// ponytail: strict variant for mutations (create/update/delete). A missing pro
+// row on a write is a real error (the UI gates it, but the server re-checks)
+// — the throw surfaces a friendly Spanish message.
 async function requireMyProId(): Promise<number> {
   const session = await getAuth().api.getSession({ headers: getHeaders() })
   if (!session?.user) {
@@ -192,7 +210,10 @@ export const followUpListSchema = z.object({
 export const listMyFollowUps = createServerFn({ method: 'GET' })
   .validator(followUpListSchema)
   .handler(async ({ data }) => {
-    const proId = await requireMyProId()
+    const proId = await getMyProId()
+    // ponytail: bare-account user on the panel (no pro row yet) → empty list,
+    // not an error. Same posture as countMyOpenFollowUps (WEB-G).
+    if (proId === null) return { rows: [], total: 0 }
     const db = getDb()
     const where = and(
       eq(followUps.professionalId, proId),
@@ -301,10 +322,13 @@ export const deleteMyFollowUp = createServerFn({ method: 'POST' })
   })
 
 // ponytail: single-number count of this pro's open (status='open') follow-ups,
-// for a panel badge. Cheap (1 row) + auth-gated.
+// for a panel badge. Cheap (1 row) + auth-gated. Returns 0 for a bare-account
+// user (no pro row) instead of throwing — the panel renders the badge as 0
+// (WEB-G: an expected UX state was surfacing as a production error).
 export const countMyOpenFollowUps = createServerFn({ method: 'GET' }).handler(
   async () => {
-    const proId = await requireMyProId()
+    const proId = await getMyProId()
+    if (proId === null) return 0
     const db = getDb()
     const rows = await db
       .select({ n: sql<number>`count(*)` })

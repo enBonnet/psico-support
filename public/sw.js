@@ -115,11 +115,19 @@ self.addEventListener('fetch', (event) => {
   // (the profile page) still go to the worker first and get cached by the
   // SWR branch below on success.
   //
+  // /media/* URLs are EXCLUDED from navigation fallback: they're binary R2
+  // reads (avatars, audio, certificates, support docs) served by server-only
+  // route handlers with NO client route component. If the SW fell back to the
+  // shell for one of these, the router would hydrate against a path with no
+  // matching route → TanStack's hydrate() invariant throws (WEB-C). Let these
+  // go straight to the network always; the runtime-SWR branch below still
+  // caches successful 200s for offline replay.
+  //
   // If the network rejects AND there's no per-URL cache AND the shell isn't
   // cached (e.g. brand-new install where install hasn't completed, or all
   // caches were just evicted by activate), serve the static Spanish fallback
   // page — never let the navigation fail to the browser's offline/blank page.
-  if (req.mode === 'navigate') {
+  if (req.mode === 'navigate' && !new URL(req.url).pathname.startsWith('/media/')) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE)

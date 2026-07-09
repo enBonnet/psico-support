@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.21.4] - 2026-07-09
+
+### Fixed
+- **Error de Sentry WEB-G — usuario sin perfil profesional disparaba un error no capturado en `/profesional/panel`**: `requireMyProId()` (en `src/server/follow-ups.ts`) lanzaba `"Completa tu perfil profesional primero."` como un error no capturado cuando un usuario autenticado sin fila de profesional (p. ej. cuenta básica creada en `/signup` que nunca completó el registro pro) cargaba el panel — el conteo de seguimientos abiertos (`countMyOpenFollowUps`) y la lista (`listMyFollowUps`) lo llamaban. Un estado esperado de UX se reportaba como error de producción (`handled: no`, 10 eventos / 1 usuario). Fix: nueva variante `getMyProId()` que retorna `null` en vez de lanzar, usada por las consultas de solo-lectura (que devuelven 0 / lista vacía cuando no hay fila pro). La variante estricta `requireMyProId()` se mantiene para mutaciones (crear/editar/eliminar seguimiento) donde la ausencia de fila pro sí es un error real.
+- **Error de Sentry WEB-C — el service worker rompía la hidratación del router en URLs `/media/*`**: cuando el SW interceptaba una navegación a `/media/document/*` (p. ej. un admin revisando credenciales) y la red fallaba o era lenta, servía el shell de la app — pero el router no tiene ruta cliente para `/media/*` (son handlers de servidor que devuelven binario de R2), así que `hydrate()` de TanStack lanzaba `"Invariant failed"` (`matchesId` vacío, 10 eventos / 4 usuarios). Fix: el SW ahora excluye `/media/*` del fallback de navegación — estas URLs van directo a la red siempre; el SWR runtime sigue cacheando los 200 binarios para replay offline.
+
 ## [1.21.2] - 2026-07-08
 
 ### Fixed
