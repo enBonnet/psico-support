@@ -28,6 +28,7 @@ import {
 } from '#/server/professionals'
 import { countMyOpenFollowUps } from '#/server/follow-ups'
 import { listMyStories, STORY_MAX_PER_PRO } from '#/server/audio-stories'
+import { noindexHead } from '#/lib/seo'
 
 // ponytail: direct support line to the admin. Constant, not env — mirrors the
 // SITE_URL convention in src/lib/seo.ts. wa.me wants digits only (no +).
@@ -47,6 +48,7 @@ export const Route = createFileRoute('/profesional/panel')({
   // (perfil/presentacion/disponibilidad/audios) so this page is just a menu of
   // descriptive links — friendlier for low-tech users.
   ssr: false,
+  head: noindexHead,
   component: PanelPage,
 })
 

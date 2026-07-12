@@ -8,6 +8,7 @@ import {
   isContactableNow,
   nextStartLabel,
   formatScheduleHuman,
+  publicAvatarUrl,
 } from '#/server/professionals'
 import { notify } from '#/lib/notifications'
 import { track, trackProContact } from '#/lib/analytics-client'
@@ -69,11 +70,19 @@ export const Route = createFileRoute('/ayuda/profesionales/$id')({
       ' ',
     )
     const path = `/ayuda/profesionales/${pro.id}`
+    // ponytail: when the pro has an avatar, use it as og/twitter:image instead
+    // of the default site logo — the face is the CTR lever on WhatsApp/Twitter
+    // shares. publicAvatarUrl returns a root-relative path (/media/avatar/...);
+    // OG needs absolute, so prepend SITE_URL.
+    const ogImage = pro.avatarKey
+      ? `${SITE_URL}${publicAvatarUrl(pro.avatarKey)}`
+      : undefined
     return seoHead({
       title: `${pro.name} — Psicólogo${locationText ? ` en ${locationText}` : ''}`,
       description,
       path,
       type: 'profile',
+      ...(ogImage ? { image: ogImage } : {}),
     })
   },
   component: ProfilePage,

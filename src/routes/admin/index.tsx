@@ -29,6 +29,7 @@ import {
   reviewStory,
 } from '#/server/audio-stories'
 import type { PendingStoryRow } from '#/server/audio-stories'
+import { noindexHead } from '#/lib/seo'
 
 // ponytail: derived list types so optimistic setQueriesData stays typed without
 // exporting DTOs from the server module.
@@ -77,6 +78,7 @@ export const Route = createFileRoute('/admin/')({
   },
   // ponytail: CSR-only — auth+admin-gated dashboard, no crawler value.
   ssr: false,
+  head: noindexHead,
   component: AdminPage,
 })
 

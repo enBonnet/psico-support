@@ -27,6 +27,7 @@ import {
   inputCls,
 } from '#/components/professional-form'
 import type { SupportDocValue } from '#/components/professional-form'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/completar')({
   beforeLoad: async () => {
@@ -45,6 +46,7 @@ export const Route = createFileRoute('/profesional/completar')({
   // client-side here (one getCurrentUser() round-trip); the pending skeleton
   // covers the gap instead of an SSR'd first paint.
   ssr: false,
+  head: noindexHead,
   component: CompletarPage,
 })
 

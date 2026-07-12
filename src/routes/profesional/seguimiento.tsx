@@ -25,6 +25,7 @@ import { PhoneInput } from '#/components/phone-input'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/lib/notifications'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/seguimiento')({
   beforeLoad: async () => {
@@ -35,6 +36,7 @@ export const Route = createFileRoute('/profesional/seguimiento')({
   },
   // ponytail: CSR-only — auth-gated, private to the pro, no crawler value.
   ssr: false,
+  head: noindexHead,
   component: SeguimientoPage,
 })
 

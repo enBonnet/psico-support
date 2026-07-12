@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { track } from '#/lib/analytics-client'
 import { getCurrentUser } from '#/server/professionals'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/signup')({
   beforeLoad: async () => {
@@ -22,6 +23,7 @@ export const Route = createFileRoute('/signup')({
   // (ssr:false) instead of global spa.enabled so the profile route keeps its
   // SSR link previews. Server fns + auth still work via the worker RPC.
   ssr: false,
+  head: noindexHead,
   component: SignupPage,
 })
 

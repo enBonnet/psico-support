@@ -16,6 +16,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
 import { Route as EquipoRouteImport } from './routes/equipo'
+import { Route as DemoRouteImport } from './routes/demo'
 import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
 import { Route as AyudameRouteImport } from './routes/ayudame'
@@ -83,6 +84,11 @@ const PsicologosRoute = PsicologosRouteImport.update({
 const EquipoRoute = EquipoRouteImport.update({
   id: '/equipo',
   path: '/equipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CuentaRoute = CuentaRouteImport.update({
@@ -262,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
+  '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
@@ -304,6 +311,7 @@ export interface FileRoutesByTo {
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
+  '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
@@ -347,6 +355,7 @@ export interface FileRoutesById {
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRoute
+  '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
@@ -391,6 +400,7 @@ export interface FileRouteTypes {
     | '/ayudame'
     | '/como-funciona'
     | '/cuenta'
+    | '/demo'
     | '/equipo'
     | '/psicologos'
     | '/recuperar'
@@ -433,6 +443,7 @@ export interface FileRouteTypes {
     | '/ayudame'
     | '/como-funciona'
     | '/cuenta'
+    | '/demo'
     | '/equipo'
     | '/psicologos'
     | '/recuperar'
@@ -475,6 +486,7 @@ export interface FileRouteTypes {
     | '/ayudame'
     | '/como-funciona'
     | '/cuenta'
+    | '/demo'
     | '/equipo'
     | '/psicologos'
     | '/recuperar'
@@ -518,6 +530,7 @@ export interface RootRouteChildren {
   AyudameRoute: typeof AyudameRoute
   ComoFuncionaRoute: typeof ComoFuncionaRoute
   CuentaRoute: typeof CuentaRoute
+  DemoRoute: typeof DemoRoute
   EquipoRoute: typeof EquipoRoute
   PsicologosRoute: typeof PsicologosRoute
   RecuperarRoute: typeof RecuperarRoute
@@ -602,6 +615,13 @@ declare module '@tanstack/react-router' {
       path: '/equipo'
       fullPath: '/equipo'
       preLoaderRoute: typeof EquipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cuenta': {
@@ -846,6 +866,7 @@ const rootRouteChildren: RootRouteChildren = {
   AyudameRoute: AyudameRoute,
   ComoFuncionaRoute: ComoFuncionaRoute,
   CuentaRoute: CuentaRoute,
+  DemoRoute: DemoRoute,
   EquipoRoute: EquipoRoute,
   PsicologosRoute: PsicologosRoute,
   RecuperarRoute: RecuperarRoute,

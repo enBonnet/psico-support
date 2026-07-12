@@ -23,6 +23,7 @@ import { notify } from '#/lib/notifications'
 import { TRACKED_EVENTS  } from '#/server/analytics'
 import type {TrackedEvent} from '#/server/analytics';
 import type { QueryId } from '#/server/analytics-queries';
+import { noindexHead } from '#/lib/seo'
 
 // =============================================================================
 // /admin/analitica — in-app analytics dashboard
@@ -52,6 +53,7 @@ export const Route = createFileRoute('/admin/analitica')({
     if (!admin) throw redirect({ to: '/profesional/panel' })
   },
   ssr: false,
+  head: noindexHead,
   component: AnalyticsPage,
 })
 

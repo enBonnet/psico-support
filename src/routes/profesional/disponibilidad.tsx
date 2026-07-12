@@ -18,6 +18,7 @@ import type {
   AvailabilityMode,
 } from '#/server/professionals'
 import { FieldShell, inputCls } from '#/components/professional-form'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/disponibilidad')({
   beforeLoad: async () => {
@@ -29,6 +30,7 @@ export const Route = createFileRoute('/profesional/disponibilidad')({
   // ponytail: CSR-only — auth-gated, no crawler value. Split out of the panel
   // so the hub stays a simple menu.
   ssr: false,
+  head: noindexHead,
   component: DisponibilidadPage,
 })
 

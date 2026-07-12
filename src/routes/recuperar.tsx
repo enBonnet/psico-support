@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { authClient } from '#/lib/auth-client'
 import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/recuperar')({
   // ponytail: CSR-only — interactive recovery form, no crawler value. Server
@@ -20,6 +21,7 @@ export const Route = createFileRoute('/recuperar')({
     error: z.string().optional(),
   }),
   ssr: false,
+  head: noindexHead,
   component: RecuperarPage,
 })
 

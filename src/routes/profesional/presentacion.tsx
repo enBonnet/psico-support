@@ -19,6 +19,7 @@ import {
   AVATAR_ACCEPT,
 } from '#/server/professionals'
 import type { AvatarMime } from '#/server/professionals'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/presentacion')({
   beforeLoad: async () => {
@@ -30,6 +31,7 @@ export const Route = createFileRoute('/profesional/presentacion')({
   // ponytail: CSR-only — auth-gated, no crawler value. Split out of the panel
   // so the hub stays a simple menu.
   ssr: false,
+  head: noindexHead,
   component: PresentacionPage,
 })
 
