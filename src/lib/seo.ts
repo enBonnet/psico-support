@@ -158,5 +158,14 @@ export function websiteJsonLd() {
     url: SITE_URL,
     inLanguage: 'es-VE',
     publisher: { '@type': 'Organization', name: SITE_BRAND },
+    // ponytail: SearchAction targets the directory's `?q=` param (validated
+    // in src/routes/ayuda/profesionales/index.tsx searchSchema). The directory
+    // isn't a full-text search, but Google's docs allow this as a "find a
+    // psychologist" entry point — it unlocks the sitelinks search box.
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE_URL}/ayuda/profesionales?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
   }
 }

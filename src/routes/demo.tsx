@@ -16,7 +16,7 @@ import {
   Download,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { seoHead } from '#/lib/seo'
+import { seoHead, SITE_URL } from '#/lib/seo'
 import { APP_VERSION } from '#/lib/version'
 
 // ponytail: /demo is a public, shareable, SEO-valuable static walkthrough —
@@ -270,7 +270,7 @@ function PrintManual() {
         <p>
           Versión de la aplicación: {APP_VERSION}
           <br />
-          Sitio: https://psicoayudaven.com
+          Sitio: {SITE_URL}
           <br />
           Soporte: soporte@psicoayudaven.com
         </p>

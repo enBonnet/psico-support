@@ -11,8 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Ruta `/demo` (tour guiado + manual descargable)**: nueva página pública SSR que recorre la plataforma en tres secciones (help-seeker, profesional, administrador) con tarjetas `glass-card` y pasos numerados, enlazando a las rutas reales para entrar en acción. Un botón "Descargar PDF" llama a `window.print()`; una hoja `@media print` en `src/styles.css` oculta el chrome de la app (`.bottom-tabs`, `.top-nav`) y la propia tour-on-screen (`.demo-screen`) y revela solo el bloque `.demo-print` —una condensación del `docs/manual-usuario.md` con FAQ, límites de archivos/audios y datos de contacto— para que el "Guardar como PDF" del navegador produzca un manual independiente sin dependencias ni ruta extra. Enlace discreto desde el footer del landing ("¿Quieres ver cómo funciona? Tour guiado y manual"), manteniendo el CTA "Necesito ayuda ahora" como prioridad visual. SEO vía `seoHead()` (título, descripción, canonical, OG) — misma forma que `/como-funciona`. Sin nuevas dependencias, sin migraciones, sin eventos de analítica (página de información pública; `demo_view` queda para más adelante si se quiere medir el funnel de adopción del tour).
-
-### Added
 - **`docs/manual-usuario.md`**: manual de usuario no técnico en español (878 líneas), PDF-ready (marcadores de salto de página entre Partes), cubriendo los tres perfiles —buscador de ayuda, profesional y administrador— con la copia verbatim de la UI extraída directamente de los archivos de rutas (botones, headings, estados, mensajes de error). Anexos de límites/tamaños máximos, glosario y contacto.
 
 ## [1.21.4] - 2026-07-09

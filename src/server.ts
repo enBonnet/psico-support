@@ -73,6 +73,7 @@ const SITEMAP_STATIC_PATHS = [
   '/recursos/enraizamiento',
   '/recursos/autochequeo',
   '/recursos/primeros-auxilios',
+  '/demo',
   '/recursos/reacciones-normales',
   '/apoyo',
   '/acerca-de',

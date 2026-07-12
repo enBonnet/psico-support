@@ -61,9 +61,10 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       // app CSS — a CSS @import would chain them serially, blocking first paint
       // by ~300-700ms on mobile. Preconnect warms DNS+TLS to fonts.gstatic.com
       // before the stylesheet is discovered. Weights 400 (body), 500 (font-
-      // medium), 600 (font-semibold), 700 (font-bold) — all upright, no italic
-      // (grep src/ confirms no font-style:italic or <em> usage). Drops the
-      // woff2 download from 8 files (~80KB) to 4 (~40KB).
+      // medium), 600 (font-semibold), 700 (font-bold) — upright only. Italic
+      // appears solely in the print-only manual block (`.demo-print blockquote`)
+      // and is browser-synthesized; not worth +4 woff2 (~40KB) for the on-screen
+      // app. Drops the woff2 download from 8 files (~80KB) to 4 (~40KB).
       {
         rel: 'preconnect',
         href: 'https://fonts.gstatic.com',
