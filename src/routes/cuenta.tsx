@@ -12,12 +12,14 @@ import {
   amIAdmin,
   getCurrentUser,
 } from '#/server/professionals'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/cuenta')({
   // ponytail: CSR-only — auth-aware hub, no crawler value. Data loads via
   // React Query → server fns on the client; first paint shows the loading
   // skeleton until getCurrentUser() resolves.
   ssr: false,
+  head: noindexHead,
   component: CuentaPage,
 })
 

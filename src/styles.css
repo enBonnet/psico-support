@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap');
+/* ponytail: Open Sans is loaded via <link rel="stylesheet"> in __root.tsx head()
+   with a preconnect to fonts.gstatic.com — that lets the font CSS and the woff2
+   files start loading in parallel with the page's own CSS, instead of the
+   serial cascade a CSS @import forces (parent CSS → fonts CSS → woff2).
+   Weights: 400/500/600/700 upright only. Italic appears in the print-only
+   manual block (`.demo-print blockquote`) and is synthesized by the browser
+   (font-style: italic on an upright face) — acceptable for a PDF artifact,
+   not worth +4 woff2 downloads (~40KB) for the on-screen app. */
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
@@ -935,4 +942,110 @@ a {
 .fab-random:focus-visible {
   outline: 2px solid var(--medi-secondary);
   outline-offset: 2px;
+}
+
+/* ── /demo: on-screen tour vs print-only manual ─────────────────────────
+   Two render targets share the /demo route:
+   - .demo-screen is the on-screen visual tour (visible by default).
+   - .demo-print is the long-form manual, hidden on screen, shown only when
+     printing so window.print() yields a standalone PDF.
+   - .demo-no-print is the page header (back link + Descargar PDF button),
+     also hidden on print so the PDF has no chrome.
+
+   ponytail: these are unlayered rules in @media print. They target a custom
+   class + the app chrome classes (.bottom-tabs, .top-nav) — NOT properties
+   the components toggle with utilities, so there's no tw-v4 layering clash
+   (gotcha #2). display: none here is fine because the same elements don't
+   rely on Tailwind display utilities for visibility on screen. */
+.demo-print {
+  display: none;
+}
+
+@media print {
+  /* Strip app chrome and the on-screen tour so the PDF is clean. */
+  .bottom-tabs,
+  .top-nav,
+  .demo-screen,
+  .demo-no-print {
+    display: none !important;
+  }
+
+  /* Reveal the print-only manual. */
+  .demo-print {
+    display: block !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  /* Paginate: each Parte starts on a fresh page; avoid breaking inside
+     tables and blockquotes. Typography tuned for paper readability. */
+  .demo-print {
+    color: #000;
+    font-family: 'Open Sans', system-ui, sans-serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    padding: 0;
+  }
+
+  .demo-print h1 {
+    font-size: 22pt;
+    margin: 0 0 0.25rem;
+  }
+
+  .demo-print h2 {
+    break-before: page;
+    font-size: 16pt;
+    margin-top: 1.5rem;
+    border-bottom: 1pt solid #ccc;
+    padding-bottom: 2pt;
+  }
+
+  .demo-print h2:first-of-type {
+    break-before: auto;
+  }
+
+  .demo-print h3 {
+    font-size: 13pt;
+    margin-top: 1rem;
+  }
+
+  .demo-print ul,
+  .demo-print p,
+  .demo-print blockquote {
+    break-inside: avoid;
+  }
+
+  .demo-print table {
+    break-inside: avoid;
+    border-collapse: collapse;
+    width: 100%;
+    margin: 0.5rem 0;
+  }
+
+  .demo-print th,
+  .demo-print td {
+    border: 1pt solid #999;
+    padding: 4pt 6pt;
+    text-align: left;
+    font-size: 10pt;
+  }
+
+  .demo-print blockquote {
+    border-left: 3pt solid var(--medi-secondary, #199bee);
+    margin: 0.5rem 0;
+    padding: 0.25rem 0.75rem;
+    color: #333;
+    font-style: italic;
+  }
+
+  .demo-print header {
+    margin-bottom: 1rem;
+  }
+
+  .demo-print a {
+    color: inherit;
+    text-decoration: none;
+  }
 }

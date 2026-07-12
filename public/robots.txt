@@ -1,3 +1,19 @@
 # https://www.robotstxt.org/robotstxt.html
+# ponytail: private + binary paths excluded from crawl-budget spend. /api/ is
+# server-fn RPC (JSON POSTs, no indexable content); /media/ is R2 binary
+# (avatars/audio/certs/docs); /admin and /profesional/* are auth-gated CSR with
+# noindex meta but also disallowed here as belt-and-suspenders.
 User-agent: *
-Disallow:
+Disallow: /api/
+Disallow: /media/
+Disallow: /admin
+Disallow: /admin/
+Disallow: /profesional/
+Disallow: /cuenta
+Disallow: /signup
+Disallow: /recuperar
+
+# ponytail: sitemap is generated dynamically at /sitemap.xml (lists /, content
+# pages, and every verified professional profile). Keeps Google coverage
+# current without a build-time precache.
+Sitemap: https://psicoayudaven.com/sitemap.xml

@@ -35,6 +35,7 @@ import type { SupportDocValue } from '#/components/professional-form'
 import { authClient } from '#/lib/auth-client'
 import { notify } from '#/lib/notifications'
 import { track } from '#/lib/analytics-client'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/registro')({
   beforeLoad: async () => {
@@ -47,6 +48,7 @@ export const Route = createFileRoute('/profesional/registro')({
   // ponytail: CSR-only — multi-step professional registration form, no
   // crawler value. Server fns + auth still work via the worker RPC.
   ssr: false,
+  head: noindexHead,
   component: RegisterPage,
 })
 

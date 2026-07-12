@@ -56,6 +56,24 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
         rel: 'stylesheet',
         href: appCss,
       },
+      // ponytail: Open Sans preconnect + stylesheet. Loaded as <link> in head
+      // (not a CSS @import) so the font CSS + woff2 fetch in parallel with the
+      // app CSS — a CSS @import would chain them serially, blocking first paint
+      // by ~300-700ms on mobile. Preconnect warms DNS+TLS to fonts.gstatic.com
+      // before the stylesheet is discovered. Weights 400 (body), 500 (font-
+      // medium), 600 (font-semibold), 700 (font-bold) — upright only. Italic
+      // appears solely in the print-only manual block (`.demo-print blockquote`)
+      // and is browser-synthesized; not worth +4 woff2 (~40KB) for the on-screen
+      // app. Drops the woff2 download from 8 files (~80KB) to 4 (~40KB).
+      {
+        rel: 'preconnect',
+        href: 'https://fonts.gstatic.com',
+        crossOrigin: 'anonymous',
+      },
+      {
+        rel: 'stylesheet',
+        href: 'https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&display=swap',
+      },
       {
         rel: 'apple-touch-icon',
         href: '/apple-touch-icon.png',
@@ -102,18 +120,25 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         {children}
         <BottomTabs pathname={pathname} />
         <NotificationStack />
-        <TanStackDevtools
-          config={{
-            position: 'bottom-right',
-          }}
-          plugins={[
-            {
-              name: 'Tanstack Router',
-              render: <TanStackRouterDevtoolsPanel />,
-            },
-            TanStackQueryDevtools,
-          ]}
-        />
+        {/* ponytail: dev-only. TanStack's plugin host registers global hooks
+            and ships ~10-15KB in the entry chunk even when the panel is hidden,
+            so gating on DEV keeps the prod bundle lean. The conditional import
+            at the top of the file is static (not dynamic) so this stays simple;
+            tree-shaking drops the unused modules in prod builds. */}
+        {import.meta.env.DEV && (
+          <TanStackDevtools
+            config={{
+              position: 'bottom-right',
+            }}
+            plugins={[
+              {
+                name: 'Tanstack Router',
+                render: <TanStackRouterDevtoolsPanel />,
+              },
+              TanStackQueryDevtools,
+            ]}
+          />
+        )}
         <Scripts />
       </body>
     </html>

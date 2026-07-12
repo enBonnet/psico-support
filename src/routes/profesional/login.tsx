@@ -3,11 +3,13 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { authClient } from '#/lib/auth-client'
 import { track } from '#/lib/analytics-client'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/login')({
   // ponytail: CSR-only — interactive auth form, no crawler value. Server
   // fns + Better Auth still work via the worker RPC.
   ssr: false,
+  head: noindexHead,
   component: LoginPage,
 })
 

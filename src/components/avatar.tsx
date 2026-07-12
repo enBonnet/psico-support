@@ -19,7 +19,7 @@ export function Avatar({
   return (
     <div
       className={cn(
-        'flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--medi-primary)]/10 text-xl font-bold text-[var(--medi-primary)]',
+        'flex shrink-0 aspect-square items-center justify-center overflow-hidden rounded-full bg-[var(--medi-primary)]/10 text-xl font-bold text-[var(--medi-primary)]',
         className,
       )}
       aria-hidden="true"
@@ -28,6 +28,8 @@ export function Avatar({
         <img
           src={url}
           alt=""
+          width={64}
+          height={64}
           className="h-full w-full object-cover"
           loading="lazy"
         />

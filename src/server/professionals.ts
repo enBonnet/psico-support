@@ -1973,6 +1973,48 @@ export const countVerifiedProfessionals = createServerFn({ method: 'GET' }).hand
   },
 )
 
+// ponytail: returns the IDs of all verified, service-providing professionals —
+// the same public pool listProfessionals + countVerifiedProfessionals filter,
+// but just the id column. Used by /sitemap.xml (worker-level handler in
+// src/server.ts) to enumerate every public profile URL for Google's index.
+// Fail-soft to [] on transient D1 resets: a partial/empty sitemap is harmless
+// (Google re-crawls the previous one), while a 500 here would drop the whole
+// sitemap from Search Console coverage.
+// Ceiling: at >50k pros this will need pagination (sitemaps cap at 50k URLs);
+// until then, one file is fine.
+//
+// Exposed as BOTH a plain function (listVerifiedProIdsRaw, for the worker
+// handler — server fns can't be called directly from server.ts because their
+// RPC wrapper expects the TanStack request envelope) AND a server fn
+// (listVerifiedProIds, kept for symmetry with the other public fns even though
+// no client currently calls it — it's the natural API if a future admin route
+// wants to enumerate IDs).
+export async function listVerifiedProIdsRaw(): Promise<number[]> {
+  try {
+    const db = getDb()
+    const rows = await withD1Retry(() =>
+      db
+        .select({ id: professionals.id })
+        .from(professionals)
+        .where(
+          and(
+            eq(professionals.verifiedStatus, 'verified'),
+            eq(professionals.providesService, true),
+          ),
+        )
+        .orderBy(asc(professionals.id)),
+    )
+    return rows.map((r) => r.id)
+  } catch (err) {
+    Sentry.captureException(err)
+    return []
+  }
+}
+
+export const listVerifiedProIds = createServerFn({ method: 'GET' }).handler(
+  async () => listVerifiedProIdsRaw(),
+)
+
 // ponytail: admin-gated user management for the "promote from panel" model.
 // listUsers feeds the admin UI; promoteToAdmin sets role='admin'. There is
 // intentionally no demote action — promote-only means an admin can never

@@ -32,6 +32,7 @@ import {
   inputCls,
 } from '#/components/professional-form'
 import { PhoneInput } from '#/components/phone-input'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/perfil')({
   beforeLoad: async () => {
@@ -44,6 +45,7 @@ export const Route = createFileRoute('/profesional/perfil')({
   // (see panel.tsx) so the hub stays a simple menu and this big form lives on
   // its own focused screen.
   ssr: false,
+  head: noindexHead,
   component: PerfilPage,
 })
 

@@ -70,6 +70,15 @@ export function seoHead({
   return { meta, links }
 }
 
+// ponytail: private routes (auth, pro panel, admin) have no crawler value and
+// shouldn't be indexed — they render as empty shells behind a login wall. One
+// shared head() shape so every private route opts out with the same one-liner.
+// Routes call `head: noindexHead` (or `head: () => noindexHead()`). The root
+// title still applies, so the page isn't title-less; robots just drops it.
+export const noindexHead = () => ({
+  meta: [{ name: 'robots', content: 'noindex' }],
+})
+
 // ponytail: schema.org Person for a professional profile. Google reads
 // JSON-LD from <head>; TanStack renders `script:ld+json` meta descriptors as
 // <script type="application/ld+json">. jobTitle is hard-coded 'Psicólogo' —
@@ -114,5 +123,49 @@ export function profileJsonLd(p: {
     // ponytail: sameAs only when the pro actually provided socials — an empty
     // array would be valid JSON-LD but useless, so omit it entirely.
     ...(p.sameAs && p.sameAs.length ? { sameAs: [...p.sameAs] } : {}),
+  }
+}
+
+// ponytail: schema.org Organization + WebSite for the landing page. Google
+// reads WebSite to enable the sitelinks search box (potentialAction) and
+// aligns the entity in its Knowledge Graph. One-shot per-deploy schema, no
+// per-route maintenance. Rendered inline in the component body (same pattern
+// as profileJsonLd — gotcha #3: 'script:ld+json' is rejected by head() at the
+// type level, so JSON-LD lives in the component, not in head()).
+//
+// The site has no on-site search, so the SearchAction points at the directory
+// with a placeholder query — Google's docs allow this even if the directory's
+// filtering isn't full-text search; it's a "find a psychologist" entry point.
+export function organizationJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: SITE_BRAND,
+    alternateName: SITE_NAME,
+    url: SITE_URL,
+    logo: `${SITE_URL}/logo512.png`,
+    description:
+      'Red de apoyo psicológico gratuito para personas afectadas en Venezuela. Conecta con psicólogos verificados por WhatsApp o de forma presencial.',
+    areaServed: 'VE',
+  }
+}
+
+export function websiteJsonLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE_BRAND,
+    url: SITE_URL,
+    inLanguage: 'es-VE',
+    publisher: { '@type': 'Organization', name: SITE_BRAND },
+    // ponytail: SearchAction targets the directory's `?q=` param (validated
+    // in src/routes/ayuda/profesionales/index.tsx searchSchema). The directory
+    // isn't a full-text search, but Google's docs allow this as a "find a
+    // psychologist" entry point — it unlocks the sitelinks search box.
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE_URL}/ayuda/profesionales?q={search_term_string}`,
+      'query-input': 'required name=search_term_string',
+    },
   }
 }

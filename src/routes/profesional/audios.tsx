@@ -19,6 +19,7 @@ import {
   STORY_MAX_PER_PRO,
   STORY_TITLE_MAX,
 } from '#/server/audio-stories'
+import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/audios')({
   beforeLoad: async () => {
@@ -30,6 +31,7 @@ export const Route = createFileRoute('/profesional/audios')({
   // ponytail: CSR-only — auth-gated, no crawler value. Split out of the panel
   // so the hub stays a simple menu.
   ssr: false,
+  head: noindexHead,
   component: AudiosPage,
 })
 
