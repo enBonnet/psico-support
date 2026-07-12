@@ -15,6 +15,7 @@ import {
   EyeOff,
   Server,
   Trash2,
+  Globe,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { seoHead } from '#/lib/seo'
@@ -53,7 +54,10 @@ function Step({
       </span>
       <div className="min-w-0">
         <p className="flex items-center gap-2 font-semibold text-[var(--medi-text-primary)]">
-          <Icon aria-hidden="true" className="size-4 text-[var(--medi-secondary)]" />
+          <Icon
+            aria-hidden="true"
+            className="size-4 text-[var(--medi-secondary)]"
+          />
           {title}
         </p>
         <p className="mt-1 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
@@ -89,6 +93,41 @@ function HowItWorksPage() {
         Aquí explicamos cómo recibir ayuda, cómo se verifica cada profesional y
         cómo cuidamos tu información.
       </p>
+
+      {/* ponytail: aviso de transición hacia el modelo de acompañamiento
+          voluntario transfronterizo. No reescribe el copy actual del
+          directorio verificado (sigue operativo). Enlace al marco completo
+          (docs/professional-communications.md registra el compromiso). */}
+      <div className="glass-card mt-6 p-5">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--medi-text-primary)]">
+          <Globe
+            aria-hidden="true"
+            className="size-5 text-[var(--medi-secondary)]"
+          />
+          Estamos creciendo: acompañamiento voluntario transfronterizo
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
+          Además del directorio de profesionales verificados que funciona hoy,
+          estamos incorporando un{' '}
+          <strong>acompañamiento psicoemocional voluntario</strong>: personas
+          con formación en salud mental, desde cualquier parte del mundo, que
+          acompañan de forma gratuita a quienes enfrentan la emergencia en
+          Venezuela. No es psicoterapia ni ejercicio profesional regulado, sino
+          contención, escucha activa y orientación hacia recursos.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <Link to="/voluntariado" className={pillClass}>
+            <HeartPulse aria-hidden="true" className="size-4" />
+            Conoce el marco de voluntariado
+          </Link>
+          <Link
+            to="/privacidad"
+            className="text-sm font-medium text-[var(--medi-secondary)] hover:underline"
+          >
+            Política de datos
+          </Link>
+        </div>
+      </div>
 
       <div className="mt-8 flex flex-col gap-4">
         {/* ── Para personas que buscan ayuda ── */}
@@ -133,7 +172,11 @@ function HowItWorksPage() {
               </Link>{' '}
               los psicólogos comparten mensajes en voz cortos para acompañarte.
             </Step>
-            <Step n={4} icon={HeartPulse} title="Usa las herramientas de autocuidado">
+            <Step
+              n={4}
+              icon={HeartPulse}
+              title="Usa las herramientas de autocuidado"
+            >
               En{' '}
               <Link
                 to="/recursos"
@@ -146,7 +189,11 @@ function HowItWorksPage() {
             </Step>
           </ol>
           <div className="mt-4">
-            <Link to="/ayuda/profesionales" search={{ modality: 'remote' }} className={pillClass}>
+            <Link
+              to="/ayuda/profesionales"
+              search={{ modality: 'remote' }}
+              className={pillClass}
+            >
               <LifeBuoy aria-hidden="true" className="size-4" />
               Buscar ayuda ahora
             </Link>
@@ -175,8 +222,8 @@ function HowItWorksPage() {
               >
                 registro
               </Link>{' '}
-              con tus datos, número de colegiación y WhatsApp de contacto. Puedes
-              adjuntar tu título para agilizar la revisión.
+              con tus datos, número de colegiación y WhatsApp de contacto.
+              Puedes adjuntar tu título para agilizar la revisión.
             </Step>
             <Step n={2} icon={BadgeCheck} title="Verificamos tu credencial">
               Un administrador confirma tu número de colegiación en el registro
@@ -195,8 +242,8 @@ function HowItWorksPage() {
               o inactivo. También editas tu perfil y publicas audios.
             </Step>
             <Step n={4} icon={UserCog} title="Atiende a quien te escribe">
-              Las personas te contactan por WhatsApp desde tu perfil público.
-              Tú decides cómo y cuándo responder.
+              Las personas te contactan por WhatsApp desde tu perfil público. Tú
+              decides cómo y cuándo responder.
             </Step>
           </ol>
           <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -222,6 +269,14 @@ function HowItWorksPage() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             Tu confianza es lo primero. Esto es cómo tratamos tu información.
+            Para el detalle completo, lee nuestra{' '}
+            <Link
+              to="/privacidad"
+              className="font-semibold text-[var(--medi-secondary)] underline"
+            >
+              política de datos
+            </Link>
+            .
           </p>
           <ul className="mt-4 flex flex-col gap-3">
             <li className="glass-card-soft flex gap-3 rounded-[var(--glass-radius-sm)] p-4">
@@ -233,8 +288,8 @@ function HowItWorksPage() {
                 <span className="font-semibold text-[var(--medi-text-primary)]">
                   No necesitas cuenta para recibir ayuda.
                 </span>{' '}
-                Puedes buscar y contactar psicólogos sin registrarte ni
-                entregar tus datos.
+                Puedes buscar y contactar psicólogos sin registrarte ni entregar
+                tus datos.
               </p>
             </li>
             <li className="glass-card-soft flex gap-3 rounded-[var(--glass-radius-sm)] p-4">

@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-07-12
+
+### Added
+- **Marco legal del modelo de acompañamiento psicoemocional voluntario transfronterizo**: dos nuevas rutas públicas SSR preparan los documentos del modelo hacia el que avanza el proyecto (voluntarios con formación en salud mental desde cualquier parte del mundo acompañando a personas en Venezuela, sin psicoterapia ni ejercicio profesional regulado), sin desmontar el directorio de profesionales verificados que sigue operativo.
+  - **`/privacidad`** ([src/routes/privacidad.tsx](src/routes/privacidad.tsx)): política de datos única para todo el sitio (cubre el directorio actual y el acompañamiento voluntario). Detalla qué datos se tratan (código de sesión, no nombre completo, en el modelo voluntario; perfil público + datos de verificación en el directorio), periodo de retención propuesto (12 meses tras el último contacto para el voluntario, `ponytail:` pendiente de validación legal), dónde viven los datos (Cloudflare D1/R2, cifrado en tránsito y reposo), procedimiento ante filtración o acceso no autorizado (detectar/contener/registrar/notificar/revisar) y el régimen aplicable (Ley Especial de Protección de Datos Personales de Venezuela como referencia principal; jurisdicción del país del voluntario para los suyos). Sin afirmar registro formal en Venezuela (decisión estratégica sección 2.2 del documento, aún abierta).
+  - **`/voluntariado`** ([src/routes/voluntariado.tsx](src/routes/voluntariado.tsx)): marco del voluntariado con carta de adhesión. Cubre la naturaleza del servicio (qué es / qué no es), encuadre transfronterizo, régimen de responsabilidad (institucional de medios + individual dentro del protocolo), deslinde frente a terceros, vínculo voluntario no laboral y la **carta de adhesión** en bloque destacado (naturaleza voluntaria y no laboral, compromiso de actuar dentro del protocolo, conocimiento de que no constituye ejercicio profesional regulado en Venezuela). Aviso visible de que el directorio verificado sigue operativo con sus propios `/terminos`.
+- **Avisos de transición en páginas informativas**: bloques y enlaces discretos (sin reescribir el copy actual del directorio verificado) que anuncian la dirección y enlazan al nuevo marco:
+  - `/como-funciona`: bloque "Estamos creciendo" + enlace en la sección de privacidad a `/privacidad`.
+  - `/acerca-de`: sección "Hacia dónde vamos" con enlaces a `/voluntariado` y `/privacidad`.
+  - `/` (landing): enlace discreto al marco de voluntariado junto al tour/guiado.
+
+### Notes
+- **`/terminos` intacto**: sigue siendo el marco del directorio de profesionales verificados vigente. No se rompe el checkbox obligatorio en `/profesional/registro` ni los enlaces existentes. El nuevo marco de voluntariado vive en su propia ruta `/voluntariado` para que ambos modelos coexistan durante la transición.
+- **Deuda explícita** (NO incluida en este release): (1) flujo de registro de voluntarios (el `registerSchema` actual exige `certificationNumber` obligatorio y apunta al checkbox de `/terminos` — se necesita un flujo paralelo que apunte a `/voluntariado` y trate la cédula como evidencia opcional); (2) reescritura profunda de copy en `/` (landing) y `/ayuda/` cuando el modelo voluntario esté plenamente operativo; (3) validación legal formal del marco por una persona abogada con conocimiento del derecho venezolano (LOPDP + Ley de Fiscalización de ONG 2024) antes de considerarlo definitivo; (4) decisión estratégica sobre registro formal en Venezuela vs. bajo perfil institucional.
+
 ## [1.22.0] - 2026-07-12
 
 ### Added

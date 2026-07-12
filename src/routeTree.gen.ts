@@ -10,11 +10,13 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as YaRouteImport } from './routes/ya'
+import { Route as VoluntariadoRouteImport } from './routes/voluntariado'
 import { Route as TerminosRouteImport } from './routes/terminos'
 import { Route as SocialRouteImport } from './routes/social'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
 import { Route as EquipoRouteImport } from './routes/equipo'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as CuentaRouteImport } from './routes/cuenta'
@@ -56,6 +58,11 @@ const YaRoute = YaRouteImport.update({
   path: '/ya',
   getParentRoute: () => rootRouteImport,
 } as any)
+const VoluntariadoRoute = VoluntariadoRouteImport.update({
+  id: '/voluntariado',
+  path: '/voluntariado',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TerminosRoute = TerminosRouteImport.update({
   id: '/terminos',
   path: '/terminos',
@@ -79,6 +86,11 @@ const RecuperarRoute = RecuperarRouteImport.update({
 const PsicologosRoute = PsicologosRouteImport.update({
   id: '/psicologos',
   path: '/psicologos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EquipoRoute = EquipoRouteImport.update({
@@ -270,11 +282,13 @@ export interface FileRoutesByFullPath {
   '/cuenta': typeof CuentaRoute
   '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
+  '/privacidad': typeof PrivacidadRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
+  '/voluntariado': typeof VoluntariadoRoute
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
@@ -313,11 +327,13 @@ export interface FileRoutesByTo {
   '/cuenta': typeof CuentaRoute
   '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
+  '/privacidad': typeof PrivacidadRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
+  '/voluntariado': typeof VoluntariadoRoute
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
@@ -357,11 +373,13 @@ export interface FileRoutesById {
   '/cuenta': typeof CuentaRoute
   '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
+  '/privacidad': typeof PrivacidadRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
   '/signup': typeof SignupRoute
   '/social': typeof SocialRoute
   '/terminos': typeof TerminosRoute
+  '/voluntariado': typeof VoluntariadoRoute
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
@@ -402,11 +420,13 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/demo'
     | '/equipo'
+    | '/privacidad'
     | '/psicologos'
     | '/recuperar'
     | '/signup'
     | '/social'
     | '/terminos'
+    | '/voluntariado'
     | '/ya'
     | '/admin/analitica'
     | '/profesional/audios'
@@ -445,11 +465,13 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/demo'
     | '/equipo'
+    | '/privacidad'
     | '/psicologos'
     | '/recuperar'
     | '/signup'
     | '/social'
     | '/terminos'
+    | '/voluntariado'
     | '/ya'
     | '/admin/analitica'
     | '/profesional/audios'
@@ -488,11 +510,13 @@ export interface FileRouteTypes {
     | '/cuenta'
     | '/demo'
     | '/equipo'
+    | '/privacidad'
     | '/psicologos'
     | '/recuperar'
     | '/signup'
     | '/social'
     | '/terminos'
+    | '/voluntariado'
     | '/ya'
     | '/admin/analitica'
     | '/profesional/audios'
@@ -532,11 +556,13 @@ export interface RootRouteChildren {
   CuentaRoute: typeof CuentaRoute
   DemoRoute: typeof DemoRoute
   EquipoRoute: typeof EquipoRoute
+  PrivacidadRoute: typeof PrivacidadRoute
   PsicologosRoute: typeof PsicologosRoute
   RecuperarRoute: typeof RecuperarRoute
   SignupRoute: typeof SignupRoute
   SocialRoute: typeof SocialRoute
   TerminosRoute: typeof TerminosRoute
+  VoluntariadoRoute: typeof VoluntariadoRoute
   YaRoute: typeof YaRoute
   AdminAnaliticaRoute: typeof AdminAnaliticaRoute
   ProfesionalAudiosRoute: typeof ProfesionalAudiosRoute
@@ -575,6 +601,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YaRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/voluntariado': {
+      id: '/voluntariado'
+      path: '/voluntariado'
+      fullPath: '/voluntariado'
+      preLoaderRoute: typeof VoluntariadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terminos': {
       id: '/terminos'
       path: '/terminos'
@@ -608,6 +641,13 @@ declare module '@tanstack/react-router' {
       path: '/psicologos'
       fullPath: '/psicologos'
       preLoaderRoute: typeof PsicologosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/equipo': {
@@ -868,11 +908,13 @@ const rootRouteChildren: RootRouteChildren = {
   CuentaRoute: CuentaRoute,
   DemoRoute: DemoRoute,
   EquipoRoute: EquipoRoute,
+  PrivacidadRoute: PrivacidadRoute,
   PsicologosRoute: PsicologosRoute,
   RecuperarRoute: RecuperarRoute,
   SignupRoute: SignupRoute,
   SocialRoute: SocialRoute,
   TerminosRoute: TerminosRoute,
+  VoluntariadoRoute: VoluntariadoRoute,
   YaRoute: YaRoute,
   AdminAnaliticaRoute: AdminAnaliticaRoute,
   ProfesionalAudiosRoute: ProfesionalAudiosRoute,
@@ -904,13 +946,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
