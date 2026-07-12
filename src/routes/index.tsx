@@ -271,6 +271,20 @@ function Landing() {
         </span>
       </Link>
 
+      {/* ponytail: enlace a la política de datos desde el punto de entrada
+          principal — consistente con /acerca-de y /como-funciona, donde la
+          política también es alcanzable. */}
+      <Link
+        to="/privacidad"
+        aria-label="Política de datos"
+        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        Cómo tratamos tu información.{' '}
+        <span className="font-medium text-[var(--medi-secondary)]">
+          Política de datos
+        </span>
+      </Link>
+
       {/* ponytail: Organization + WebSite JSON-LD. Rendered inline in the body
           (not head()) because TanStack's head() meta type rejects
           'script:ld+json' at the type level (gotcha #3) — Google reads body

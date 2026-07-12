@@ -17,7 +17,7 @@ export const Route = createFileRoute('/privacidad')({
     seoHead({
       title: 'Política de datos',
       description:
-        'Cómo trata PsicoAyudaVen tus datos personales: qué recopilamos, cuánto se conservan, dónde viven, qué pasa ante una filtración y qué régimen jurídico aplica (LOPDP Venezuela).',
+        'Cómo trata PsicoAyudaVen tus datos personales: qué recopilamos, cuánto tiempo se conservan, dónde viven, qué pasa ante una filtración y qué régimen jurídico aplica (LOPDP Venezuela).',
       path: '/privacidad',
     }),
   component: PrivacidadPage,
@@ -110,13 +110,16 @@ function PrivacidadPage() {
               />
               <span>
                 <strong>Acompañamiento voluntario:</strong>{' '}
-                {/* ponytail: plazo de retención propuesto (12 meses tras el
-                    último contacto). Pendiente de validación legal — la
-                    abogada debe confirmar el periodo exacto antes de cerrar
-                    esta política. */}
-                los registros de sesión se conservan hasta 12 meses después del
-                último contacto y luego se eliminan automáticamente, salvo que
-                una obligación legal exija conservarlos por más tiempo.
+                {/* ponytail: plazo de retención orientativo (12 meses tras el
+                    último contacto). Pendiente de validación legal y de la
+                    implementación del flujo de borrado — no afirmar borrado
+                    automático hasta que ambos existan. Coherente con la
+                    postura de /voluntariado y del documento de lineamientos. */}
+                los registros de sesión se conservan por un periodo orientativo
+                de hasta 12 meses después del último contacto. El plazo exacto y
+                el procedimiento de eliminación están pendientes de validación
+                legal; si una obligación aplicable exige conservarlos por más
+                tiempo, se mantendrán únicamente lo necesario para cumplirla.
               </span>
             </li>
           </ul>
@@ -190,17 +193,23 @@ function PrivacidadPage() {
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             Las personas acompañadas están, en su mayoría, en territorio
-            venezolano, por lo que tiene como referencia principal la{' '}
+            venezolano, por lo que se toma como referencia la{' '}
             <strong>
               Ley Especial de Protección de Datos Personales de Venezuela
             </strong>
             . Cada persona voluntaria queda además sujeta a la legislación de
             protección de datos del país desde donde actúa.
           </p>
-          {/* ponytail: no afirmar registro formal en Venezuela (decisión
-              estratégica de la sección 2.2 del documento de lineamientos,
-              aún abierta). Mantener bajo perfil institucional hasta que se
-              resuelva con asesoría legal venezolana actualizada. */}
+          {/* ponytail: el régimen aplicable y los derechos quedan sujetos a
+              revisión legal formal con asesoría venezolana actualizada (LOPDP
+              + Ley de Fiscalización de ONG 2024), igual que la postura de
+              registro en /voluntariado. No presentar como zanjado. */}
+          <p className="mt-2 rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--medi-secondary)] bg-[rgba(99,102,241,0.06)] p-3 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
+            Este es el marco de referencia que seguimos mientras el proyecto
+            formaliza su postura legal y de registro. Tanto el régimen aplicable
+            como el alcance de los derechos quedan sujetos a validación con una
+            persona abogada con conocimiento del derecho venezolano vigente.
+          </p>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             Tienes derecho a conocer qué datos tuyos tratamos, a corregirlos y a
             solicitar su eliminación. Para ejercerlos, escríbenos a{' '}
