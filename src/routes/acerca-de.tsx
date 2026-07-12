@@ -4,6 +4,7 @@ import {
   Github,
   Globe,
   Heart,
+  HeartHandshake,
   LifeBuoy,
   MessageCircle,
   ShieldCheck,
@@ -56,8 +57,8 @@ function AboutPage() {
       <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
         Psico Ayuda Venezuela es una red de apoyo psicológico gratuito y de
         código abierto, creada para acompañar a las personas afectadas por los
-        terremotos en Venezuela. Las conectamos con psicólogos verificados, de forma
-        confidencial.
+        terremotos en Venezuela. Las conectamos con psicólogos verificados, de
+        forma confidencial.
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
@@ -88,6 +89,44 @@ function AboutPage() {
             >
               <MessageCircle aria-hidden="true" className="size-4" />
               Soy psicólogo
+            </Link>
+          </div>
+        </section>
+
+        {/* ponytail: aviso de transición hacia el modelo de acompañamiento
+            voluntario transfronterizo. La misión actual (directorio verificado)
+            no se reescribe; este bloque describe la dirección. */}
+        <section className="glass-card p-5">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--medi-text-primary)]">
+            <HeartHandshake
+              aria-hidden="true"
+              className="size-5 text-[var(--medi-secondary)]"
+            />
+            Hacia dónde vamos
+          </h2>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
+            Además del directorio de profesionales verificados que funciona hoy,
+            estamos incorporando un{' '}
+            <strong>acompañamiento psicoemocional voluntario</strong>: personas
+            con formación en salud mental, desde cualquier parte del mundo, que
+            acompañan de forma gratuita a quienes enfrentan la emergencia en
+            Venezuela. No sustituye a los servicios oficiales de emergencia ni
+            es psicoterapia —es contención, escucha activa y orientación hacia
+            recursos.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-3">
+            <Link
+              to="/voluntariado"
+              className="glass-pill inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+            >
+              <HeartHandshake aria-hidden="true" className="size-4" />
+              Marco de voluntariado
+            </Link>
+            <Link
+              to="/privacidad"
+              className="glass-pill inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+            >
+              Política de datos
             </Link>
           </div>
         </section>
@@ -138,8 +177,8 @@ function AboutPage() {
             <span className="font-medium text-[var(--medi-text-primary)]">
               Build4Venezuela
             </span>
-            , un esfuerzo colaborativo de la comunidad tecnológica para construir
-            soluciones que sirvan al país.
+            , un esfuerzo colaborativo de la comunidad tecnológica para
+            construir soluciones que sirvan al país.
           </p>
           <div className="mt-4">
             <a

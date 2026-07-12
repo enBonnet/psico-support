@@ -22,7 +22,8 @@ export const Route = createFileRoute('/')({
       // SITE_DEFAULT_TITLE — "Psico Ayuda Venezuela · Red de apoyo gratuito
       // ante la contingencia"), but kept here as a self-documenting hint and
       // for callers that read this route's head config directly.
-      title: 'Psico Ayuda Venezuela · Red de apoyo gratuito ante la contingencia',
+      title:
+        'Psico Ayuda Venezuela · Red de apoyo gratuito ante la contingencia',
       description:
         'Red de apoyo psicológico gratuito para personas afectadas por los terremotos en Venezuela. Te conectamos con psicólogos verificados, por WhatsApp o de forma presencial. Servicio confidencial.',
       path: '/',
@@ -147,7 +148,7 @@ function Landing() {
       </div>
 
       <nav className="mt-10 flex flex-col gap-4">
-      {/* ponytail: "Ahora" = immediate. Auto-picks a professional who is
+        {/* ponytail: "Ahora" = immediate. Auto-picks a professional who is
           contactable right now and opens WhatsApp directly — one tap from the
           hero instead of funneling through the directory (which was bleeding
           ~96% of landings). The directory stays reachable via the "ver todos"
@@ -158,55 +159,67 @@ function Landing() {
           and preventDefault on success; if JS is off or hydration hasn't run,
           the link is a plain navigation to the directory (the same URL
           helpNow itself falls back to when no pro is contactable). */}
-      <a
-        href="/ayuda/profesionales?modality=remote"
-        onClick={(e) => {
-          // ponytail: only intercept as a JS click (left/middle click on a
-          // real anchor still works for open-in-new-tab etc.). Modifier
-          // clicks are the browser's to handle.
-          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
-          e.preventDefault()
-          helpNow()
-        }}
-        aria-disabled={picking}
-        className="glass-primary flex min-h-16 cursor-pointer items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] aria-disabled:cursor-progress aria-disabled:opacity-80"
-      >
-        <LifeBuoy aria-hidden="true" className="size-5" />
-        {picking ? 'Buscando un profesional…' : 'Necesito ayuda ahora'}
-      </a>
-      {/* ponytail: secondary escape hatch for users who want to browse / pick
+        <a
+          href="/ayuda/profesionales?modality=remote"
+          onClick={(e) => {
+            // ponytail: only intercept as a JS click (left/middle click on a
+            // real anchor still works for open-in-new-tab etc.). Modifier
+            // clicks are the browser's to handle.
+            if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+            e.preventDefault()
+            helpNow()
+          }}
+          aria-disabled={picking}
+          className="glass-primary flex min-h-16 cursor-pointer items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)] aria-disabled:cursor-progress aria-disabled:opacity-80"
+        >
+          <LifeBuoy aria-hidden="true" className="size-5" />
+          {picking ? 'Buscando un profesional…' : 'Necesito ayuda ahora'}
+        </a>
+        {/* ponytail: secondary escape hatch for users who want to browse / pick
           themselves. Kept small so the auto-pick stays the dominant CTA, but
           present so the directory is never more than one tap away. */}
-      <Link
-        to="/ayuda/profesionales"
-        search={{ modality: 'remote' }}
-        onClick={() =>
-          track({
-            event: 'cta_click',
-            category: 'public',
-            param1: 'help_now_browse',
-          })
-        }
-        className="self-center text-sm font-medium text-[var(--medi-secondary)] underline-offset-2 hover:underline"
-      >
-        O ver todos los profesionales
-      </Link>
-      <Link
-        to="/recursos"
-        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'recursos' })}
-        className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <HeartPulse aria-hidden="true" className="size-5" />
-        Herramientas de autocuidado
-      </Link>
-      <Link
-        to="/profesional/registro"
-        onClick={() => track({ event: 'cta_click', category: 'public', param1: 'ofrezco_ayuda' })}
-        className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <Stethoscope aria-hidden="true" className="size-5" />
-        Soy psicólogo, quiero ayudar
-      </Link>
+        <Link
+          to="/ayuda/profesionales"
+          search={{ modality: 'remote' }}
+          onClick={() =>
+            track({
+              event: 'cta_click',
+              category: 'public',
+              param1: 'help_now_browse',
+            })
+          }
+          className="self-center text-sm font-medium text-[var(--medi-secondary)] underline-offset-2 hover:underline"
+        >
+          O ver todos los profesionales
+        </Link>
+        <Link
+          to="/recursos"
+          onClick={() =>
+            track({
+              event: 'cta_click',
+              category: 'public',
+              param1: 'recursos',
+            })
+          }
+          className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        >
+          <HeartPulse aria-hidden="true" className="size-5" />
+          Herramientas de autocuidado
+        </Link>
+        <Link
+          to="/profesional/registro"
+          onClick={() =>
+            track({
+              event: 'cta_click',
+              category: 'public',
+              param1: 'ofrezco_ayuda',
+            })
+          }
+          className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        >
+          <Stethoscope aria-hidden="true" className="size-5" />
+          Soy psicólogo, quiero ayudar
+        </Link>
       </nav>
 
       <InstallCard />
@@ -244,13 +257,29 @@ function Landing() {
         </span>
       </Link>
 
+      {/* ponytail: aviso corto de transición hacia el modelo de acompañamiento
+          voluntario transfronterizo. No reescribe el copy de la landing; solo
+          añade un enlace discreto al marco de voluntariado. */}
+      <Link
+        to="/voluntariado"
+        aria-label="Marco de voluntariado"
+        className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+      >
+        Acompañamiento voluntario transfronterizo.{' '}
+        <span className="font-medium text-[var(--medi-secondary)]">
+          Conoce el marco
+        </span>
+      </Link>
+
       {/* ponytail: Organization + WebSite JSON-LD. Rendered inline in the body
           (not head()) because TanStack's head() meta type rejects
           'script:ld+json' at the type level (gotcha #3) — Google reads body
           JSON-LD fine. Unlocks sitelinks search box + Knowledge Graph. */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd()) }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(organizationJsonLd()),
+        }}
       />
       <script
         type="application/ld+json"
