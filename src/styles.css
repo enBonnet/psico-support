@@ -11,8 +11,6 @@
 
 @import 'tw-animate-css';
 
-@custom-variant dark (&:is(.dark *));
-
 :root {
   /* Medicall palette — deep medical blue + bright blue accent.
      Tracks the logo (public/favicon.svg) exactly: navy #112a8d + cyan #199bee. */
@@ -113,73 +111,16 @@
   --sidebar-ring: oklch(0.62 0.19 244);
 }
 
-.dark {
-  --sea-ink: #dbe7ff;
-  --sea-ink-soft: #9fb4e0;
-  --lagoon: #4aa8f5;
-  --lagoon-deep: #6b8ef0;
-  --palm: #8aa8f0;
-  --sand: #0b1530;
-  --foam: #0a1228;
-  --surface: rgba(16, 26, 52, 0.8);
-  --surface-strong: rgba(13, 22, 46, 0.92);
-  --line: rgba(107, 142, 240, 0.2);
-  --inset-glint: rgba(180, 205, 255, 0.14);
-  --kicker: #8aa8f0;
-  --bg-base: #070d1c;
-  --header-bg: rgba(10, 18, 40, 0.82);
-  --chip-bg: rgba(13, 24, 52, 0.9);
-  --chip-line: rgba(107, 142, 240, 0.26);
-  --link-bg-hover: rgba(20, 34, 70, 0.8);
-  --hero-a: rgba(74, 168, 245, 0.18);
-  --hero-b: rgba(107, 142, 240, 0.12);
-
-  /* Liquid glass — dark variant. Same construction, inverted luminance:
-     a darker tint over the navy bg, cool specular highlights. */
-  --glass-tint: rgba(20, 32, 64, 0.5);
-  --glass-tint-strong: rgba(16, 26, 52, 0.7);
-  --glass-tint-soft: rgba(20, 32, 64, 0.32);
-  --glass-edge: rgba(180, 205, 255, 0.22);
-  --glass-edge-dim: rgba(180, 205, 255, 0.1);
-  --glass-specular: rgba(180, 205, 255, 0.28);
-  --glass-stroke: rgba(107, 142, 240, 0.24);
-  --glass-blur: 24px;
-  --glass-saturate: 160%;
-  --glass-brightness: 112%;
-
-  --background: oklch(0.16 0.03 264);
-  --foreground: oklch(0.97 0.01 240);
-  --card: oklch(0.2 0.03 264);
-  --card-foreground: oklch(0.97 0.01 240);
-  --popover: oklch(0.2 0.03 264);
-  --popover-foreground: oklch(0.97 0.01 240);
-  --primary: oklch(0.7 0.15 244);
-  --primary-foreground: oklch(0.16 0.03 264);
-  --secondary: oklch(0.3 0.04 264);
-  --secondary-foreground: oklch(0.97 0.01 240);
-  --muted: oklch(0.3 0.04 264);
-  --muted-foreground: oklch(0.72 0.02 264);
-  --accent: oklch(0.62 0.19 244);
-  --accent-foreground: oklch(1 0 0);
-  --destructive: oklch(0.396 0.141 25.723);
-  --destructive-foreground: oklch(0.637 0.237 25.331);
-  --border: oklch(0.3 0.04 264);
-  --input: oklch(0.3 0.04 264);
-  --ring: oklch(0.62 0.19 244);
-  --chart-1: oklch(0.7 0.15 244);
-  --chart-2: oklch(0.62 0.19 244);
-  --chart-3: oklch(0.55 0.12 200);
-  --chart-4: oklch(0.7 0.15 160);
-  --chart-5: oklch(0.82 0.18 84);
-  --sidebar: oklch(0.18 0.03 264);
-  --sidebar-foreground: oklch(0.97 0.01 240);
-  --sidebar-primary: oklch(0.7 0.15 244);
-  --sidebar-primary-foreground: oklch(0.16 0.03 264);
-  --sidebar-accent: oklch(0.3 0.04 264);
-  --sidebar-accent-foreground: oklch(0.97 0.01 240);
-  --sidebar-border: oklch(0.3 0.04 264);
-  --sidebar-ring: oklch(0.62 0.19 244);
-}
+/* ponytail: dark mode was aspirational dead code here — the app actually
+   renders light-only via the --medi-* tokens above, which had no dark
+   variants. The .dark block redefined only the legacy --sea-ink/--lagoon
+   aliases (no component used them) and the shadcn tokens (used ~7x, all in
+   styles.css itself). Wiring a real dark theme is a separate pass: it would
+   need --medi-* dark variants, a re-audit of every hardcoded rgba() in the
+   glass shadows/hero gradients/.section-underline, explicit chart variants
+   (charts/index.tsx), and a contrast check on colored callout tints. Removed
+   to stop shipping ~70 lines of unreachable CSS and to stop implying (e.g.
+   in the charts header comment) that dark mode works. Re-add when scoped. */
 
 @theme inline {
   --font-sans: 'Open Sans', ui-sans-serif, system-ui, sans-serif;
@@ -283,19 +224,11 @@ body::before {
     radial-gradient(circle at 42% 82%, rgba(17, 42, 141, 0.1), transparent 36%);
 }
 
-body::after {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 0.12;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: radial-gradient(circle at 50% 30%, black, transparent 78%);
-}
+/* ponytail: the faint hairline grid mask that lived here (tiled
+   linear-gradient at 28px) was removed — it read as a generated-UI
+   signature under the glass cards without adding product structure. The
+   body's three radial-gradient layers + body::before blob field still
+   carry the liquid-glass atmosphere without it. */
 
 a {
   color: var(--medi-secondary);
@@ -353,6 +286,25 @@ pre code {
   .page-wrap--wide {
     max-width: none;
   }
+}
+
+/* ponytail: skip-work utility for repeated glass-card lists (directory,
+   audio-stories tray). Worst case on the directory is ~12 .glass-card rows
+   stacked with ~14 backdrop-filter layers (cards + filter pill + sticky bar +
+   bottom tabs), all repainting on scroll — expensive on mid-tier Android,
+   which is the primary device class here. content-visibility:auto lets the
+   browser skip layout+paint for off-screen cards entirely; contain-intrinsic-
+   size gives it a scrollbar placeholder so scrolling doesn't jump. Zero
+   visual change: visible cards render identically, the containment only
+   kicks in for items scrolled out of view.
+   PREEMPTIVE — added without a real-device profile (the local D1 has no seed
+   data, so the directory renders its empty state and a measurement wouldn't
+   be representative). Confirm the win with a throttled-CPU profile against a
+   12-card directory before trusting it; if the profile shows no movement,
+   remove this class — it's load-bearing only if it actually helps. */
+.skip-when-offscreen {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 180px;
 }
 
 /* Medicall signature: 100x6 gradient bar under section titles */
@@ -653,6 +605,16 @@ a {
   }
 }
 
+/* ponytail: the one animation in the app that missed the reduced-motion pass
+   that notif-banner and bottom-tab::before already have. The element's
+   default visible state (opacity:1, no transform) is the right resting point
+   for reduced-motion users — no fade, no slide, just present. */
+@media (prefers-reduced-motion: reduce) {
+  .rise-in {
+    animation: none;
+  }
+}
+
 .site-footer {
   border-top: 1px solid var(--line);
   background: color-mix(in oklab, var(--header-bg) 84%, transparent 16%);
@@ -745,11 +707,17 @@ a {
 
 .notif-close {
   flex-shrink: 0;
+  /* ponytail: 44px hit area meets WCAG 2.5.5 without bloating the visual —
+     the icon stays at size-4 (16px, set on the <X> in notifications.tsx);
+     padding grows the tappable square around it. The banner itself is also
+     click-to-dismiss, so this is the secondary affordance, but a thumb
+     landing on the X shouldn't miss it. */
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin: -0.625rem -0.375rem -0.625rem 0;
   border-radius: var(--glass-radius-pill);
   color: var(--medi-text-secondary);
   opacity: 0.7;

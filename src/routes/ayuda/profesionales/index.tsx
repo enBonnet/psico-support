@@ -699,7 +699,7 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
   )
 
   return (
-    <li className="glass-card p-4">
+    <li className="glass-card skip-when-offscreen p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <Link

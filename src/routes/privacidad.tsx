@@ -204,7 +204,7 @@ function PrivacidadPage() {
               revisión legal formal con asesoría venezolana actualizada (LOPDP
               + Ley de Fiscalización de ONG 2024), igual que la postura de
               registro en /voluntariado. No presentar como zanjado. */}
-          <p className="mt-2 rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--medi-secondary)] bg-[rgba(99,102,241,0.06)] p-3 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
+          <p className="mt-2 rounded-[var(--glass-radius-sm)] bg-[rgba(25,155,238,0.1)] p-3 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             Este es el marco de referencia que seguimos mientras el proyecto
             formaliza su postura legal y de registro. Tanto el régimen aplicable
             como el alcance de los derechos quedan sujetos a validación con una

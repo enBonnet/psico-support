@@ -53,7 +53,7 @@ function VoluntariadoPage() {
       {/* ponytail: aviso de transición — el directorio de profesionales
           verificados sigue operativo con sus propios términos (/terminos).
           No mezclar ambos marcos en la cabeza del usuario. */}
-      <p className="mt-2 rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--medi-secondary)] bg-[rgba(99,102,241,0.06)] p-3 text-sm text-[var(--medi-text-secondary)]">
+      <p className="mt-2 rounded-[var(--glass-radius-sm)] bg-[rgba(25,155,238,0.1)] p-3 text-sm text-[var(--medi-text-secondary)]">
         Mientras este modelo se incorpora, el{' '}
         <Link
           to="/terminos"
@@ -243,7 +243,7 @@ function VoluntariadoPage() {
           {/* ponytail: bloque destacado — el párrafo que el voluntario acepta.
               Redactado en presente/infinitivo para encajar cuando se habilite
               el flujo de adhesión (aún como deuda de producto). */}
-          <blockquote className="mt-3 rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--medi-secondary)] bg-[rgba(99,102,241,0.06)] p-4 text-sm leading-relaxed text-[var(--medi-text-primary)]">
+          <blockquote className="mt-3 rounded-[var(--glass-radius-sm)] bg-[rgba(25,155,238,0.1)] p-4 text-sm leading-relaxed text-[var(--medi-text-primary)]">
             Mi participación es <strong>voluntaria</strong> y{' '}
             <strong>no laboral</strong>, sin remuneración, subordinación u
             horario obligatorio, y puedo terminarla en cualquier momento. Me

@@ -123,12 +123,12 @@ function TerminosPage() {
             este apoyo contradice el propósito solidario de la iniciativa y puede
             derivar en la suspensión o eliminación del perfil.
           </p>
-          <p className="mt-3 rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--notif-error)] bg-[rgba(220,38,38,0.06)] p-3 text-sm text-[var(--medi-text-secondary)]">
+          <p className="mt-3 rounded-[var(--glass-radius-sm)] bg-[rgba(220,38,38,0.1)] p-3 text-sm font-medium text-[var(--notif-error)]">
             Si un psicólogo te solicita pago a cambio de la ayuda de esta
             plataforma, repórtalo de inmediato a{' '}
             <a
               href={`mailto:${SUPPORT_EMAIL}`}
-              className="font-semibold text-[var(--medi-secondary)] underline"
+              className="font-bold text-[var(--notif-error)] underline underline-offset-2"
             >
               {SUPPORT_EMAIL}
             </a>

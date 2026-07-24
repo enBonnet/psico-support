@@ -222,7 +222,7 @@ function Autochequeo() {
                 Primero te preguntaremos si necesitas apoyo urgente. Luego, 6
                 preguntas sobre tu bienestar de las últimas semanas.
               </p>
-              <p className="mt-3 rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--medi-secondary)] bg-[rgba(25,155,238,0.06)] p-3 text-xs text-[var(--medi-text-secondary)]">
+              <p className="mt-3 rounded-[var(--glass-radius-sm)] bg-[rgba(25,155,238,0.1)] p-3 text-xs text-[var(--medi-text-secondary)]">
                 Esto es un autochequeo educativo y <strong>no sustituye un
                 diagnóstico profesional</strong>. Si te preocupa tu bienestar,
                 habla con un psicólogo.

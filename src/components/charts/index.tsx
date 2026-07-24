@@ -7,8 +7,10 @@
 // and the styling consistent with the app's glass design tokens.
 //
 // All components are presentational (no data fetching). Color tokens come from
-// the design system (var(--medi-primary), var(--medi-secondary), etc.) so dark
-// mode / theme changes propagate automatically.
+// the design system (var(--medi-primary), var(--medi-secondary), etc.). The app
+// is currently light-only — the .dark block was removed from styles.css as
+// unreachable dead code; if dark mode is later scoped, these charts will need
+// explicit dark variants (the color tokens alone won't carry it).
 //
 // Accessibility: every chart has role="img" + aria-label summarizing the
 // shape; the underlying numbers are also rendered as text in the card so

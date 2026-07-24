@@ -101,7 +101,7 @@ function ReaccionesNormales() {
             </li>
           </ul>
 
-          <div className="not-prose rounded-[var(--glass-radius-sm)] border-l-4 border-[var(--medi-secondary)] bg-[rgba(25,155,238,0.06)] p-4">
+          <div className="not-prose rounded-[var(--glass-radius-sm)] bg-[rgba(25,155,238,0.1)] p-4">
             <p className="m-0 text-sm text-[var(--medi-text-secondary)]">
               En la mayoría de las personas estas reacciones disminuyen
               gradualmente en las semanas siguientes, especialmente con apoyo y

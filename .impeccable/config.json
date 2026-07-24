@@ -1,0 +1,68 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles.css"
+        ],
+        "createdAt": "2026-07-24T17:39:31.851Z",
+        "reason": "User confirmed: .notif-banner border-left is iOS-style type-accent color-coding (success/warning/error/info), not an AI-card chrome tell"
+      },
+      {
+        "rule": "overused-font",
+        "value": "open sans",
+        "createdAt": "2026-07-24T17:41:00.434Z",
+        "reason": "User confirmed Open Sans is intentional; documented weight-pruned choice (8->4 woff2, ~40KB saved) in __root.tsx"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/routes/voluntariado.tsx"
+        ],
+        "createdAt": "2026-07-24T22:51:16.003Z",
+        "reason": "User confirmed (distill pass): callout border-l-4 pattern being refactored out of these files; ignore unblocks the refactor that removes the finding"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/routes/privacidad.tsx"
+        ],
+        "createdAt": "2026-07-24T22:51:16.031Z",
+        "reason": "User confirmed (distill pass): callout border-l-4 pattern being refactored out of these files; ignore unblocks the refactor that removes the finding"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/routes/recursos/autochequeo.tsx"
+        ],
+        "createdAt": "2026-07-24T22:51:16.059Z",
+        "reason": "User confirmed (distill pass): callout border-l-4 pattern being refactored out of these files; ignore unblocks the refactor that removes the finding"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/routes/recursos/reacciones-normales.tsx"
+        ],
+        "createdAt": "2026-07-24T22:51:16.084Z",
+        "reason": "User confirmed (distill pass): callout border-l-4 pattern being refactored out of these files; ignore unblocks the refactor that removes the finding"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/routes/terminos.tsx"
+        ],
+        "createdAt": "2026-07-24T22:51:16.111Z",
+        "reason": "User confirmed (distill pass): callout border-l-4 pattern being refactored out of these files; ignore unblocks the refactor that removes the finding"
+      }
+    ]
+  }
+}
