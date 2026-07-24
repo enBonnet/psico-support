@@ -22,3 +22,5 @@ dev.db.bak
 
 # Local export — PII
 /professionals.csv
+# Local Pi runtime state
+.atl/
