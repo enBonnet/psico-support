@@ -192,6 +192,26 @@ function Landing() {
         >
           O ver todos los profesionales
         </Link>
+        {/* ponytail: third primary CTA — for users who know the specific area
+          they need (duelo, trauma, suicidio, etc.). Routes to a category
+          picker that deep-links into the directory pre-filtered. Styled like
+          the autocuidado / soy-psicólogo cards (not the dominant auto-pick)
+          so "ayuda ahora" stays the top-of-funnel default for the unsure
+          majority, while giving the self-aware minority a direct path. */}
+        <Link
+          to="/ayuda/especifica"
+          onClick={() =>
+            track({
+              event: 'cta_click',
+              category: 'public',
+              param1: 'help_especifica',
+            })
+          }
+          className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+        >
+          <LifeBuoy aria-hidden="true" className="size-5" />
+          Necesito ayuda específica
+        </Link>
         <Link
           to="/recursos"
           onClick={() =>

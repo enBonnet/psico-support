@@ -4,8 +4,8 @@
 
 ---
 
-**Versión del manual:** 1.0
-**Versión de la aplicación:** 1.22.0
+**Versión del manual:** 1.1
+**Versión de la aplicación:** 1.24.0
 **Sitio:** [https://psicoayudaven.com](https://psicoayudaven.com)
 **Soporte:** soporte@psicoayudaven.com
 
@@ -120,8 +120,9 @@ Debajo del título hay un panel de filtros (cerrado por defecto). Pulsa **"Abrir
 - **Estado** — filtra por región de Venezuela (o país si no es Venezuela).
 - **Ciudad** — solo se activa después de elegir el estado.
 - **Edad / Población** — Niños, Adolescentes, Adultos, Adultos mayores.
-- **Población específica** — Oncológica, Neurodivergentes, Cuidadores, Comunidad LGBTQ+.
-- **Área de intervención** — Duelo, Violencia, Adicciones, Intervención en crisis, Ansiedad y depresión.
+- **Población específica** — Comunidad LGBTQ+, Migrantes y refugiados, Pueblos originarios, Comunidades rurales, Personas privadas de libertad, Adolescentes en riesgo social.
+- **Área de intervención** — Violencia (género/intrafamiliar), Adicciones, Intervención en crisis, Ansiedad y depresión.
+- **Área específica** — Duelo, Personas Cuidadoras, Personas Neurodivergentes, Oncológica, Diversidad funcional, Suicidio, Acompañamiento y fortalecimiento laboral, Trauma y Estrés post Traumático.
 
 Para borrar todo, pulsa **"Limpiar"**.
 
@@ -158,7 +159,7 @@ Pulsa el **nombre** de cualquier profesional para abrir su perfil completo. All�
   - **Ubicación** (ciudad y estado, o país).
   - **Modalidad** — "Atención online", "Atención presencial" o "Atención presencial y online".
   - **Horario** (si es agendado).
-  - **A quién atiende**, **población específica** y **área de intervención**.
+  - **Atiende a** (edad), **población específica**, **área de intervención** y, si aplica, **especialista en** (áreas específicas).
 
 > Si intentas abrir un perfil que no existe o no está verificado, verás: **"Profesional no encontrado. El perfil que buscas no está disponible."**
 
@@ -368,8 +369,12 @@ El registro tiene **dos pasos** y se hace en `/profesional/registro`.
 **Especialización:**
 
 - **¿Con quién trabajas?** (obligatorio, elige al menos uno): Niños, Adolescentes, Adultos, Adultos mayores.
-- **Poblaciones específicas** (opcional): Oncológica, Neurodivergentes, Cuidadores, Comunidad LGBTQ+.
-- **Áreas de intervención** (opcional): Duelo, Violencia, Adicciones, Intervención en crisis, Ansiedad y depresión.
+- **¿Con qué poblaciones específicas trabajas?** (opcional): Comunidad LGBTQ+, Migrantes y refugiados, Pueblos originarios, Comunidades rurales, Personas privadas de libertad, Adolescentes en riesgo social.
+- **¿En qué áreas intervienes?** (opcional): Violencia (género/intrafamiliar), Adicciones, Intervención en crisis, Ansiedad y depresión.
+- **¿Acompañas en áreas específicas?** (opcional): Duelo, Personas Cuidadoras, Personas Neurodivergentes, Oncológica, Diversidad funcional, Suicidio, Acompañamiento y fortalecimiento laboral, Trauma y Estrés post Traumático.
+  - Si marcas una o más, aparece un selector **¿Cómo quieres participar en estas áreas?** con dos opciones:
+    - **Inclusiva** (por defecto): apareces tanto en el directorio general como cuando alguien filtra por una de tus áreas específicas.
+    - **Exclusiva**: **solo** apareces cuando un buscador de ayuda filtra por una de tus áreas específicas — no saldrás en el directorio general ni en el botón "Necesito ayuda ahora". Útil si atiendes un nicho y prefieres no recibir contactos genéricos.
 
 **Contacto y modalidad:**
 
@@ -448,7 +453,7 @@ Entra desde el panel a **"Perfil profesional"**. Aquí puedes cambiar:
 
 - **Nombre**.
 - **Credencial** — país, número de colegiación y colegio.
-- **Especialización** — con quién trabajas, poblaciones y áreas.
+- **Especialización** — con quién trabajas, poblaciones específicas, áreas de intervención y áreas específicas (con su modo de participación inclusiva/exclusiva).
 - **Ubicación y contacto** — modalidad, país, estado, ciudad y WhatsApp.
 
 > **Importante:** Cambiar tu número de colegiación o el país del colegio **reinicia la verificación**. Verás: *"Perfil actualizado — tu credencial volvió a revisión"* y volverás al estado "en revisión".
@@ -875,4 +880,4 @@ No. El contador superior solo muestra verificados. Tienes que entrar a `/admin` 
 
 ---
 
-*Este manual refleja la versión 1.22.0 de la aplicación. Si encuentras algo distinto en la pantalla, es posible que la app se haya actualizado. Consulta la versión más reciente en el repositorio del proyecto.*
+*Este manual refleja la versión 1.24.0 de la aplicación. Si encuentras algo distinto en la pantalla, es posible que la app se haya actualizado. Consulta la versión más reciente en el repositorio del proyecto.*

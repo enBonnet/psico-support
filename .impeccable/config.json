@@ -1,7 +1,9 @@
 {
   "detector": {
     "ignoreRules": [],
-    "ignoreFiles": [],
+    "ignoreFiles": [
+      "src/db/schema.ts"
+    ],
     "ignoreValues": [
       {
         "rule": "side-tab",

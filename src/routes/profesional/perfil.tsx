@@ -18,12 +18,14 @@ import {
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
+  SPECIALIZED_AREA_OPTIONS,
   PAIS_OPTIONS,
   VENEZUELA_ESTADOS,
 } from '#/server/professionals'
 import type {
   ProfileEditInput,
   CertificateMime,
+  SpecializationMode,
 } from '#/server/professionals'
 import { VENEZUELA, ESTADO_CIUDADES } from '#/server/locations'
 import {
@@ -31,6 +33,7 @@ import {
   SectionHeader,
   inputCls,
 } from '#/components/professional-form'
+import { TagSelect } from '#/components/tag-select'
 import { PhoneInput } from '#/components/phone-input'
 import { noindexHead } from '#/lib/seo'
 
@@ -118,6 +121,11 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
   const [practiceAreas, setPracticeAreas] = useState<string[]>(
     me.practiceAreas,
   )
+  const [specializedAreas, setSpecializedAreas] = useState<string[]>(
+    me.specializedAreas,
+  )
+  const [specializationMode, setSpecializationMode] =
+    useState<SpecializationMode>(me.specializationMode)
   const [modality, setModality] = useState(me.modality)
   const [country, setCountry] = useState(me.country)
   const [estado, setEstado] = useState(me.estado ?? '')
@@ -161,6 +169,8 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
     population.join(',') !== me.population.join(',') ||
     focusGroups.join(',') !== me.focusGroups.join(',') ||
     practiceAreas.join(',') !== me.practiceAreas.join(',') ||
+    specializedAreas.join(',') !== me.specializedAreas.join(',') ||
+    specializationMode !== me.specializationMode ||
     modality !== me.modality ||
     country !== me.country ||
     estado !== (me.estado ?? '') ||
@@ -181,6 +191,15 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
       population,
       focusGroups,
       practiceAreas,
+      specializedAreas,
+      // ponytail: if the user cleared all specialized areas but left the mode
+      // on 'exclusive', send 'inclusive' so profileEditSchema's defensive
+      // coercion matches what the user sees. (The radio is disabled in that
+      // state, but a stale selection could linger from a previous save.)
+      specializationMode:
+        specializedAreas.length === 0 && specializationMode === 'exclusive'
+          ? 'inclusive'
+          : specializationMode,
       modality,
       country,
       estado: country === VENEZUELA ? estado : null,
@@ -255,17 +274,70 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
           onChange={setPopulation}
         />
         <TagSelect
-          label="Poblaciones específicas (opcional)"
+          label="¿Con qué poblaciones específicas trabajas? (opcional)"
           options={FOCUS_GROUP_OPTIONS}
           value={focusGroups}
           onChange={setFocusGroups}
         />
         <TagSelect
-          label="Áreas de intervención (opcional)"
+          label="¿En qué áreas intervienes? (opcional)"
           options={PRACTICE_AREA_OPTIONS}
           value={practiceAreas}
           onChange={setPracticeAreas}
         />
+        {/* ponytail: sensitive specialized areas + participation mode. The
+            exclusive radio is disabled until ≥1 area is picked; clearing the
+            last area while 'exclusive' is selected visually leaves the radio
+            checked, but the submit payload coerces back to inclusive (above)
+            and the server double-guards it. */}
+        <TagSelect
+          label="¿Acompañas en áreas específicas? (opcional)"
+          options={SPECIALIZED_AREA_OPTIONS}
+          value={specializedAreas}
+          onChange={setSpecializedAreas}
+        />
+        <FieldShell
+          label="¿Cómo quieres participar en estas áreas?"
+          errors={[]}
+        >
+          <div className="flex flex-col gap-2">
+            <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+              <input
+                type="radio"
+                name="specializationMode"
+                value="inclusive"
+                checked={specializationMode === 'inclusive'}
+                onChange={() => setSpecializationMode('inclusive')}
+                className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+              />
+              <span>
+                <span className="font-medium text-[var(--medi-text-primary)]">
+                  Inclusiva
+                </span>{' '}
+                — aparezco en el directorio general y cuando alguien filtra por
+                un área específica.
+              </span>
+            </label>
+            <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+              <input
+                type="radio"
+                name="specializationMode"
+                value="exclusive"
+                checked={specializationMode === 'exclusive'}
+                onChange={() => setSpecializationMode('exclusive')}
+                disabled={specializedAreas.length === 0}
+                className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+              />
+              <span>
+                <span className="font-medium text-[var(--medi-text-primary)]">
+                  Exclusiva
+                </span>{' '}
+                — solo aparezco cuando alguien filtra por una de mis áreas. No
+                salgo en el directorio general ni en el botón de “ayuda ahora”.
+              </span>
+            </label>
+          </div>
+        </FieldShell>
 
         <SectionHeader>Ubicación &amp; contacto</SectionHeader>
         <FieldShell label="Modalidad" errors={[]}>
@@ -359,50 +431,6 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
         {save.isPending ? 'Guardando…' : 'Guardar perfil'}
       </Button>
     </section>
-  )
-}
-
-// ponytail: multi-select tag buttons (mirrors completar.tsx). Plain value +
-// onChange so it composes with useState (no TanStack Form generics here).
-function TagSelect({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  options: readonly string[]
-  value: string[]
-  onChange: (v: string[]) => void
-}) {
-  return (
-    <FieldShell label={label} errors={[]}>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const selected = value.includes(opt)
-          return (
-            <button
-              key={opt}
-              type="button"
-              aria-pressed={selected}
-              onClick={() =>
-                onChange(
-                  selected ? value.filter((v) => v !== opt) : [...value, opt],
-                )
-              }
-              className={
-                'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
-                (selected
-                  ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
-                  : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
-              }
-            >
-              {opt}
-            </button>
-          )
-        })}
-      </div>
-    </FieldShell>
   )
 }
 

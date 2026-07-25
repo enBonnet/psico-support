@@ -11,22 +11,23 @@ import {
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
+  SPECIALIZED_AREA_OPTIONS,
   VENEZUELA_ESTADOS,
   PAIS_OPTIONS,
 } from '#/server/professionals'
-import type { RegisterStep2Input } from '#/server/professionals'
+import type { RegisterStep2Input, SpecializationMode } from '#/server/professionals'
 import { VENEZUELA, ESTADO_CIUDADES } from '#/server/locations'
 import {
-  DIAL_CODE,
   FieldShell,
   SectionHeader,
   CertificateInput,
   SupportDocsInput,
   collectFormErrors,
-  formatWhatsapp,
   inputCls,
 } from '#/components/professional-form'
 import type { SupportDocValue } from '#/components/professional-form'
+import { TagSelect } from '#/components/tag-select'
+import { PhoneInput } from '#/components/phone-input'
 import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/completar')({
@@ -69,6 +70,8 @@ function CompletarPage() {
       population: [] as string[],
       focusGroups: [] as string[],
       practiceAreas: [] as string[],
+      specializedAreas: [] as string[],
+      specializationMode: 'inclusive' as SpecializationMode,
       modality: '',
       country: '',
       estado: '',
@@ -319,111 +322,101 @@ function CompletarPage() {
 
         <form.Field name="population">
           {(field) => (
-            <FieldShell label="¿Con quién trabajas?" errors={field.state.meta.errors}>
-              <div className="flex flex-wrap gap-2">
-                {POPULATION_OPTIONS.map((opt) => {
-                  const selected = field.state.value.includes(opt)
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() =>
-                        field.handleChange(
-                          selected
-                            ? field.state.value.filter((v: string) => v !== opt)
-                            : [...field.state.value, opt],
-                        )
-                      }
-                      className={
-                        'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
-                        (selected
-                          ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
-                          : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
-                      }
-                    >
-                      {opt}
-                    </button>
-                  )
-                })}
-              </div>
-            </FieldShell>
+            <TagSelect
+              label="¿Con quién trabajas?"
+              options={POPULATION_OPTIONS}
+              value={field.state.value}
+              onChange={(v) => field.handleChange(v)}
+              errors={field.state.meta.errors}
+            />
           )}
         </form.Field>
 
         <form.Field name="focusGroups">
           {(field) => (
-            <FieldShell
+            <TagSelect
               label="¿Con qué poblaciones específicas trabajas? (opcional)"
+              options={FOCUS_GROUP_OPTIONS}
+              value={field.state.value}
+              onChange={(v) => field.handleChange(v)}
               errors={field.state.meta.errors}
-            >
-              <div className="flex flex-wrap gap-2">
-                {FOCUS_GROUP_OPTIONS.map((opt) => {
-                  const selected = field.state.value.includes(opt)
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() =>
-                        field.handleChange(
-                          selected
-                            ? field.state.value.filter(
-                                (v: string) => v !== opt,
-                              )
-                            : [...field.state.value, opt],
-                        )
-                      }
-                      className={
-                        'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
-                        (selected
-                          ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
-                          : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
-                      }
-                    >
-                      {opt}
-                    </button>
-                  )
-                })}
-              </div>
-            </FieldShell>
+            />
           )}
         </form.Field>
 
         <form.Field name="practiceAreas">
           {(field) => (
-            <FieldShell
+            <TagSelect
               label="¿En qué áreas intervienes? (opcional)"
+              options={PRACTICE_AREA_OPTIONS}
+              value={field.state.value}
+              onChange={(v) => field.handleChange(v)}
+              errors={field.state.meta.errors}
+            />
+          )}
+        </form.Field>
+
+        {/* ── Áreas específicas (sensibles) ── */}
+        {/* ponytail: see registro.tsx for the rationale. The exclusive toggle
+            is disabled until ≥1 specialized area is picked; the server
+            double-guards the empty-exclusive case. */}
+        <form.Field name="specializedAreas">
+          {(field) => (
+            <TagSelect
+              label="¿Acompañas en áreas específicas? (opcional)"
+              options={SPECIALIZED_AREA_OPTIONS}
+              value={field.state.value}
+              onChange={(v) => field.handleChange(v)}
+              errors={field.state.meta.errors}
+            />
+          )}
+        </form.Field>
+
+        <form.Field name="specializationMode">
+          {(field) => (
+            <FieldShell
+              label="¿Cómo quieres participar en estas áreas?"
               errors={field.state.meta.errors}
             >
-              <div className="flex flex-wrap gap-2">
-                {PRACTICE_AREA_OPTIONS.map((opt) => {
-                  const selected = field.state.value.includes(opt)
-                  return (
-                    <button
-                      key={opt}
-                      type="button"
-                      aria-pressed={selected}
-                      onClick={() =>
-                        field.handleChange(
-                          selected
-                            ? field.state.value.filter(
-                                (v: string) => v !== opt,
-                              )
-                            : [...field.state.value, opt],
-                        )
-                      }
-                      className={
-                        'min-h-11 rounded-[var(--glass-radius-sm)] border px-4 py-2 text-sm font-medium transition-all ' +
-                        (selected
-                          ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
-                          : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
-                      }
-                    >
-                      {opt}
-                    </button>
-                  )
-                })}
+              <div className="flex flex-col gap-2">
+                <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+                  <input
+                    type="radio"
+                    name="specializationMode"
+                    value="inclusive"
+                    checked={field.state.value === 'inclusive'}
+                    onChange={() => field.handleChange('inclusive')}
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                  />
+                  <span>
+                    <span className="font-medium text-[var(--medi-text-primary)]">
+                      Inclusiva
+                    </span>{' '}
+                    — aparezco en el directorio general y cuando alguien filtra
+                    por un área específica.
+                  </span>
+                </label>
+                <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+                  <input
+                    type="radio"
+                    name="specializationMode"
+                    value="exclusive"
+                    checked={field.state.value === 'exclusive'}
+                    onChange={() => field.handleChange('exclusive')}
+                    disabled={
+                      form.getFieldValue('specializedAreas').length === 0
+                    }
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                  />
+                  <span>
+                    <span className="font-medium text-[var(--medi-text-primary)]">
+                      Exclusiva
+                    </span>{' '}
+                    — solo aparezco cuando alguien filtra por una de mis áreas.
+                    No salgo en el directorio general ni en el botón de “ayuda
+                    ahora”.
+                  </span>
+                </label>
               </div>
             </FieldShell>
           )}
@@ -452,59 +445,21 @@ function CompletarPage() {
         </form.Field>
 
         <form.Field name="whatsappCountry">
-          {(field) => (
-            <FieldShell label="País del WhatsApp" errors={field.state.meta.errors}>
-              <select
-                className={inputCls}
-                value={field.state.value}
-                onChange={(e) => {
-                  field.handleChange(e.target.value)
-                  // ponytail: re-format existing whatsapp with the new dial code.
-                  const current = form.getFieldValue('whatsapp')
-                  form.setFieldValue(
-                    'whatsapp',
-                    formatWhatsapp(current, e.target.value),
-                  )
-                }}
-                onBlur={field.handleBlur}
-              >
-                <option value="" disabled>
-                  Selecciona…
-                </option>
-                {PAIS_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c} ({DIAL_CODE[c] ?? '+'})
-                  </option>
-                ))}
-              </select>
-            </FieldShell>
-          )}
-        </form.Field>
-
-        <form.Subscribe selector={(s) => s.values.whatsappCountry}>
-          {(whatsappCountry) => (
+          {(countryField) => (
             <form.Field name="whatsapp">
-              {(field) => (
-                <FieldShell label="WhatsApp / teléfono" errors={field.state.meta.errors}>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    autoCapitalize="none"
-                    className={inputCls}
-                    value={field.state.value}
-                    onChange={(e) =>
-                      field.handleChange(
-                        formatWhatsapp(e.target.value, whatsappCountry),
-                      )
-                    }
-                    onBlur={field.handleBlur}
-                  />
-                </FieldShell>
+              {(phoneField) => (
+                <PhoneInput
+                  country={countryField.state.value}
+                  phone={phoneField.state.value}
+                  onCountryChange={(c) => countryField.handleChange(c)}
+                  onPhoneChange={(p) => phoneField.handleChange(p)}
+                  countryLabel="País del WhatsApp"
+                  phoneLabel="WhatsApp / teléfono"
+                />
               )}
             </form.Field>
           )}
-        </form.Subscribe>
-
+        </form.Field>
         {submitError && (
           <p className="glass-card-soft rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm text-red-700">
             {submitError}

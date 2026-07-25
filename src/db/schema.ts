@@ -116,6 +116,21 @@ export const professionals = sqliteTable(
     // ponytail: JSON array of intervention-area tags (e.g. '["Duelo","Adicciones"]').
     // Also orthogonal to population/focusGroups.
     practiceAreas: text('practice_areas').notNull(),
+    // ponytail: JSON array of sensitive specialized-area tags (e.g.
+    // '["Suicidio","Duelo"]'). Orthogonal to the general axes — these are
+    // areas where the help-seeker's need is delicate enough that we don't
+    // surface every pro who holds them in the default directory browse.
+    // See `specializationMode` for the visibility control.
+    specializedAreas: text('specialized_areas').notNull().default('[]'),
+    // ponytail: 'inclusive' = appear in the general directory browse AND when
+    // a specialized-area filter is applied (default — preserves current
+    // visibility for migrated pros). 'exclusive' = hidden from default browse
+    // and from the "Necesito ayuda ahora" random pick; surfaces ONLY when a
+    // help-seeker filters by one of this pro's specialized areas (the
+    // /ayuda/especifica triage path). Plain TEXT enum (no CHECK; Zod validates).
+    specializationMode: text('specialization_mode')
+      .notNull()
+      .default('inclusive'),
     modality: text('modality', {
       enum: ['in_person', 'remote', 'both'],
     }).notNull(),

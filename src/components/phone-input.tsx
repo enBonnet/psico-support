@@ -1,9 +1,12 @@
 // ponytail: shared phone (WhatsApp-style) input — country <select> + tel input
-// with formatWhatsapp. Extracted from the inline copy in completar.tsx/registro
-// so the follow-up form (and any future surface) reuses it. Plain controlled
-// props (no TanStack Form generics — same escape CertificateInput uses) so it
-// composes inside any form. The two registration routes keep their inline copy
-// for now (separate optional refactor) to keep this change small.
+// with formatWhatsapp. Used by all four phone-bearing forms: the pro
+// registration routes (registro/completar), the profile edit (perfil), and the
+// follow-up form (seguimiento). Plain controlled props (no TanStack Form
+// generics — same escape CertificateInput / TagSelect use) so it composes
+// inside any form. When the country changes, the existing phone is re-formatted
+// with the new dial code via onPhoneChange(formatWhatsapp(phone, country)) —
+// this mirrors the hand-rolled setFieldValue('whatsapp', …) the registration
+// routes used to inline.
 
 import { PAIS_OPTIONS } from '#/server/locations'
 import {

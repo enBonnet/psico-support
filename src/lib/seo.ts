@@ -91,18 +91,22 @@ export function profileJsonLd(p: {
   populations?: readonly string[]
   focusGroups?: readonly string[]
   practiceAreas?: readonly string[]
+  specializedAreas?: readonly string[]
   /**
    * Canonical profile URLs (social media etc.) — maps to schema.org Person.sameAs,
    * which Google's Knowledge Graph reads to link an entity to its social profiles.
    */
   sameAs?: readonly string[]
 }) {
-  // ponytail: knowsAbout folds all three specialization axes (age population +
-  // focus groups + practice areas) into one schema.org field.
+  // ponytail: knowsAbout folds all four specialization axes (age population +
+  // focus groups + practice areas + specialized areas) into one schema.org
+  // field. Specialized areas (Suicidio, Trauma, etc.) are folded in because
+  // Google reads knowsAbout as topic expertise — exactly what they represent.
   const knowsAbout = [
     ...(p.populations ?? []),
     ...(p.focusGroups ?? []),
     ...(p.practiceAreas ?? []),
+    ...(p.specializedAreas ?? []),
   ]
   return {
     '@context': 'https://schema.org',

@@ -315,8 +315,9 @@ function PrintManual() {
         <li><strong>Búsqueda por nombre</strong></li>
         <li><strong>Estado</strong> y <strong>ciudad</strong></li>
         <li><strong>Edad / Población:</strong> Niños, Adolescentes, Adultos, Adultos mayores</li>
-        <li><strong>Población específica:</strong> Oncológica, Neurodivergentes, Cuidadores, Comunidad LGBTQ+</li>
-        <li><strong>Área de intervención:</strong> Duelo, Violencia, Adicciones, Intervención en crisis, Ansiedad y depresión</li>
+        <li><strong>Población específica:</strong> Comunidad LGBTQ+, Migrantes y refugiados, Pueblos originarios, Comunidades rurales, Personas privadas de libertad, Adolescentes en riesgo social</li>
+        <li><strong>Área de intervención:</strong> Violencia (género/intrafamiliar), Adicciones, Intervención en crisis, Ansiedad y depresión</li>
+        <li><strong>Área específica:</strong> Duelo, Personas Cuidadoras, Personas Neurodivergentes, Oncológica, Diversidad funcional, Suicidio, Acompañamiento y fortalecimiento laboral, Trauma y Estrés post Traumático</li>
       </ul>
       <p>
         La lista se actualiza cada 20 segundos. Cada tarjeta muestra nombre,

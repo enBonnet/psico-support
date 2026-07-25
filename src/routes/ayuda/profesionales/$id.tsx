@@ -63,9 +63,16 @@ export const Route = createFileRoute('/ayuda/profesionales/$id')({
     // practice areas) into one SEO-friendly clause when either is present.
     const focusText = [...pro.focusGroups, ...pro.practiceAreas]
     const focusClause = focusText.length > 0 ? ` Enfoque: ${focusText.join(', ')}.` : ''
+    // ponytail: specialized areas (sensitive axis) get their own SEO clause so
+    // searches like "psicólogo duelo" or "psicólogo trauma" can match this
+    // profile. Separate from the general focus clause above.
+    const specializedClause =
+      pro.specializedAreas.length > 0
+        ? ` Especialista en: ${pro.specializedAreas.join(', ')}.`
+        : ''
     const description = `${pro.name}, psicólogo verificado${
       locationText ? ` en ${locationText}` : ''
-    }. ${modalityText}. ${popText}${focusClause} Contacto directo por WhatsApp.`.replace(
+    }. ${modalityText}. ${popText}${focusClause}${specializedClause} Contacto directo por WhatsApp.`.replace(
       '  ',
       ' ',
     )
@@ -224,6 +231,7 @@ function ProfilePage() {
               populations: pro.population,
               focusGroups: pro.focusGroups,
               practiceAreas: pro.practiceAreas,
+              specializedAreas: pro.specializedAreas,
               sameAs: socials.map((s) => s.href),
             }),
           ),
@@ -325,6 +333,15 @@ function ProfilePage() {
             <div className="flex items-center gap-2">
               <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
               <dd>Área de intervención: {pro.practiceAreas.join(', ')}</dd>
+            </div>
+          )}
+          {/* ponytail: specialized areas get their own row — they're the
+              sensitive axis (Suicidio, Trauma, etc.) and warrant explicit
+              labeling distinct from the general focus/practice tags above. */}
+          {pro.specializedAreas.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
+              <dd>Especialista en: {pro.specializedAreas.join(', ')}</dd>
             </div>
           )}
         </dl>

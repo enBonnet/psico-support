@@ -463,7 +463,7 @@ function recomputeKpis(rows, days) {
   const byEvent = {};
   rows.forEach(r => { byEvent[r.event] = (byEvent[r.event] || 0) + (Number(r.total) || 0); });
   lastKpis = [
-    { label: 'Contactos WhatsApp', value: (byEvent['pro_contact'] || 0) + (byEvent['pro_contact_random'] || 0), sub: 'pro_contact + pro_contact_random' },
+    { label: 'Contactos WhatsApp', value: (byEvent['pro_contact'] || 0) + (byEvent['pro_contact_random'] || 0) + (byEvent['pro_contact_help_now'] || 0) + (byEvent['pro_contact_ahora'] || 0), sub: 'pro_contact* (4 entry points)' },
     { label: 'Vistas directorio', value: byEvent['directory_view'] || 0, sub: 'directory_view' },
     { label: 'Vistas perfil', value: byEvent['profile_view'] || 0, sub: 'profile_view' },
     { label: 'CTA landing', value: byEvent['cta_click'] || 0, sub: 'cta_click' },

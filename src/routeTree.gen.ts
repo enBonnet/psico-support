@@ -44,6 +44,7 @@ import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login
 import { Route as ProfesionalDisponibilidadRouteImport } from './routes/profesional/disponibilidad'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as ProfesionalAudiosRouteImport } from './routes/profesional/audios'
+import { Route as AyudaEspecificaRouteImport } from './routes/ayuda/especifica'
 import { Route as AdminAnaliticaRouteImport } from './routes/admin/analitica'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
 import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
@@ -231,6 +232,11 @@ const ProfesionalAudiosRoute = ProfesionalAudiosRouteImport.update({
   path: '/profesional/audios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AyudaEspecificaRoute = AyudaEspecificaRouteImport.update({
+  id: '/ayuda/especifica',
+  path: '/ayuda/especifica',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminAnaliticaRoute = AdminAnaliticaRouteImport.update({
   id: '/admin/analitica',
   path: '/admin/analitica',
@@ -291,6 +297,7 @@ export interface FileRoutesByFullPath {
   '/voluntariado': typeof VoluntariadoRoute
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
+  '/ayuda/especifica': typeof AyudaEspecificaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -336,6 +343,7 @@ export interface FileRoutesByTo {
   '/voluntariado': typeof VoluntariadoRoute
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
+  '/ayuda/especifica': typeof AyudaEspecificaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -382,6 +390,7 @@ export interface FileRoutesById {
   '/voluntariado': typeof VoluntariadoRoute
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
+  '/ayuda/especifica': typeof AyudaEspecificaRoute
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -429,6 +438,7 @@ export interface FileRouteTypes {
     | '/voluntariado'
     | '/ya'
     | '/admin/analitica'
+    | '/ayuda/especifica'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -474,6 +484,7 @@ export interface FileRouteTypes {
     | '/voluntariado'
     | '/ya'
     | '/admin/analitica'
+    | '/ayuda/especifica'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -519,6 +530,7 @@ export interface FileRouteTypes {
     | '/voluntariado'
     | '/ya'
     | '/admin/analitica'
+    | '/ayuda/especifica'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -565,6 +577,7 @@ export interface RootRouteChildren {
   VoluntariadoRoute: typeof VoluntariadoRoute
   YaRoute: typeof YaRoute
   AdminAnaliticaRoute: typeof AdminAnaliticaRoute
+  AyudaEspecificaRoute: typeof AyudaEspecificaRoute
   ProfesionalAudiosRoute: typeof ProfesionalAudiosRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
   ProfesionalDisponibilidadRoute: typeof ProfesionalDisponibilidadRoute
@@ -839,6 +852,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfesionalAudiosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/ayuda/especifica': {
+      id: '/ayuda/especifica'
+      path: '/ayuda/especifica'
+      fullPath: '/ayuda/especifica'
+      preLoaderRoute: typeof AyudaEspecificaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/analitica': {
       id: '/admin/analitica'
       path: '/admin/analitica'
@@ -917,6 +937,7 @@ const rootRouteChildren: RootRouteChildren = {
   VoluntariadoRoute: VoluntariadoRoute,
   YaRoute: YaRoute,
   AdminAnaliticaRoute: AdminAnaliticaRoute,
+  AyudaEspecificaRoute: AyudaEspecificaRoute,
   ProfesionalAudiosRoute: ProfesionalAudiosRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
   ProfesionalDisponibilidadRoute: ProfesionalDisponibilidadRoute,

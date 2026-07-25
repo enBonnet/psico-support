@@ -217,7 +217,8 @@ src/
     seo.ts               # helpers SEO (OG/Twitter/canonical + JSON-LD)
     notifications.tsx    # notificaciones fire-and-forget estilo iOS
     install-prompt.tsx   # detección de instalación PWA
-  components/            # bottom-tabs (BottomTabs + DesktopNav), ui/*, etc.
+  components/            # bottom-tabs (BottomTabs + DesktopNav), ui/*, tag-select,
+                          # phone-input, avatar, …
   server.ts              # entrada del Worker (httpsRedirect + Sentry.withSentry)
   instrument.client.ts   # Sentry.init (cliente)
   db/                    # esquema Drizzle + cliente D1
@@ -234,6 +235,18 @@ public/
 - La credencial es un único número de colegiación (+ colegio certificador
   opcional). El **certificado de egreso** y los **documentos de apoyo** son
   opcionales y se guardan en R2 (`support-docs/`, `certificates/`).
+- **Cuatro ejes ortogonales de especialización** (`src/server/professionals.ts`,
+  option sets `as const`): `population` (edad), `focusGroups` (poblaciones
+  específicas), `practiceAreas` (áreas de intervención) y `specializedAreas`
+  (áreas sensibles — Duelo, Trauma, Suicidio, etc.). Cada uno es un array JSON
+  en D1 y se surfacea en el registro, el panel, el directorio (filtros),
+  el perfil público, la meta SEO y el JSON-LD `knowsAbout`. Las áreas
+  específicas tienen además un `specialization_mode` (`inclusive`/`exclusive`):
+  un profesional exclusivo solo aparece cuando un buscador filtra por una de
+  sus áreas — nunca en el directorio general ni en "Necesito ayuda ahora".
+- Los componentes de formulario compartidos (`<PhoneInput>`, `<TagSelect>`,
+  `<CertificateInput>`) viven en `src/components/` y se reutilizan entre
+  registro, completar y perfil para que el alta y la edición nunca diverjan.
 - Los mensajes de error al usuario están en español; nunca se filtran detalles
   de SQL al cliente.
 - La analítica de producto es **fire-and-forget**: un fallo de escritura nunca

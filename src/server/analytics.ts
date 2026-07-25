@@ -47,6 +47,18 @@ export const TRACKED_EVENTS = [
   // failure of listProfessionals (e.g. transient D1 DO reset, WEB-3). Gauges how
   // often the recovery state is reached in prod and whether retries help.
   'directory_retry',
+  // especifica_view: /ayuda/especifica triage page mounted. The funnel entry
+  // for help-seekers who know the specific area they need (duelo, trauma,
+  // suicidio, etc.). Funnel:
+  //   cta_click(help_especifica) → especifica_view → especifica_select →
+  //   directory_view (with specialized= set) → pro_contact.
+  // Compare against the general funnel (cta_click(help_now) →
+  // pro_contact_help_now) to see which path converts better for sensitive areas.
+  'especifica_view',
+  // especifica_select: a specialized-area button tapped on the triage page.
+  // param1 = the area tag (matches SPECIALIZED_AREA_OPTIONS). Lets us see
+  // which areas drive the most demand (Suicidio vs Duelo vs Trauma, etc.).
+  'especifica_select',
   'profile_view',
   // pro_contact: param1=proId, param2=source (directory|profile), param3=userId (server-resolved)
   'pro_contact',

@@ -323,7 +323,7 @@ src/
     route-pending.tsx    # router defaultPendingComponent — covers CSR beforeLoad/loader gaps
     not-found.tsx        # router defaultNotFoundComponent — Spanish 404
     error.tsx            # router defaultErrorComponent — Spanish 500 + Sentry captureException
-    avatar.tsx, phone-input.tsx, social-icons.tsx, audio-story-viewer.tsx, …
+    avatar.tsx, phone-input.tsx, tag-select.tsx, social-icons.tsx, audio-story-viewer.tsx, …
     ui/                  # button, card, badge, input, switch, label, skeleton
   router.tsx             # createRouter + default{Pending,NotFound,Error}Component + ssr-query + Sentry router tracing
   server.ts              # Worker entry: httpsRedirect + Sentry.withSentry (cloudflare SDK)

@@ -77,14 +77,17 @@ export const QUERIES: QueryDef[] = [
 	{
 		id: 'whatsapp',
 		title: 'Clicks WhatsApp',
-		description: 'Contactar por WhatsApp + Contactar al azar',
+		description: 'Todos los puntos de WhatsApp: directorio, al-azar, ayuda-ahora, /ahora',
 		columns: ['event', 'total'],
 		sql: ({ days }) => `
 			SELECT
 				blob1 AS event,
 				SUM(_sample_interval * double1) AS total
 			FROM ${DATASET}
-			WHERE blob1 IN ('pro_contact', 'pro_contact_random')
+			WHERE blob1 IN (
+				'pro_contact', 'pro_contact_random',
+				'pro_contact_help_now', 'pro_contact_ahora'
+			)
 				AND timestamp > NOW() - INTERVAL '${days}' DAY
 			GROUP BY event
 			ORDER BY total DESC
@@ -93,18 +96,20 @@ export const QUERIES: QueryDef[] = [
 	{
 		id: 'whatsapp-by-pro',
 		title: 'WhatsApp por profesional',
-		description: 'Top profesionales por clicks de WhatsApp',
-		columns: ['pro_id', 'user_id', 'source', 'clicks'],
+		description: 'Top profesionales por clicks (todos los puntos de WhatsApp)',
+		columns: ['pro_id', 'user_id', 'clicks'],
 		sql: ({ days }) => `
 			SELECT
 				blob4 AS pro_id,
 				blob6 AS user_id,
-				blob5 AS source,
 				SUM(_sample_interval * double1) AS clicks
 			FROM ${DATASET}
-			WHERE blob1 = 'pro_contact'
+			WHERE blob1 IN (
+				'pro_contact', 'pro_contact_random',
+				'pro_contact_help_now', 'pro_contact_ahora'
+			)
 				AND timestamp > NOW() - INTERVAL '${days}' DAY
-			GROUP BY pro_id, user_id, source
+			GROUP BY pro_id, user_id
 			ORDER BY clicks DESC
 			LIMIT 20
 		`,

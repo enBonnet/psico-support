@@ -41,23 +41,59 @@ export type Population = (typeof POPULATION_OPTIONS)[number]
 
 // ponytail: specialized populations (orthogonal to age). Optional — most pros
 // hold none of these. Same JSON-array pattern + LIKE filter as population.
+// Three former members (Oncológica, Cuidadores, Neurodivergentes) were moved
+// into SPECIALIZED_AREA_OPTIONS when that axis landed — they were sensitive
+// areas mislabeled as a "population", and the duplicate tag pickers confused
+// pros at registration (see CHANGELOG [Unreleased] + scripts/migrate-specialized-areas.ts).
+// The remaining tags are demographic / identity communities a pro may have
+// particular experience serving — kept distinct from the sensitive-area axis
+// (which is about the help-seeker's presenting need, not their identity).
 export const FOCUS_GROUP_OPTIONS = [
-  'Oncológica',
-  'Neurodivergentes',
-  'Cuidadores',
   'Comunidad LGBTQ+',
+  'Migrantes y refugiados',
+  'Pueblos originarios',
+  'Comunidades rurales',
+  'Personas privadas de libertad',
+  'Adolescentes en riesgo social',
 ] as const
 export type FocusGroup = (typeof FOCUS_GROUP_OPTIONS)[number]
 
 // ponytail: intervention areas (problem-type axis). Optional, JSON array.
+// 'Duelo' was moved into SPECIALIZED_AREA_OPTIONS for the same reason as the
+// focus-group cull above — it's a sensitive area, not a generic intervention.
 export const PRACTICE_AREA_OPTIONS = [
-  'Duelo',
   'Violencia (género/intrafamiliar)',
   'Adicciones',
   'Intervención en crisis',
   'Ansiedad y depresión',
 ] as const
 export type PracticeArea = (typeof PRACTICE_AREA_OPTIONS)[number]
+
+// ponytail: sensitive specialized areas — the "áreas específicas" axis. These
+// are areas where the help-seeker's need is delicate (suicide, trauma, duelo,
+// neurodivergencia, etc.) and where pros can opt into an EXCLUSIVE visibility
+// mode: hidden from default directory browse + random pick, surfaced only when
+// a help-seeker filters by one of these areas (the /ayuda/especifica triage).
+// JSON array + LIKE filter.
+export const SPECIALIZED_AREA_OPTIONS = [
+  'Duelo',
+  'Personas Cuidadoras',
+  'Personas Neurodivergentes',
+  'Oncológica',
+  'Diversidad funcional',
+  'Suicidio',
+  'Acompañamiento y fortalecimiento laboral',
+  'Trauma y Estrés post Traumático',
+] as const
+export type SpecializedArea = (typeof SPECIALIZED_AREA_OPTIONS)[number]
+
+// ponytail: per-pro participation mode for the specialized axis.
+// 'inclusive' (default) — appear in the general directory AND when a
+//   specialized filter matches.
+// 'exclusive' — hidden from default browse + random pick; surface only when
+//   a help-seeker filters by one of this pro's specialized areas.
+export const SPECIALIZATION_MODES = ['inclusive', 'exclusive'] as const
+export type SpecializationMode = (typeof SPECIALIZATION_MODES)[number]
 
 // ponytail: optional certificate upload (título / certificado de egreso).
 // Transported through the server fn as base64 so the upload is atomic with
@@ -310,6 +346,20 @@ export function parsePracticeAreas(
   raw: string | null | undefined,
 ): PracticeArea[] {
   return parseJsonTagArray(raw, PRACTICE_AREA_OPTIONS)
+}
+export function parseSpecializedAreas(
+  raw: string | null | undefined,
+): SpecializedArea[] {
+  return parseJsonTagArray(raw, SPECIALIZED_AREA_OPTIONS)
+}
+
+// ponytail: coerce stored text → typed specialization mode, defaulting to
+// 'inclusive' on anything unknown (null, old rows pre-migration, garbage).
+// Never throws — same posture as parseJsonTagArray.
+export function parseSpecializationMode(
+  raw: string | null | undefined,
+): SpecializationMode {
+  return raw === 'exclusive' ? 'exclusive' : 'inclusive'
 }
 
 // ── Availability schedule (F1) ───────────────────────────────────────────────
@@ -589,6 +639,8 @@ export type PublicProfessional = {
   population: Population[]
   focusGroups: FocusGroup[]
   practiceAreas: PracticeArea[]
+  specializedAreas: SpecializedArea[]
+  specializationMode: SpecializationMode
 }
 
 // ponytail: filter shape shared by the list route (search params) and the
@@ -604,6 +656,10 @@ export const listSchema = z.object({
   population: z.string().trim().optional(),
   focusGroups: z.string().trim().optional(),
   practiceAreas: z.string().trim().optional(),
+  // ponytail: when set, the directory surfaces pros (inclusive OR exclusive)
+  // whose specialized_areas contain this tag. When unset, exclusive pros are
+  // hidden from the default browse — see buildProfessionalWhere.
+  specialized: z.string().trim().optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(48).default(12),
 })
@@ -625,6 +681,7 @@ function buildProfessionalWhere(
     | 'population'
     | 'focusGroups'
     | 'practiceAreas'
+    | 'specialized'
   >,
 ) {
   return and(
@@ -651,6 +708,17 @@ function buildProfessionalWhere(
     data.practiceAreas
       ? like(professionals.practiceAreas, `%"${data.practiceAreas}"%`)
       : undefined,
+    // ponytail: specialized-area filter + exclusive visibility.
+    // - If `specialized` is set: surface pros whose specialized_areas contain
+    //   the tag, REGARDLESS of mode (an exclusive pro is the whole point of
+    //   this path — they exist precisely for filtered, not random, matching).
+    // - If `specialized` is unset: hide exclusive pros from the default browse
+    //   so they don't appear in casual directory scrolling. Inclusive pros
+    //   stay visible everywhere (backward-compatible with migrated pros, who
+    //   all default to 'inclusive').
+    data.specialized
+      ? like(professionals.specializedAreas, `%"${data.specialized}"%`)
+      : ne(professionals.specializationMode, 'exclusive'),
   )
 }
 
@@ -689,6 +757,8 @@ export const listProfessionals = createServerFn({ method: 'GET' })
           populationRaw: professionals.population,
           focusGroupsRaw: professionals.focusGroups,
           practiceAreasRaw: professionals.practiceAreas,
+          specializedAreasRaw: professionals.specializedAreas,
+          specializationMode: professionals.specializationMode,
         })
         .from(professionals)
         .where(where),
@@ -738,6 +808,8 @@ export const listProfessionals = createServerFn({ method: 'GET' })
         population: parsePopulation(r.populationRaw),
         focusGroups: parseFocusGroups(r.focusGroupsRaw),
         practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+        specializedAreas: parseSpecializedAreas(r.specializedAreasRaw),
+        specializationMode: parseSpecializationMode(r.specializationMode),
       })),
       total,
       anyAvailableNow,
@@ -774,6 +846,8 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
           populationRaw: professionals.population,
           focusGroupsRaw: professionals.focusGroups,
           practiceAreasRaw: professionals.practiceAreas,
+          specializedAreasRaw: professionals.specializedAreas,
+          specializationMode: professionals.specializationMode,
           verifiedStatus: professionals.verifiedStatus,
           providesService: professionals.providesService,
           avatarKey: professionals.avatarKey,
@@ -805,6 +879,8 @@ export const getPublicProfessional = createServerFn({ method: 'GET' })
       population: parsePopulation(r.populationRaw),
       focusGroups: parseFocusGroups(r.focusGroupsRaw),
       practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+      specializedAreas: parseSpecializedAreas(r.specializedAreasRaw),
+      specializationMode: parseSpecializationMode(r.specializationMode),
       avatarKey: r.avatarKey,
       socialX: r.socialX,
       socialInstagram: r.socialInstagram,
@@ -844,6 +920,12 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
       population: z.string().trim().optional(),
       focusGroups: z.string().trim().optional(),
       practiceAreas: z.string().trim().optional(),
+      // ponytail: specialized intentionally omitted from the random-pick shape —
+      // exclusive pros must never be auto-matched to a help-seeker (they only
+      // surface via the /ayuda/especifica filtered path). Keeping the key here
+      // as `undefined` makes buildProfessionalWhere hit its
+      // `ne(specializationMode, 'exclusive')` branch, excluding them.
+      specialized: z.undefined().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -958,6 +1040,12 @@ const registerStep2Object = z.object({
     .min(1, 'Selecciona al menos uno'),
   focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
   practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
+  // ponytail: sensitive specialized areas (4th axis). Optional. When non-empty
+  // + specializationMode='exclusive', the pro is hidden from the default
+  // directory browse and the "ayuda ahora" random pick — they only surface
+  // when a help-seeker filters by one of these areas (/ayuda/especifica).
+  specializedAreas: z.array(z.enum(SPECIALIZED_AREA_OPTIONS)),
+  specializationMode: z.enum(SPECIALIZATION_MODES).default('inclusive'),
   modality: z.enum(['in_person', 'remote', 'both']),
   country: z.enum(PAIS_OPTIONS),
   estado: nullableWhenEmptyEstado,
@@ -1004,6 +1092,8 @@ export const registerSchema = z
       .min(1, 'Selecciona al menos uno'),
     focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
     practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
+    specializedAreas: z.array(z.enum(SPECIALIZED_AREA_OPTIONS)),
+    specializationMode: z.enum(SPECIALIZATION_MODES).default('inclusive'),
     modality: z.enum(['in_person', 'remote', 'both']),
     country: z.enum(PAIS_OPTIONS),
     estado: nullableWhenEmptyEstado,
@@ -1040,6 +1130,8 @@ type ProInsertData = {
   population: string[]
   focusGroups: string[]
   practiceAreas: string[]
+  specializedAreas: string[]
+  specializationMode: SpecializationMode
   modality: 'in_person' | 'remote' | 'both'
   country: string
   estado?: string | null
@@ -1050,6 +1142,15 @@ type ProInsertData = {
 }
 
 function proEditableFields(data: ProInsertData) {
+  // ponytail: an 'exclusive' pro with no specialized areas is a contradiction
+  // (they'd be hidden from every path with nothing to surface for). Coerce to
+  // 'inclusive' rather than reject — defensive on the server, never blocks
+  // the write. The form disables the exclusive toggle until they pick ≥1 area.
+  const mode =
+    data.specializationMode === 'exclusive' &&
+    data.specializedAreas.length === 0
+      ? 'inclusive'
+      : data.specializationMode
   return {
     name: data.name,
     certificationNumber: data.certificationNumber.trim(),
@@ -1057,6 +1158,8 @@ function proEditableFields(data: ProInsertData) {
     population: JSON.stringify(data.population),
     focusGroups: JSON.stringify(data.focusGroups),
     practiceAreas: JSON.stringify(data.practiceAreas),
+    specializedAreas: JSON.stringify(data.specializedAreas),
+    specializationMode: mode,
     modality: data.modality,
     country: data.country,
     estado: data.country === VENEZUELA ? (data.estado ?? null) : null,
@@ -1399,6 +1502,8 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
         populationRaw: professionals.population,
         focusGroupsRaw: professionals.focusGroups,
         practiceAreasRaw: professionals.practiceAreas,
+        specializedAreasRaw: professionals.specializedAreas,
+        specializationMode: professionals.specializationMode,
         country: professionals.country,
         estado: professionals.estado,
         ciudad: professionals.ciudad,
@@ -1436,6 +1541,8 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
       population: parsePopulation(r.populationRaw),
       focusGroups: parseFocusGroups(r.focusGroupsRaw),
       practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+      specializedAreas: parseSpecializedAreas(r.specializedAreasRaw),
+      specializationMode: parseSpecializationMode(r.specializationMode),
       country: r.country,
       estado: r.estado,
       ciudad: r.ciudad,
@@ -1837,6 +1944,8 @@ export const listAllProfessionals = createServerFn({ method: 'GET' })
           populationRaw: professionals.population,
           focusGroupsRaw: professionals.focusGroups,
           practiceAreasRaw: professionals.practiceAreas,
+          specializedAreasRaw: professionals.specializedAreas,
+          specializationMode: professionals.specializationMode,
           country: professionals.country,
           estado: professionals.estado,
           ciudad: professionals.ciudad,
@@ -1894,6 +2003,8 @@ export const listAllProfessionals = createServerFn({ method: 'GET' })
         population: parsePopulation(r.populationRaw),
         focusGroups: parseFocusGroups(r.focusGroupsRaw),
         practiceAreas: parsePracticeAreas(r.practiceAreasRaw),
+        specializedAreas: parseSpecializedAreas(r.specializedAreasRaw),
+        specializationMode: parseSpecializationMode(r.specializationMode),
         country: r.country,
         estado: r.estado,
         ciudad: r.ciudad,

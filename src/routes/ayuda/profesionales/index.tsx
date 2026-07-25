@@ -21,6 +21,7 @@ import {
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
+  SPECIALIZED_AREA_OPTIONS,
   PAGE_SIZE_DEFAULT,
 } from '#/server/professionals'
 import type {
@@ -60,6 +61,11 @@ const searchSchema = z.object({
   population: z.string().optional().default(''),
   focusGroups: z.string().optional().default(''),
   practiceAreas: z.string().optional().default(''),
+  // ponytail: specialized-area filter — the /ayuda/especifica triage path
+  // deep-links here with ?specialized=<tag>. When set, the list surfaces pros
+  // whose specialized_areas contain the tag (inclusive AND exclusive). When
+  // unset, exclusive pros are hidden from the default browse (server-side).
+  specialized: z.string().optional().default(''),
   page: z.number().int().min(1).default(1),
 })
 
@@ -75,6 +81,7 @@ type Filters = {
   population: string
   focusGroups: string
   practiceAreas: string
+  specialized: string
   page: number
 }
 
@@ -127,6 +134,7 @@ function ProfessionalsList() {
   const [population, setPopulation] = useState(initial.population)
   const [focusGroups, setFocusGroups] = useState(initial.focusGroups)
   const [practiceAreas, setPracticeAreas] = useState(initial.practiceAreas)
+  const [specialized, setSpecialized] = useState(initial.specialized)
   const [page, setPage] = useState(initial.page)
 
   const [picking, setPicking] = useState(false)
@@ -154,6 +162,7 @@ function ProfessionalsList() {
       population,
       focusGroups,
       practiceAreas,
+      specialized,
       page,
     ],
     queryFn: () =>
@@ -166,6 +175,7 @@ function ProfessionalsList() {
           population,
           focusGroups,
           practiceAreas,
+          specialized,
           page,
           pageSize: PAGE_SIZE_DEFAULT,
         },
@@ -216,7 +226,8 @@ function ProfessionalsList() {
     ciudad ||
     population ||
     focusGroups ||
-    practiceAreas
+    practiceAreas ||
+    specialized
 
   // ponytail: human-readable list of the active filters for the collapsed
   // summary. Quoted term for the name search, plain labels for the rest.
@@ -227,6 +238,7 @@ function ProfessionalsList() {
   if (population) activeFilterParts.push(population)
   if (focusGroups) activeFilterParts.push(focusGroups)
   if (practiceAreas) activeFilterParts.push(practiceAreas)
+  if (specialized) activeFilterParts.push(specialized)
   const filterSummary = activeFilterParts.join(' · ')
 
   // ponytail: filter setters reset page → 1 (narrowing can shorten the list).
@@ -249,6 +261,7 @@ function ProfessionalsList() {
     if (patch.population !== undefined) setPopulation(patch.population)
     if (patch.focusGroups !== undefined) setFocusGroups(patch.focusGroups)
     if (patch.practiceAreas !== undefined) setPracticeAreas(patch.practiceAreas)
+    if (patch.specialized !== undefined) setSpecialized(patch.specialized)
   }
   function clearFilters() {
     track({ event: 'directory_clear', category: 'public' })
@@ -258,6 +271,7 @@ function ProfessionalsList() {
     setPopulation('')
     setFocusGroups('')
     setPracticeAreas('')
+    setSpecialized('')
     setPage(1)
   }
   function goPage(next: number) {
@@ -522,6 +536,25 @@ function ProfessionalsList() {
                   </option>
                 ))}
               </select>
+
+              {/* ponytail: specialized-area filter. Reachable from the
+                  /ayuda/especifica triage, but also offered inline so a user
+                  refining filters can pick one directly. Surfacing it here
+                  means an exclusive pro becomes visible the moment a tag is
+                  chosen — which is the entire point of the exclusive mode. */}
+              <select
+                value={specialized}
+                onChange={(e) => patchFilter({ specialized: e.target.value })}
+                aria-label="Filtrar por área específica"
+                className="glass-input h-12 w-full px-3 text-base"
+              >
+                <option value="">Cualquier área específica</option>
+                {SPECIALIZED_AREA_OPTIONS.map((a) => (
+                  <option key={a} value={a}>
+                    {a}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         )}
@@ -718,13 +751,21 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
           </p>
           {p.population.length > 0 && (
             <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
-              Atiende: {p.population.join(', ')}
+              Atiende a: {p.population.join(', ')}
             </p>
           )}
           {[...p.focusGroups, ...p.practiceAreas].length > 0 && (
             <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
               Enfoque:{' '}
               {[...p.focusGroups, ...p.practiceAreas].join(' · ')}
+            </p>
+          )}
+          {/* ponytail: specialized areas get their own line — they're the
+              sensitive axis (Suicidio, Trauma, etc.) and deserve visual
+              separation from the general focus tags above. */}
+          {p.specializedAreas.length > 0 && (
+            <p className="mt-0.5 text-xs font-medium text-[var(--medi-secondary)]">
+              Especialista en: {p.specializedAreas.join(' · ')}
             </p>
           )}
           {p.availabilityMode === 'scheduled' &&
