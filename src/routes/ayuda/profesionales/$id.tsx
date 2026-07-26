@@ -56,10 +56,21 @@ export const Route = createFileRoute('/ayuda/profesionales/$id')({
         : pro.modality === 'both'
           ? 'Atención presencial y online'
           : 'Atención presencial'
+    // ponytail: a generalist (all four specialization axes empty) gets an
+    // "Atención general" clause in the SEO description instead of a bare
+    // profile — both for honesty ("supports everyone") and so generalist
+    // profiles aren't outranked by every specialized one.
+    const isGeneralist =
+      pro.population.length === 0 &&
+      pro.focusGroups.length === 0 &&
+      pro.practiceAreas.length === 0 &&
+      pro.specializedAreas.length === 0
     const popText =
       pro.population.length > 0
         ? `Atiende a: ${pro.population.join(', ')}.`
-        : ''
+        : isGeneralist
+          ? 'Atención general.'
+          : ''
     // ponytail: combine the two optional specialization axes (focus groups +
     // practice areas) into one SEO-friendly clause when either is present.
     const focusText = [...pro.focusGroups, ...pro.practiceAreas]
@@ -328,6 +339,18 @@ function ProfilePage() {
               <dd>Horario: {scheduleText}</dd>
             </div>
           )}
+          {/* ponytail: a generalist (all four specialization axes empty) gets a
+              positive "Atención general" row so the profile doesn't look bare.
+              Mirrors the directory card. */}
+          {pro.population.length === 0 &&
+            pro.focusGroups.length === 0 &&
+            pro.practiceAreas.length === 0 &&
+            pro.specializedAreas.length === 0 && (
+              <div className="flex items-center gap-2">
+                <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />
+                <dd>Atención general</dd>
+              </div>
+            )}
           {pro.population.length > 0 && (
             <div className="flex items-center gap-2">
               <Users className="size-4 shrink-0 text-[var(--medi-secondary)]" />

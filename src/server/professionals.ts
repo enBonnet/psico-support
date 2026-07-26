@@ -738,8 +738,11 @@ function buildProfessionalWhere(
     data.q ? like(professionals.name, `%${data.q}%`) : undefined,
     data.estado ? eq(professionals.estado, data.estado) : undefined,
     data.ciudad ? eq(professionals.ciudad, data.ciudad) : undefined,
-    // ponytail: population is a JSON text array ('["Niños","Adultos"]').
-    // LIKE '%"Niños"%' matches the tag anywhere in the serialized string.
+    // ponytail: tag filters (4 axes). The columns are JSON text arrays
+    // ('["Niños","Adultos"]'); LIKE '%"Niños"%' matches the tag anywhere in the
+    // serialized string. Each LIKE matches regardless of the pro's
+    // specializationMode — inclusive AND exclusive pros surface on their
+    // selected tags.
     data.population
       ? like(professionals.population, `%"${data.population}"%`)
       : undefined,
@@ -749,16 +752,23 @@ function buildProfessionalWhere(
     data.practiceAreas
       ? like(professionals.practiceAreas, `%"${data.practiceAreas}"%`)
       : undefined,
-    // ponytail: specialized-area filter + exclusive visibility.
-    // - If `specialized` is set: surface pros whose specialized_areas contain
-    //   the tag, REGARDLESS of mode (an exclusive pro is the whole point of
-    //   this path — they exist precisely for filtered, not random, matching).
-    // - If `specialized` is unset: hide exclusive pros from the default browse
-    //   so they don't appear in casual directory scrolling. Inclusive pros
-    //   stay visible everywhere (backward-compatible with migrated pros, who
-    //   all default to 'inclusive').
     data.specialized
       ? like(professionals.specializedAreas, `%"${data.specialized}"%`)
+      : undefined,
+    // ponytail: exclusive visibility — the blanket exclusion. An exclusive pro
+    // is hidden from UNFILTERED browse and the unfiltered random pick (they
+    // don't want casual/general matches). But the moment a help-seeker sets
+    // ANY tag filter (edad/grupo/área/área específica), the matching LIKE
+    // clauses above already include them — so we drop the exclusion whenever
+    // at least one tag filter is active. Inclusive pros are always visible.
+    // (Previously this gate keyed only on the `specialized` axis; extending it
+    // to all four axes makes "Exclusiva" mean true exclusivity across the pro's
+    // whole configured focus, not just the sensitive axis.)
+    data.population ||
+    data.focusGroups ||
+    data.practiceAreas ||
+    data.specialized
+      ? undefined
       : ne(professionals.specializationMode, 'exclusive'),
   )
 }
@@ -961,12 +971,14 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
       population: z.string().trim().optional(),
       focusGroups: z.string().trim().optional(),
       practiceAreas: z.string().trim().optional(),
-      // ponytail: specialized intentionally omitted from the random-pick shape —
-      // exclusive pros must never be auto-matched to a help-seeker (they only
-      // surface via the /ayuda/especifica filtered path). Keeping the key here
-      // as `undefined` makes buildProfessionalWhere hit its
-      // `ne(specializationMode, 'exclusive')` branch, excluding them.
-      specialized: z.undefined().optional(),
+      // ponytail: specialized is accepted here (alongside the other 3 tag
+      // filters) so the directory's "Contactar al azar" can draw from the
+      // FILTERED pool — which, per buildProfessionalWhere, includes matching
+      // exclusive pros once any tag filter is active. The landing's
+      // "Necesito ayuda ahora" calls this fn with no tag filters set, so it
+      // still hits the `ne(specializationMode, 'exclusive')` branch and
+      // excludes exclusive pros from the unfiltered random match.
+      specialized: z.string().trim().optional(),
     }),
   )
   .handler(async ({ data }) => {
@@ -1076,9 +1088,11 @@ const nullableWhenEmptyEstado = z.preprocess(
 const registerStep2Object = z.object({
   certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
   certifyingSchool: z.string().max(120).optional().nullable(),
-  population: z
-    .array(z.enum(POPULATION_OPTIONS))
-    .min(1, 'Selecciona al menos uno'),
+  // ponytail: population used to be required (.min(1)), but a generalist pro
+  // (Atención general toggle) intentionally leaves all four specialization
+  // axes empty — they support every age/group/area. An empty array here means
+  // "generalist"; the directory/profile render "Atención general" in that case.
+  population: z.array(z.enum(POPULATION_OPTIONS)),
   focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
   practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
   // ponytail: sensitive specialized areas (4th axis). Optional. When non-empty
@@ -1128,9 +1142,9 @@ export const registerSchema = z
     password: z.string().min(8, 'Mínimo 8 caracteres'),
     certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
     certifyingSchool: z.string().max(120).optional().nullable(),
-    population: z
-      .array(z.enum(POPULATION_OPTIONS))
-      .min(1, 'Selecciona al menos uno'),
+    // ponytail: mirrors registerStep2Object — population optional (empty =
+    // generalist / Atención general). Kept in sync manually with step2Object.
+    population: z.array(z.enum(POPULATION_OPTIONS)),
     focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
     practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
     specializedAreas: z.array(z.enum(SPECIALIZED_AREA_OPTIONS)),
@@ -1183,13 +1197,19 @@ type ProInsertData = {
 }
 
 function proEditableFields(data: ProInsertData) {
-  // ponytail: an 'exclusive' pro with no specialized areas is a contradiction
-  // (they'd be hidden from every path with nothing to surface for). Coerce to
-  // 'inclusive' rather than reject — defensive on the server, never blocks
-  // the write. The form disables the exclusive toggle until they pick ≥1 area.
+  // ponytail: an 'exclusive' pro with no specialization at all is a
+  // contradiction — they'd be hidden from every path with nothing to surface
+  // for (buildProfessionalWhere only drops the `ne(mode,'exclusive')` exclusion
+  // when a tag filter is active, and an all-empty pro matches no tag). Coerce
+  // to 'inclusive' rather than reject — defensive on the server, never blocks
+  // the write. The form disables the exclusive toggle until they pick ≥1 axis.
+  const hasAnyFocus =
+    data.population.length > 0 ||
+    data.focusGroups.length > 0 ||
+    data.practiceAreas.length > 0 ||
+    data.specializedAreas.length > 0
   const mode =
-    data.specializationMode === 'exclusive' &&
-    data.specializedAreas.length === 0
+    data.specializationMode === 'exclusive' && !hasAnyFocus
       ? 'inclusive'
       : data.specializationMode
   return {

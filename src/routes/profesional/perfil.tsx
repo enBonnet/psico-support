@@ -35,6 +35,7 @@ import {
 } from '#/components/professional-form'
 import { TagSelect } from '#/components/tag-select'
 import { PhoneInput } from '#/components/phone-input'
+import { Switch } from '#/components/ui/switch'
 import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/perfil')({
@@ -126,6 +127,16 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
   )
   const [specializationMode, setSpecializationMode] =
     useState<SpecializationMode>(me.specializationMode)
+  // ponytail: "Atención general" toggle (see registro.tsx). Derived from the
+  // loaded profile — a pro is general when all four specialization axes are
+  // empty. Driving it from explicit state lets the user flip it; the arrays
+  // remain the source of truth for save + dirty-check.
+  const [generalAttention, setGeneralAttention] = useState(
+    me.population.length === 0 &&
+      me.focusGroups.length === 0 &&
+      me.practiceAreas.length === 0 &&
+      me.specializedAreas.length === 0,
+  )
   const [modality, setModality] = useState(me.modality)
   const [country, setCountry] = useState(me.country)
   const [estado, setEstado] = useState(me.estado ?? '')
@@ -192,12 +203,17 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
       focusGroups,
       practiceAreas,
       specializedAreas,
-      // ponytail: if the user cleared all specialized areas but left the mode
-      // on 'exclusive', send 'inclusive' so profileEditSchema's defensive
-      // coercion matches what the user sees. (The radio is disabled in that
-      // state, but a stale selection could linger from a previous save.)
+      // ponytail: if the user cleared every focus axis but left the mode on
+      // 'exclusive', send 'inclusive' so it matches proEditableFields' defensive
+      // coercion (an exclusive pro with no focus would be invisible everywhere).
+      // The radio is disabled in that state, but a stale selection could linger
+      // from a previous save. Mirrors the hasAnyFocus gate on the radio below.
       specializationMode:
-        specializedAreas.length === 0 && specializationMode === 'exclusive'
+        population.length === 0 &&
+        focusGroups.length === 0 &&
+        practiceAreas.length === 0 &&
+        specializedAreas.length === 0 &&
+        specializationMode === 'exclusive'
           ? 'inclusive'
           : specializationMode,
       modality,
@@ -222,7 +238,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
       </h2>
 
       <div className="mt-3 flex flex-col gap-3">
-        <FieldShell label="Nombre" errors={[]}>
+        <FieldShell label="Nombre" errors={[]} required>
           <input
             className={inputCls}
             value={name}
@@ -231,7 +247,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
         </FieldShell>
 
         <SectionHeader>Credencial</SectionHeader>
-        <FieldShell label="País del colegio o certificación" errors={[]}>
+        <FieldShell label="País del colegio o certificación" errors={[]} required>
           <select
             className={inputCls}
             value={credentialCountry}
@@ -247,7 +263,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
             ))}
           </select>
         </FieldShell>
-        <FieldShell label="Número de colegiación" errors={[]}>
+        <FieldShell label="Número de colegiación" errors={[]} required>
           <input
             type="text"
             autoCapitalize="none"
@@ -266,81 +282,150 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
           />
         </FieldShell>
 
-        <SectionHeader>Especialización</SectionHeader>
-        <TagSelect
-          label="¿Con quién trabajas?"
-          options={POPULATION_OPTIONS}
-          value={population}
-          onChange={setPopulation}
-        />
-        <TagSelect
-          label="¿Con qué poblaciones específicas trabajas? (opcional)"
-          options={FOCUS_GROUP_OPTIONS}
-          value={focusGroups}
-          onChange={setFocusGroups}
-        />
-        <TagSelect
-          label="¿En qué áreas intervienes? (opcional)"
-          options={PRACTICE_AREA_OPTIONS}
-          value={practiceAreas}
-          onChange={setPracticeAreas}
-        />
-        {/* ponytail: sensitive specialized areas + participation mode. The
-            exclusive radio is disabled until ≥1 area is picked; clearing the
-            last area while 'exclusive' is selected visually leaves the radio
-            checked, but the submit payload coerces back to inclusive (above)
-            and the server double-guards it. */}
-        <TagSelect
-          label="¿Acompañas en áreas específicas? (opcional)"
-          options={SPECIALIZED_AREA_OPTIONS}
-          value={specializedAreas}
-          onChange={setSpecializedAreas}
-        />
-        <FieldShell
-          label="¿Cómo quieres participar en estas áreas?"
-          errors={[]}
-        >
-          <div className="flex flex-col gap-2">
-            <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
-              <input
-                type="radio"
-                name="specializationMode"
-                value="inclusive"
-                checked={specializationMode === 'inclusive'}
-                onChange={() => setSpecializationMode('inclusive')}
-                className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
-              />
-              <span>
-                <span className="font-medium text-[var(--medi-text-primary)]">
-                  Inclusiva
-                </span>{' '}
-                — aparezco en el directorio general y cuando alguien filtra por
-                un área específica.
-              </span>
-            </label>
-            <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
-              <input
-                type="radio"
-                name="specializationMode"
-                value="exclusive"
-                checked={specializationMode === 'exclusive'}
-                onChange={() => setSpecializationMode('exclusive')}
-                disabled={specializedAreas.length === 0}
-                className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
-              />
-              <span>
-                <span className="font-medium text-[var(--medi-text-primary)]">
-                  Exclusiva
-                </span>{' '}
-                — solo aparezco cuando alguien filtra por una de mis áreas. No
-                salgo en el directorio general ni en el botón de “ayuda ahora”.
-              </span>
-            </label>
-          </div>
-        </FieldShell>
+        {/* ── Enfoque de atención ── */}
+        {/* ponytail: "Atención general" toggle (see registro.tsx). When ON the
+            four specialization axes are cleared and mode forced inclusive.
+            Initialized from the loaded profile so an existing generalist opens
+            ON. */}
+        <SectionHeader>Enfoque de atención</SectionHeader>
+        <label className="flex items-start gap-3">
+          <Switch
+            checked={generalAttention}
+            onCheckedChange={(checked) => {
+              setGeneralAttention(checked)
+              if (checked) {
+                setPopulation([])
+                setFocusGroups([])
+                setPracticeAreas([])
+                setSpecializedAreas([])
+                setSpecializationMode('inclusive')
+              }
+            }}
+            className="mt-0.5"
+          />
+          <span className="flex flex-col gap-0.5 text-sm">
+            <span className="font-medium text-[var(--medi-text-primary)]">
+              Atención general
+            </span>
+            <span className="text-xs text-[var(--medi-text-secondary)]">
+              Acompaño a cualquier persona, sin filtros de edad, grupo o área.
+              Aparezco en el directorio general y en el botón de “ayuda ahora”.
+            </span>
+          </span>
+        </label>
+        {generalAttention && (
+          <p className="-mt-2 text-xs text-[var(--medi-text-secondary)]">
+            No te pediremos preferencias específicas. Si en el futuro quieres
+            definir enfoques, desactiva esta opción.
+          </p>
+        )}
+
+        {!generalAttention && (
+          <>
+            <TagSelect
+              label="¿Con qué edades trabajas?"
+              options={POPULATION_OPTIONS}
+              value={population}
+              onChange={setPopulation}
+            />
+            <TagSelect
+              label="¿Con qué comunidades o poblaciones específicas?"
+              options={FOCUS_GROUP_OPTIONS}
+              value={focusGroups}
+              onChange={setFocusGroups}
+            />
+            <TagSelect
+              label="¿En qué áreas intervienes?"
+              options={PRACTICE_AREA_OPTIONS}
+              value={practiceAreas}
+              onChange={setPracticeAreas}
+            />
+            {/* ponytail: sensitive specialized areas + participation mode.
+                Exclusivity spans ALL four axes (see registro.tsx +
+                buildProfessionalWhere): an exclusive pro surfaces only when a
+                help-seeker filters by any of their selected tags. The radio is
+                disabled until ≥1 axis is picked; clearing the last axis while
+                'exclusive' is selected visually leaves the radio checked, but
+                the submit payload coerces back to inclusive (above) and the
+                server double-guards it. */}
+            <TagSelect
+              label="¿Acompañas en áreas específicas? (Duelo, Trauma, etc.)"
+              options={SPECIALIZED_AREA_OPTIONS}
+              value={specializedAreas}
+              onChange={setSpecializedAreas}
+            />
+            {(() => {
+              const hasAnyFocus =
+                population.length > 0 ||
+                focusGroups.length > 0 ||
+                practiceAreas.length > 0 ||
+                specializedAreas.length > 0
+              const exclusiveDisabled = !hasAnyFocus
+              return (
+                <FieldShell
+                  label="¿Cómo quieres participar?"
+                  errors={[]}
+                  hint={
+                    exclusiveDisabled
+                      ? 'Selecciona al menos una preferencia arriba (edad, grupo, área o área específica) para activar la opción Exclusiva.'
+                      : undefined
+                  }
+                >
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+                      <input
+                        type="radio"
+                        name="specializationMode"
+                        value="inclusive"
+                        checked={specializationMode === 'inclusive'}
+                        onChange={() => setSpecializationMode('inclusive')}
+                        className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                      />
+                      <span>
+                        <span className="font-medium text-[var(--medi-text-primary)]">
+                          Inclusiva
+                        </span>{' '}
+                        — aparezco en el directorio general y también cuando
+                        alguien filtra por cualquiera de mis preferencias.
+                      </span>
+                    </label>
+                    <label
+                      className={
+                        'flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]' +
+                        (exclusiveDisabled
+                          ? ' cursor-not-allowed opacity-60'
+                          : '')
+                      }
+                      aria-disabled={exclusiveDisabled || undefined}
+                    >
+                      <input
+                        type="radio"
+                        name="specializationMode"
+                        value="exclusive"
+                        checked={specializationMode === 'exclusive'}
+                        onChange={() => setSpecializationMode('exclusive')}
+                        disabled={exclusiveDisabled}
+                        className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                      />
+                      <span>
+                        <span className="font-medium text-[var(--medi-text-primary)]">
+                          Exclusiva
+                        </span>{' '}
+                        — solo aparezco cuando alguien filtra por una de mis
+                        preferencias (edad, grupo, área o área específica). No
+                        salgo en el directorio general ni en el botón de “ayuda
+                        ahora” sin filtros.
+                      </span>
+                    </label>
+                  </div>
+                </FieldShell>
+              )
+            })()}
+          </>
+        )}
 
         <SectionHeader>Ubicación &amp; contacto</SectionHeader>
-        <FieldShell label="Modalidad" errors={[]}>
+        <FieldShell label="Modalidad" errors={[]} required>
           <select
             className={inputCls}
             value={modality}
@@ -353,7 +438,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
             <option value="both">Ambas</option>
           </select>
         </FieldShell>
-        <FieldShell label="País donde vives" errors={[]}>
+        <FieldShell label="País donde vives" errors={[]} required>
           <select
             className={inputCls}
             value={country}
@@ -374,7 +459,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
         </FieldShell>
         {country === VENEZUELA && (
           <>
-            <FieldShell label="Estado" errors={[]}>
+            <FieldShell label="Estado" errors={[]} required>
               <select
                 className={inputCls}
                 value={estado}
@@ -393,7 +478,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
                 ))}
               </select>
             </FieldShell>
-            <FieldShell label="Ciudad" errors={[]}>
+            <FieldShell label="Ciudad" errors={[]} required>
               <select
                 className={inputCls}
                 value={ciudad}
@@ -419,6 +504,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
           onPhoneChange={setWhatsapp}
           countryLabel="País del WhatsApp"
           phoneLabel="WhatsApp / teléfono"
+          phoneRequired
         />
       </div>
 

@@ -26,6 +26,7 @@ export function PhoneInput({
   countryLabel = 'País del teléfono',
   phoneLabel = 'Teléfono / WhatsApp',
   disabled = false,
+  phoneRequired = false,
 }: {
   country: string
   phone: string
@@ -36,6 +37,10 @@ export function PhoneInput({
   countryLabel?: string
   phoneLabel?: string
   disabled?: boolean
+  // ponytail: the phone (whatsapp) field is required in the registration
+  // schemas but the country is optional — callers pass phoneRequired so the
+  // asterisk lands on the right label.
+  phoneRequired?: boolean
 }) {
   return (
     <>
@@ -68,6 +73,7 @@ export function PhoneInput({
       <FieldShell
         label={phoneLabel}
         errors={phoneError ? [{ message: phoneError }] : []}
+        required={phoneRequired}
       >
         <input
           type="tel"

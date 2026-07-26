@@ -98,17 +98,30 @@ export function FieldShell({
   label,
   errors,
   children,
+  required = false,
+  hint,
 }: {
   label: string
   errors: unknown[]
   children: ReactNode
+  // ponytail: when true, renders a red "*" after the label so required fields
+  // are obvious before any submit attempt (the Zod messages only surface post-
+  // submit). Purely visual — actual required-ness lives in the server schema.
+  required?: boolean
+  // ponytail: optional muted helper line rendered between the input and the
+  // error. Used to explain disabled/gated controls (e.g. the Exclusiva radio).
+  hint?: ReactNode
 }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-sm font-medium text-[var(--medi-text-primary)]">
         {label}
+        {required && <span className="text-red-500"> *</span>}
       </span>
       {children}
+      {hint && (
+        <span className="text-xs text-[var(--medi-text-secondary)]">{hint}</span>
+      )}
       {errors.length > 0 && (
         <span className="text-sm text-red-600">
           {(errors[0] as { message?: string }).message ?? 'Inválido'}

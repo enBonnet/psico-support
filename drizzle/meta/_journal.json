@@ -120,6 +120,13 @@
       "when": 1783457936130,
       "tag": "0016_warm_jasper_sitwell",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1785089375697,
+      "tag": "0017_open_shinko_yamashiro",
+      "breakpoints": true
     }
   ]
 }
