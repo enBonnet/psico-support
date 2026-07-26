@@ -660,84 +660,105 @@ function RegisterPage() {
                   )}
                 </form.Field>
 
-                <form.Field name="specializationMode">
-                  {(field) => {
-                    // ponytail: exclusive needs ≥1 preference across ANY axis
-                    // (edad/grupo/área/área específica) to be meaningful —
-                    // exclusivity is gated by buildProfessionalWhere on the
-                    // pro's whole configured focus, not just the sensitive
-                    // axis. An all-empty exclusive pro would be invisible
-                    // everywhere; the server (proEditableFields) coerces that
-                    // back to inclusive defensively, and we disable the radio
-                    // here until they pick ≥1 axis.
+                {/*
+                  ponytail: subscribe to the four focus axes so the Exclusiva
+                  gate is reactive. Reading them via form.getFieldValue inside
+                  the specializationMode field's render would only re-evaluate
+                  when specializationMode itself changes — picking/clearing a
+                  tag in another axis wouldn't update the radio's disabled state
+                  until an unrelated re-render. form.Subscribe re-renders this
+                  block whenever any of the four arrays changes.
+                */}
+                <form.Subscribe
+                  selector={(s) => [
+                    s.values.population,
+                    s.values.focusGroups,
+                    s.values.practiceAreas,
+                    s.values.specializedAreas,
+                  ]}
+                >
+                  {([populationV, focusGroupsV, practiceAreasV, specializedAreasV]) => {
                     const hasAnyFocus =
-                      form.getFieldValue('population').length > 0 ||
-                      form.getFieldValue('focusGroups').length > 0 ||
-                      form.getFieldValue('practiceAreas').length > 0 ||
-                      form.getFieldValue('specializedAreas').length > 0
-                    const exclusiveDisabled = !hasAnyFocus
+                      populationV.length > 0 ||
+                      focusGroupsV.length > 0 ||
+                      practiceAreasV.length > 0 ||
+                      specializedAreasV.length > 0
                     return (
-                      <FieldShell
-                        label="¿Cómo quieres participar?"
-                        errors={field.state.meta.errors}
-                        hint={
-                          exclusiveDisabled
-                            ? 'Selecciona al menos una preferencia arriba (edad, grupo, área o área específica) para activar la opción Exclusiva.'
-                            : undefined
-                        }
-                      >
-                        <div className="flex flex-col gap-2">
-                          <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
-                            <input
-                              type="radio"
-                              name="specializationMode"
-                              value="inclusive"
-                              checked={field.state.value === 'inclusive'}
-                              onChange={() => field.handleChange('inclusive')}
-                              className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
-                            />
-                            <span>
-                              <span className="font-medium text-[var(--medi-text-primary)]">
-                                Inclusiva
-                              </span>{' '}
-                              — aparezco en el directorio general y también
-                              cuando alguien filtra por cualquiera de mis
-                              preferencias.
-                            </span>
-                          </label>
-                          <label
-                            className={
-                              'flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]' +
-                              (exclusiveDisabled
-                                ? ' cursor-not-allowed opacity-60'
-                                : '')
-                            }
-                            aria-disabled={exclusiveDisabled || undefined}
-                          >
-                            <input
-                              type="radio"
-                              name="specializationMode"
-                              value="exclusive"
-                              checked={field.state.value === 'exclusive'}
-                              onChange={() => field.handleChange('exclusive')}
-                              disabled={exclusiveDisabled}
-                              className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
-                            />
-                            <span>
-                              <span className="font-medium text-[var(--medi-text-primary)]">
-                                Exclusiva
-                              </span>{' '}
-                              — solo aparezco cuando alguien filtra por una de
-                              mis preferencias (edad, grupo, área o área
-                              específica). No salgo en el directorio general ni
-                              en el botón de “ayuda ahora” sin filtros.
-                            </span>
-                          </label>
-                        </div>
-                      </FieldShell>
+                      <form.Field name="specializationMode">
+                        {(field) => {
+                          // ponytail: exclusive needs ≥1 preference across ANY
+                          // axis to be meaningful — exclusivity is gated by
+                          // buildProfessionalWhere on the pro's whole configured
+                          // focus. An all-empty exclusive pro would be invisible
+                          // everywhere; the server (proEditableFields) coerces
+                          // that back to inclusive defensively, and we disable
+                          // the radio here until they pick ≥1 axis.
+                          const exclusiveDisabled = !hasAnyFocus
+                          return (
+                            <FieldShell
+                              label="¿Cómo quieres participar?"
+                              errors={field.state.meta.errors}
+                              hint={
+                                exclusiveDisabled
+                                  ? 'Selecciona al menos una preferencia arriba (edad, grupo, área o área específica) para activar la opción Exclusiva.'
+                                  : undefined
+                              }
+                            >
+                              <div className="flex flex-col gap-2">
+                                <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+                                  <input
+                                    type="radio"
+                                    name="specializationMode"
+                                    value="inclusive"
+                                    checked={field.state.value === 'inclusive'}
+                                    onChange={() => field.handleChange('inclusive')}
+                                    className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                                  />
+                                  <span>
+                                    <span className="font-medium text-[var(--medi-text-primary)]">
+                                      Inclusiva
+                                    </span>{' '}
+                                    — aparezco en el directorio general y también
+                                    cuando alguien filtra por cualquiera de mis
+                                    preferencias.
+                                  </span>
+                                </label>
+                                <label
+                                  className={
+                                    'flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]' +
+                                    (exclusiveDisabled
+                                      ? ' cursor-not-allowed opacity-60'
+                                      : '')
+                                  }
+                                  aria-disabled={exclusiveDisabled || undefined}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="specializationMode"
+                                    value="exclusive"
+                                    checked={field.state.value === 'exclusive'}
+                                    onChange={() => field.handleChange('exclusive')}
+                                    disabled={exclusiveDisabled}
+                                    className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                                  />
+                                  <span>
+                                    <span className="font-medium text-[var(--medi-text-primary)]">
+                                      Exclusiva
+                                    </span>{' '}
+                                    — solo aparezco cuando alguien filtra por una
+                                    de mis preferencias (edad, grupo, área o área
+                                    específica). No salgo en el directorio general
+                                    ni en el botón de “ayuda ahora” sin filtros.
+                                  </span>
+                                </label>
+                              </div>
+                            </FieldShell>
+                          )
+                        }}
+                      </form.Field>
                     )
                   }}
-                </form.Field>
+                </form.Subscribe>
               </>
             )}
 

@@ -203,12 +203,17 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
       focusGroups,
       practiceAreas,
       specializedAreas,
-      // ponytail: if the user cleared all specialized areas but left the mode
-      // on 'exclusive', send 'inclusive' so profileEditSchema's defensive
-      // coercion matches what the user sees. (The radio is disabled in that
-      // state, but a stale selection could linger from a previous save.)
+      // ponytail: if the user cleared every focus axis but left the mode on
+      // 'exclusive', send 'inclusive' so it matches proEditableFields' defensive
+      // coercion (an exclusive pro with no focus would be invisible everywhere).
+      // The radio is disabled in that state, but a stale selection could linger
+      // from a previous save. Mirrors the hasAnyFocus gate on the radio below.
       specializationMode:
-        specializedAreas.length === 0 && specializationMode === 'exclusive'
+        population.length === 0 &&
+        focusGroups.length === 0 &&
+        practiceAreas.length === 0 &&
+        specializedAreas.length === 0 &&
+        specializationMode === 'exclusive'
           ? 'inclusive'
           : specializationMode,
       modality,
