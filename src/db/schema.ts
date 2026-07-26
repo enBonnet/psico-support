@@ -218,6 +218,16 @@ export const professionals = sqliteTable(
     // ponytail: IANA tz (e.g. 'America/Caracas') interpreting the schedule.
     // Defaulted from country on first schedule save.
     timezone: text('timezone'),
+    // ponytail: JSON array of offered appointment durations in minutes
+    // (e.g. '[15,45]'). Default '[45]' (not '[]') so existing pros and new
+    // signups offer 45-min sessions out of the box — no backfill, no migration
+    // data step. Only meaningful when availabilityMode='scheduled'; the pro
+    // picks the set in /profesional/disponibilidad. Allowed values are
+    // constrained to {15,30,45,60} via Zod on write (APPOINTMENT_DURATION_OPTIONS
+    // in src/server/professionals.ts) — no CHECK constraint, matching every
+    // other JSON-array/status column in this schema. parseAppointmentDurations
+    // drops invalid values and defaults to [45] on empty/garbage.
+    appointmentDurations: text('appointment_durations').notNull().default('[45]'),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(
       sql`(unixepoch())`,
     ),
@@ -227,6 +237,16 @@ export const professionals = sqliteTable(
     // estado/country carry the location filters; available is the ORDER BY
     // tiebreak. Cover the hot paths without over-indexing a small table.
     index('professionals_verifiedStatus_idx').on(table.verifiedStatus),
+    // Composite covering the directory's most common predicate
+    // (verifiedStatus='verified' AND provides_service=1) — listProfessionals,
+    // countVerifiedProfessionals, getVerifiedProfessionalIds all hit this.
+    // The single-column verifiedStatus index above covers SSR profile lookup
+    // and other reads that don't constrain providesService. Added after WEB-H:
+    // the count query was triggering D1 backend timeouts under load without it.
+    index('professionals_verifiedStatus_providesService_idx').on(
+      table.verifiedStatus,
+      table.providesService,
+    ),
     index('professionals_estado_idx').on(table.estado),
     index('professionals_country_idx').on(table.country),
     index('professionals_available_idx').on(table.available),
@@ -372,9 +392,85 @@ export const followUps = sqliteTable(
   ],
 )
 
+// ponytail: scheduled video-call appointments between a logged-in help-seeker
+// (clientUserId → user.id) and a professional (professionalId → professionals.id).
+// Derived from the pro's weekly availabilitySchedule (see src/server/appointments.ts
+// generateSlots); there is no separate "slots" table — slots are computed at query
+// time and this row only exists once a slot is booked. The meeting is a public
+// meet.jit.si room with an opaque unguessable name (meetingRoom); no JWT, no SDK.
+// status: 'booked' = upcoming/active; 'cancelled' = either party cancelled (slot
+// becomes re-bookable); 'completed' = past its endAt (set lazily on read, no cron).
+// ON DELETE CASCADE on both FKs — if a user or pro row is hard-deleted, their
+// appointments go too (soft-delete of a pro leaves the row intact). Double-booking
+// is prevented in createAppointment via a check-then-insert query (no unique index
+// because cancelled slots must be re-bookable). Plain-TEXT enums (no CHECK; Zod
+// validates on write), matching every other status column in this schema.
+export const appointments = sqliteTable(
+  'appointments',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    professionalId: integer('professional_id')
+      .notNull()
+      .references(() => professionals.id, { onDelete: 'cascade' }),
+    // ponytail: the booking client (a standard user account, NOT a professional).
+    // Required — anonymous visitors use the instant WhatsApp path; scheduled
+    // video calls need an attributable account so we can email both parties and
+    // give the client a self-service "Mis sesiones" list.
+    clientUserId: text('client_user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    // ponytail: UTC ms (timestamp_ms) — matches user/session/follow_ups convention.
+    // Stored in UTC; rendered in each participant's tz via Intl.DateTimeFormat.
+    startAt: integer('start_at', { mode: 'timestamp_ms' }).notNull(),
+    endAt: integer('end_at', { mode: 'timestamp_ms' }).notNull(),
+    // ponytail: denormalized meeting length in minutes (default 45). Redundant
+    // with endAt-startAt but convenient for display + analytics. Ceiling: if
+    // per-pro configurable duration is added, this becomes the source of truth.
+    durationMin: integer('duration_min').notNull().default(45),
+    meetingUrl: text('meeting_url').notNull(),
+    // ponytail: the bare room name (e.g. 'psico-<uuid>'), kept separately from
+    // meetingUrl for reference/auditing. The full URL is reconstructed if needed.
+    meetingRoom: text('meeting_room').notNull(),
+    status: text('status', {
+      enum: ['booked', 'cancelled', 'completed'],
+    })
+      .notNull()
+      .default('booked'),
+    // ponytail: IANA tz of the CLIENT at booking time, so the client's "Mis
+    // sesiones" list renders in their tz even if the pro is in another country.
+    // The pro's tz comes from professionals.timezone.
+    clientTz: text('client_tz').notNull(),
+    cancelReason: text('cancel_reason'),
+    createdAt: integer('created_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    // ponytail: covers the pro's upcoming list, the double-book guard
+    // (WHERE professional_id=? AND status='booked' AND start_at < ? AND end_at > ?),
+    // and the per-pro "Mis sesiones" query — all leading on professional_id with
+    // a start_at range/predicate.
+    index('appointments_pro_start_idx').on(table.professionalId, table.startAt),
+    // ponytail: the client's "Mis sesiones" list (WHERE client_user_id=? ORDER BY
+    // start_at). Separate from the pro index because the leading column differs.
+    index('appointments_client_start_idx').on(
+      table.clientUserId,
+      table.startAt,
+    ),
+  ],
+)
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
+  // ponytail: a user may be the client side of many appointments. (There is still
+  // NO user→professionals relation — that link is one-way via professionals.userId
+  // and resolved manually in server fns; adding it here would not change that.)
+  appointmentsAsClient: many(appointments),
 }))
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -383,4 +479,25 @@ export const sessionRelations = relations(session, ({ one }) => ({
 
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, { fields: [account.userId], references: [user.id] }),
+}))
+
+export const professionalsRelations = relations(professionals, ({ many }) => ({
+  // ponytail: back-relations for the pro side of appointments and the existing
+  // media/follow-up tables (declared here for the first time — they were omitted
+  // originally because relational queries weren't used for those tables).
+  appointments: many(appointments),
+  audioStories: many(audioStories),
+  professionalDocuments: many(professionalDocuments),
+  followUps: many(followUps),
+}))
+
+export const appointmentsRelations = relations(appointments, ({ one }) => ({
+  professional: one(professionals, {
+    fields: [appointments.professionalId],
+    references: [professionals.id],
+  }),
+  client: one(user, {
+    fields: [appointments.clientUserId],
+    references: [user.id],
+  }),
 }))

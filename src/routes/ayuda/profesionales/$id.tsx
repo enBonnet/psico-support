@@ -1,6 +1,6 @@
 import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useEffect } from 'react'
-import { Share2, ArrowLeft, MapPin, Users, Clock } from 'lucide-react'
+import { Share2, ArrowLeft, MapPin, Users, Clock, Video } from 'lucide-react'
 import {
   getPublicProfessional,
   socialLinks,
@@ -12,6 +12,7 @@ import {
 } from '#/server/professionals'
 import { notify } from '#/lib/notifications'
 import { track, trackProContact } from '#/lib/analytics-client'
+import { APPOINTMENTS_ENABLED } from '#/lib/features'
 import { whatsappHref } from '#/lib/whatsapp'
 import { seoHead, profileJsonLd, SITE_URL } from '#/lib/seo'
 import { Avatar } from '#/components/avatar'
@@ -166,6 +167,16 @@ function ProfilePage() {
     pro.availabilitySchedule,
     tz,
   )
+  // ponytail: whether this pro offers scheduled video-call booking. Requires
+  // the feature flag on, remote-capable modality, AND a weekly schedule
+  // (availabilityMode='scheduled' with at least one slot). 'always'/'inactive'
+  // pros have no grid to derive bookable slots from. Computed in render (cheap)
+  // so the SSR HTML includes the CTA for crawlers when the flag is on.
+  const canBookVideo =
+    APPOINTMENTS_ENABLED &&
+    (pro.modality === 'remote' || pro.modality === 'both') &&
+    pro.availabilityMode === 'scheduled' &&
+    pro.availabilitySchedule.length > 0
 
   // ponytail: Web Share API on mobile (native sheet) → clipboard fallback for
   // desktop. navigator.share rejects on cancel; treat that as a no-op, not an
@@ -370,6 +381,30 @@ function ProfilePage() {
           >
             No disponible ahora
           </span>
+        )}
+        {/* ponytail: scheduled video-call booking CTA — only for pros who
+            offer remote sessions AND have set their availability to "Por
+            horario" with at least one slot. 'always'/'inactive' pros have no
+            grid to derive bookable slots from and are reached via the instant
+            WhatsApp path above. Clicking navigates to the CSR booking route;
+            if the visitor isn't logged in, that route's beforeLoad redirects
+            to /signup (which returns here after auth). The CTA renders as an
+            <a> in SSR HTML (Link → <a href>), so crawlers see it too. */}
+        {canBookVideo && (
+          <Link
+            to="/cuenta/sesiones/agendar/$proId"
+            params={{ proId: String(pro.id) }}
+            onClick={() =>
+              track({
+                event: 'appointment_intent',
+                category: 'public',
+                param1: String(pro.id),
+              })
+            }
+            className="glass-card-soft flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] px-4 py-3 text-base font-semibold !text-white bg-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+          >
+            <Video className="size-5" /> Agendar videollamada
+          </Link>
         )}
         <button
           type="button"

@@ -12,10 +12,12 @@ import {
   Mic,
   Trash2,
   UserCog,
+  Video,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { authClient } from '#/lib/auth-client'
 import { track } from '#/lib/analytics-client'
+import { APPOINTMENTS_ENABLED } from '#/lib/features'
 import { notify } from '#/lib/notifications'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
@@ -254,21 +256,31 @@ function PanelPage() {
               subtitle="Cómo te ven las personas en tu perfil público"
             />
             {providesService ? (
+              <>
+            <PanelCard
+              to="/profesional/disponibilidad"
+              icon={CalendarClock}
+              title="Disponibilidad"
+              subtitle="Cuándo pueden contactarte los pacientes"
+              meta={
+                <span className="glass-pill shrink-0 px-2 py-0.5 text-xs font-medium text-[var(--medi-text-secondary)]">
+                  {me.availabilityMode === 'always'
+                    ? 'Siempre'
+                    : me.availabilityMode === 'scheduled'
+                      ? 'Por horario'
+                      : 'No disponible'}
+                </span>
+              }
+            />
+            {APPOINTMENTS_ENABLED && (
               <PanelCard
-                to="/profesional/disponibilidad"
-                icon={CalendarClock}
-                title="Disponibilidad"
-                subtitle="Cuándo pueden contactarte los pacientes"
-                meta={
-                  <span className="glass-pill shrink-0 px-2 py-0.5 text-xs font-medium text-[var(--medi-text-secondary)]">
-                    {me.availabilityMode === 'always'
-                      ? 'Siempre'
-                      : me.availabilityMode === 'scheduled'
-                        ? 'Por horario'
-                        : 'No disponible'}
-                  </span>
-                }
+                to="/profesional/sesiones"
+                icon={Video}
+                title="Videollamadas agendadas"
+                subtitle="Sesiones que las personas reservan contigo"
               />
+            )}
+              </>
             ) : (
               <div className="glass-card-soft flex items-center gap-3 rounded-[var(--glass-radius-sm)] p-4 text-sm text-[var(--medi-text-secondary)]">
                 <Mic

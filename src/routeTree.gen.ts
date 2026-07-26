@@ -35,6 +35,7 @@ import { Route as RecursosReaccionesNormalesRouteImport } from './routes/recurso
 import { Route as RecursosPrimerosAuxiliosRouteImport } from './routes/recursos/primeros-auxilios'
 import { Route as RecursosEnraizamientoRouteImport } from './routes/recursos/enraizamiento'
 import { Route as RecursosAutochequeoRouteImport } from './routes/recursos/autochequeo'
+import { Route as ProfesionalSesionesRouteImport } from './routes/profesional/sesiones'
 import { Route as ProfesionalSeguimientoRouteImport } from './routes/profesional/seguimiento'
 import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
 import { Route as ProfesionalPresentacionRouteImport } from './routes/profesional/presentacion'
@@ -44,6 +45,7 @@ import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login
 import { Route as ProfesionalDisponibilidadRouteImport } from './routes/profesional/disponibilidad'
 import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
 import { Route as ProfesionalAudiosRouteImport } from './routes/profesional/audios'
+import { Route as CuentaSesionesRouteImport } from './routes/cuenta.sesiones'
 import { Route as AyudaEspecificaRouteImport } from './routes/ayuda/especifica'
 import { Route as AdminAnaliticaRouteImport } from './routes/admin/analitica'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
@@ -53,6 +55,7 @@ import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
 import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
 import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as CuentaSesionesAgendarProIdRouteImport } from './routes/cuenta.sesiones.agendar.$proId'
 
 const YaRoute = YaRouteImport.update({
   id: '/ya',
@@ -186,6 +189,11 @@ const RecursosAutochequeoRoute = RecursosAutochequeoRouteImport.update({
   path: '/recursos/autochequeo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProfesionalSesionesRoute = ProfesionalSesionesRouteImport.update({
+  id: '/profesional/sesiones',
+  path: '/profesional/sesiones',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfesionalSeguimientoRoute = ProfesionalSeguimientoRouteImport.update({
   id: '/profesional/seguimiento',
   path: '/profesional/seguimiento',
@@ -232,6 +240,11 @@ const ProfesionalAudiosRoute = ProfesionalAudiosRouteImport.update({
   path: '/profesional/audios',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CuentaSesionesRoute = CuentaSesionesRouteImport.update({
+  id: '/sesiones',
+  path: '/sesiones',
+  getParentRoute: () => CuentaRoute,
+} as any)
 const AyudaEspecificaRoute = AyudaEspecificaRouteImport.update({
   id: '/ayuda/especifica',
   path: '/ayuda/especifica',
@@ -277,6 +290,12 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CuentaSesionesAgendarProIdRoute =
+  CuentaSesionesAgendarProIdRouteImport.update({
+    id: '/agendar/$proId',
+    path: '/agendar/$proId',
+    getParentRoute: () => CuentaSesionesRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -285,7 +304,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
-  '/cuenta': typeof CuentaRoute
+  '/cuenta': typeof CuentaRouteWithChildren
   '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
   '/privacidad': typeof PrivacidadRoute
@@ -298,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
   '/ayuda/especifica': typeof AyudaEspecificaRoute
+  '/cuenta/sesiones': typeof CuentaSesionesRouteWithChildren
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -307,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/profesional/presentacion': typeof ProfesionalPresentacionRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
   '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
+  '/profesional/sesiones': typeof ProfesionalSesionesRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
   '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
   '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
@@ -323,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/media/document/$': typeof MediaDocumentSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
+  '/cuenta/sesiones/agendar/$proId': typeof CuentaSesionesAgendarProIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -331,7 +353,7 @@ export interface FileRoutesByTo {
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
-  '/cuenta': typeof CuentaRoute
+  '/cuenta': typeof CuentaRouteWithChildren
   '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
   '/privacidad': typeof PrivacidadRoute
@@ -344,6 +366,7 @@ export interface FileRoutesByTo {
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
   '/ayuda/especifica': typeof AyudaEspecificaRoute
+  '/cuenta/sesiones': typeof CuentaSesionesRouteWithChildren
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -353,6 +376,7 @@ export interface FileRoutesByTo {
   '/profesional/presentacion': typeof ProfesionalPresentacionRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
   '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
+  '/profesional/sesiones': typeof ProfesionalSesionesRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
   '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
   '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
@@ -369,6 +393,7 @@ export interface FileRoutesByTo {
   '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/media/document/$': typeof MediaDocumentSplatRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
+  '/cuenta/sesiones/agendar/$proId': typeof CuentaSesionesAgendarProIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -378,7 +403,7 @@ export interface FileRoutesById {
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
   '/como-funciona': typeof ComoFuncionaRoute
-  '/cuenta': typeof CuentaRoute
+  '/cuenta': typeof CuentaRouteWithChildren
   '/demo': typeof DemoRoute
   '/equipo': typeof EquipoRoute
   '/privacidad': typeof PrivacidadRoute
@@ -391,6 +416,7 @@ export interface FileRoutesById {
   '/ya': typeof YaRoute
   '/admin/analitica': typeof AdminAnaliticaRoute
   '/ayuda/especifica': typeof AyudaEspecificaRoute
+  '/cuenta/sesiones': typeof CuentaSesionesRouteWithChildren
   '/profesional/audios': typeof ProfesionalAudiosRoute
   '/profesional/completar': typeof ProfesionalCompletarRoute
   '/profesional/disponibilidad': typeof ProfesionalDisponibilidadRoute
@@ -400,6 +426,7 @@ export interface FileRoutesById {
   '/profesional/presentacion': typeof ProfesionalPresentacionRoute
   '/profesional/registro': typeof ProfesionalRegistroRoute
   '/profesional/seguimiento': typeof ProfesionalSeguimientoRoute
+  '/profesional/sesiones': typeof ProfesionalSesionesRoute
   '/recursos/autochequeo': typeof RecursosAutochequeoRoute
   '/recursos/enraizamiento': typeof RecursosEnraizamientoRoute
   '/recursos/primeros-auxilios': typeof RecursosPrimerosAuxiliosRoute
@@ -416,6 +443,7 @@ export interface FileRoutesById {
   '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/media/document/$': typeof MediaDocumentSplatRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
+  '/cuenta/sesiones/agendar/$proId': typeof CuentaSesionesAgendarProIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -439,6 +467,7 @@ export interface FileRouteTypes {
     | '/ya'
     | '/admin/analitica'
     | '/ayuda/especifica'
+    | '/cuenta/sesiones'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -448,6 +477,7 @@ export interface FileRouteTypes {
     | '/profesional/presentacion'
     | '/profesional/registro'
     | '/profesional/seguimiento'
+    | '/profesional/sesiones'
     | '/recursos/autochequeo'
     | '/recursos/enraizamiento'
     | '/recursos/primeros-auxilios'
@@ -464,6 +494,7 @@ export interface FileRouteTypes {
     | '/media/certificate/$'
     | '/media/document/$'
     | '/ayuda/profesionales/'
+    | '/cuenta/sesiones/agendar/$proId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -485,6 +516,7 @@ export interface FileRouteTypes {
     | '/ya'
     | '/admin/analitica'
     | '/ayuda/especifica'
+    | '/cuenta/sesiones'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -494,6 +526,7 @@ export interface FileRouteTypes {
     | '/profesional/presentacion'
     | '/profesional/registro'
     | '/profesional/seguimiento'
+    | '/profesional/sesiones'
     | '/recursos/autochequeo'
     | '/recursos/enraizamiento'
     | '/recursos/primeros-auxilios'
@@ -510,6 +543,7 @@ export interface FileRouteTypes {
     | '/media/certificate/$'
     | '/media/document/$'
     | '/ayuda/profesionales'
+    | '/cuenta/sesiones/agendar/$proId'
   id:
     | '__root__'
     | '/'
@@ -531,6 +565,7 @@ export interface FileRouteTypes {
     | '/ya'
     | '/admin/analitica'
     | '/ayuda/especifica'
+    | '/cuenta/sesiones'
     | '/profesional/audios'
     | '/profesional/completar'
     | '/profesional/disponibilidad'
@@ -540,6 +575,7 @@ export interface FileRouteTypes {
     | '/profesional/presentacion'
     | '/profesional/registro'
     | '/profesional/seguimiento'
+    | '/profesional/sesiones'
     | '/recursos/autochequeo'
     | '/recursos/enraizamiento'
     | '/recursos/primeros-auxilios'
@@ -556,6 +592,7 @@ export interface FileRouteTypes {
     | '/media/certificate/$'
     | '/media/document/$'
     | '/ayuda/profesionales/'
+    | '/cuenta/sesiones/agendar/$proId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -565,7 +602,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRoute
   AyudameRoute: typeof AyudameRoute
   ComoFuncionaRoute: typeof ComoFuncionaRoute
-  CuentaRoute: typeof CuentaRoute
+  CuentaRoute: typeof CuentaRouteWithChildren
   DemoRoute: typeof DemoRoute
   EquipoRoute: typeof EquipoRoute
   PrivacidadRoute: typeof PrivacidadRoute
@@ -587,6 +624,7 @@ export interface RootRouteChildren {
   ProfesionalPresentacionRoute: typeof ProfesionalPresentacionRoute
   ProfesionalRegistroRoute: typeof ProfesionalRegistroRoute
   ProfesionalSeguimientoRoute: typeof ProfesionalSeguimientoRoute
+  ProfesionalSesionesRoute: typeof ProfesionalSesionesRoute
   RecursosAutochequeoRoute: typeof RecursosAutochequeoRoute
   RecursosEnraizamientoRoute: typeof RecursosEnraizamientoRoute
   RecursosPrimerosAuxiliosRoute: typeof RecursosPrimerosAuxiliosRoute
@@ -789,6 +827,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RecursosAutochequeoRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/profesional/sesiones': {
+      id: '/profesional/sesiones'
+      path: '/profesional/sesiones'
+      fullPath: '/profesional/sesiones'
+      preLoaderRoute: typeof ProfesionalSesionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profesional/seguimiento': {
       id: '/profesional/seguimiento'
       path: '/profesional/seguimiento'
@@ -851,6 +896,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/profesional/audios'
       preLoaderRoute: typeof ProfesionalAudiosRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/cuenta/sesiones': {
+      id: '/cuenta/sesiones'
+      path: '/sesiones'
+      fullPath: '/cuenta/sesiones'
+      preLoaderRoute: typeof CuentaSesionesRouteImport
+      parentRoute: typeof CuentaRoute
     }
     '/ayuda/especifica': {
       id: '/ayuda/especifica'
@@ -915,8 +967,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cuenta/sesiones/agendar/$proId': {
+      id: '/cuenta/sesiones/agendar/$proId'
+      path: '/agendar/$proId'
+      fullPath: '/cuenta/sesiones/agendar/$proId'
+      preLoaderRoute: typeof CuentaSesionesAgendarProIdRouteImport
+      parentRoute: typeof CuentaSesionesRoute
+    }
   }
 }
+
+interface CuentaSesionesRouteChildren {
+  CuentaSesionesAgendarProIdRoute: typeof CuentaSesionesAgendarProIdRoute
+}
+
+const CuentaSesionesRouteChildren: CuentaSesionesRouteChildren = {
+  CuentaSesionesAgendarProIdRoute: CuentaSesionesAgendarProIdRoute,
+}
+
+const CuentaSesionesRouteWithChildren = CuentaSesionesRoute._addFileChildren(
+  CuentaSesionesRouteChildren,
+)
+
+interface CuentaRouteChildren {
+  CuentaSesionesRoute: typeof CuentaSesionesRouteWithChildren
+}
+
+const CuentaRouteChildren: CuentaRouteChildren = {
+  CuentaSesionesRoute: CuentaSesionesRouteWithChildren,
+}
+
+const CuentaRouteWithChildren =
+  CuentaRoute._addFileChildren(CuentaRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -925,7 +1007,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRoute,
   AyudameRoute: AyudameRoute,
   ComoFuncionaRoute: ComoFuncionaRoute,
-  CuentaRoute: CuentaRoute,
+  CuentaRoute: CuentaRouteWithChildren,
   DemoRoute: DemoRoute,
   EquipoRoute: EquipoRoute,
   PrivacidadRoute: PrivacidadRoute,
@@ -947,6 +1029,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfesionalPresentacionRoute: ProfesionalPresentacionRoute,
   ProfesionalRegistroRoute: ProfesionalRegistroRoute,
   ProfesionalSeguimientoRoute: ProfesionalSeguimientoRoute,
+  ProfesionalSesionesRoute: ProfesionalSesionesRoute,
   RecursosAutochequeoRoute: RecursosAutochequeoRoute,
   RecursosEnraizamientoRoute: RecursosEnraizamientoRoute,
   RecursosPrimerosAuxiliosRoute: RecursosPrimerosAuxiliosRoute,

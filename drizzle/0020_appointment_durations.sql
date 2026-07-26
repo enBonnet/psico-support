@@ -1,0 +1,11 @@
+-- Per-pro offered appointment durations (1.25.0 video-call scheduling).
+-- JSON array of minute values, e.g. '[15,45]'. Default '[45]' so existing pros
+-- and new signups offer 45-min sessions out of the box — no backfill, no data
+-- migration step. Only meaningful when availabilityMode='scheduled'; the pro
+-- picks the set in /profesional/disponibilidad. Allowed values are constrained
+-- to {15,30,45,60} via Zod on write (APPOINTMENT_DURATION_OPTIONS) — no CHECK
+-- constraint, matching every other JSON-array/status column. Plain text like
+-- population/availabilitySchedule. Hand-authored: the drizzle-kit journal is
+-- still stale (drift from 0017/0018), so `db:generate` would re-emit already-
+-- applied statements — same lesson as 0019.
+ALTER TABLE `professionals` ADD `appointment_durations` text DEFAULT '[45]' NOT NULL;
