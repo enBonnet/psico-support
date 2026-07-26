@@ -128,6 +128,24 @@ export const TRACKED_EVENTS = [
   'enraizamiento_step',
   'crisis_cta_click',
   'pro_cta_click',
+  // --- Scheduled video-call appointments (1.25.0) ---
+  // appointment_intent: a help-seeker taps "Agendar videollamada" on a pro's
+  // profile (the booking-funnel entry). param1=proId. category=public (fired
+  // client-side; the visitor may not be logged in yet). Lets us measure the
+  // drop-off from intent → booked (a booking requires signup, so the gap is
+  // expected but informative).
+  'appointment_intent',
+  // appointment_booked: a slot was successfully booked (server-fired from
+  // createAppointment, NOT from the auth-free track() fn — booking mutates D1
+  // and is therefore session-gated; the event is written via writeEvent()
+  // directly with the authenticated userId as param3, mirroring how
+  // pro_contact_* events get param3 enriched server-side). param1=proId,
+  // param2=durationMin (e.g. "45"), param3=clientUserId.
+  'appointment_booked',
+  // appointment_cancelled: an appointment moved to 'cancelled' by either party
+  // (server-fired from cancelAppointment). param1=proId,
+  // param2=cancelledByRole ('client'|'pro'), param3=clientUserId.
+  'appointment_cancelled',
   // --- Admin (admin) ---
   'admin_pro_review',
   'admin_pro_toggle_service',

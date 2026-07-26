@@ -121,6 +121,16 @@ const AVAILABILITY_MODE_OPTIONS: { value: AvailabilityMode; label: string }[] = 
   { value: 'inactive', label: 'No disponible' },
 ]
 
+// ponytail: duration toggle options for video-call bookings. Values are
+// strings to match setAvailabilityModeSchema's zod enum; labels are the
+// Spanish display. Mirrors APPOINTMENT_DURATION_OPTIONS in the server fn.
+const DURATION_OPTIONS: { value: string; label: string }[] = [
+  { value: '15', label: '15 min' },
+  { value: '30', label: '30 min' },
+  { value: '45', label: '45 min' },
+  { value: '60', label: '60 min' },
+]
+
 // ponytail: three-state availability (F1). Replaces the old ON/OFF toggle.
 // 'always'/'inactive' are one-tap; 'scheduled' reveals a weekly grid of
 // {start,end} slots per day + a timezone select. Plain controlled state (like
@@ -137,12 +147,20 @@ function AvailabilitySection({
   const [mode, setMode] = useState<AvailabilityMode>(me.availabilityMode)
   const [slots, setSlots] = useState<ScheduleSlot[]>(me.availabilitySchedule)
   const [timezone, setTimezone] = useState(initialTz)
+  // ponytail: durations the pro offers for video-call bookings. Stored as
+  // strings ('15','30','45','60') to match the zod enum in
+  // setAvailabilityModeSchema. Seeded from me.appointmentDurations (numbers),
+  // converted to strings. parseAppointmentDurations already defaults to [45]
+  // on empty/garbage, so this is always a non-empty array.
+  const initialDurations = me.appointmentDurations.map(String)
+  const [durations, setDurations] = useState<string[]>(initialDurations)
 
   const save = useMutation({
     mutationFn: (vars: {
       mode: AvailabilityMode
       schedule: ScheduleSlot[]
       timezone: string
+      durations: string[]
     }) => setAvailabilityMode({ data: vars }),
     onSuccess: () => {
       if (actorId) {
@@ -159,20 +177,28 @@ function AvailabilitySection({
       }),
   })
 
-  // ponytail: only dirty if the mode changed, or (in scheduled mode) slots/tz
-  // changed. Switching to always/inactive discards the grid server-side, so
-  // slot edits don't count when not in scheduled mode.
+  // ponytail: only dirty if the mode changed, or (in scheduled mode) slots/tz/
+  // durations changed. Switching to always/inactive discards the grid server-
+  // side, so slot edits don't count when not in scheduled mode. Durations
+  // persist across mode switches server-side, but only count toward dirty in
+  // scheduled mode (the only mode where they're editable + meaningful).
   const dirty =
     mode !== me.availabilityMode ||
     (mode === 'scheduled' &&
       (JSON.stringify(slots) !== JSON.stringify(me.availabilitySchedule) ||
-        timezone !== initialTz))
+        timezone !== initialTz ||
+        JSON.stringify(durations) !== JSON.stringify(initialDurations)))
 
   function submit() {
+    // ponytail: never send an empty durations array — the schema refine
+    // rejects it, and a pro who cleared all toggles should keep the default
+    // rather than fail the save.
+    const safeDurations = durations.length ? durations : ['45']
     save.mutate({
       mode,
       schedule: mode === 'scheduled' ? slots : [],
       timezone,
+      durations: mode === 'scheduled' ? safeDurations : ['45'],
     })
   }
 
@@ -247,6 +273,49 @@ function AvailabilitySection({
               ))}
             </select>
           </FieldShell>
+
+          {/* ponytail: durations the pro offers for video-call bookings.
+              Multi-select via aria-pressed toggle buttons (same pattern as the
+              availability-mode buttons above and the tag-select component).
+              At least one must stay selected — clearing the last one is a no-op
+              (the schema refine + the submit() guard both enforce [45] as the
+              floor). Only relevant when the scheduling feature flag is on, but
+              shown regardless so a pro can configure ahead of rollout. */}
+          <label className="flex flex-col gap-1">
+            <span className="text-sm font-medium text-[var(--medi-text-primary)]">
+              Duraciones de videollamada
+            </span>
+            <span className="text-xs text-[var(--medi-text-secondary)]">
+              Elige qué sesiones ofrecer. La persona elegirá una al agendar.
+            </span>
+            <div className="mt-1 grid grid-cols-4 gap-2">
+              {DURATION_OPTIONS.map((opt) => {
+                const pressed = durations.includes(opt.value)
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    aria-pressed={pressed}
+                    onClick={() =>
+                      setDurations((cur) =>
+                        pressed
+                          ? cur.filter((d) => d !== opt.value)
+                          : [...cur, opt.value],
+                      )
+                    }
+                    className={
+                      'min-h-10 rounded-[var(--glass-radius-sm)] border px-2 py-1 text-xs font-medium transition-all ' +
+                      (pressed
+                        ? 'border-[var(--medi-secondary)] bg-[var(--medi-secondary)] text-white'
+                        : 'border-[var(--medi-border)] text-[var(--medi-text-secondary)] hover:translate-y-[-1px]')
+                    }
+                  >
+                    {opt.label}
+                  </button>
+                )
+              })}
+            </div>
+          </label>
 
           {DAYS_MON_FIRST.map((day) => {
             const daySlots = slots

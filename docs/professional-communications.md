@@ -16,6 +16,71 @@ stack. Always close with an invitation to reply with doubts/suggestions.
 
 ---
 
+## 2026-07-26 — DRAFT (not sent): Videollamadas programadas
+
+**Channel:** TBD (WhatsApp broadcast to verified professionals, pending
+confirmation).
+**Status:** 🟡 **DRAFT — do not send until reviewed.** This feature is
+implemented but **not yet deployed, and gated behind a feature
+flag that defaults to OFF**. Sending the announcement before flipping the
+flag + deploying would tell pros about a button that doesn't appear yet.
+(The version metadata in `package.json` is `1.25.0`; the CHANGELOG still
+lists this under `[Unreleased]` until the release is cut — align them
+before sending.)
+
+**Context:** new scheduled-video-call booking path. Up to now the only
+remote option was instant WhatsApp ("Necesito ayuda ahora"). This adds a
+**scheduled** path: a person picks a time slot derived from the pro's
+existing weekly availability grid and gets a Jitsi link + calendar invite
+by email. The pro chooses which session lengths to offer (15/30/45/60 min)
+from their Disponibilidad page. The WhatsApp path stays for urgent/immediate
+contact — this is explicitly the non-urgent lane.
+
+**Rollout sequence (do before sending):**
+1. `npm run deploy`
+2. `npx wrangler d1 migrations apply psico-support-db --remote` (0019 appointments + 0020 appointment_durations)
+3. `npx wrangler d1 migrations list psico-support-db --remote` (sanity check, empty)
+4. Confirm `psicoayudaven.com` is onboarded for the Email Service (booking emails silently fail otherwise — captured to Sentry).
+5. `npx wrangler secret put APPOINTMENTS_ENABLED` → set to `true` (server gate).
+6. Set `VITE_APPOINTMENTS_ENABLED=true` in the build env and redeploy (client gate — hides the CTA/cards).
+7. *Then* send this message.
+
+**Open commitment this creates:** once shipped, pros who switch their
+availability to "Por horario" will start receiving booking emails. If a
+pro is in "Siempre disponible" they will NOT offer scheduled video calls
+(that mode has no grid to derive slots from). We should be clear about
+this so nobody is surprised their "Agendar videollamada" button didn't
+appear.
+
+**Draft message:**
+
+> Hola, soy Ender del equipo de PsicoAyudaVen 💜
+>
+> Te contamos una novedad que nos pidieron mucho: ahora se pueden agendar **videollamadas** contigo desde la plataforma.
+>
+> 📅 *Cómo funciona para ti*
+> Si tu disponibilidad está en modo **"Por horario"** (y atiendes a distancia o ambas modalidades), las personas podrán elegir una hora de tu agenda y reservar una sesión de videollamada. Te llega un correo con los datos, un enlace para unirte, y un archivo para agregar la cita a tu calendario (Google, Apple, Outlook) con un toque.
+>
+> ⏱️ *Tú eliges la duración*
+> En tu página de Disponibilidad ahora eliges qué sesiones ofrecer: 15, 30, 45 o 60 minutos. Puedes ofrecer varias — la persona verá pestañas para escoger.
+>
+> 🟢 *Si estás en "Siempre disponible"*
+> No te preocupes: sigues apareciendo para el contacto inmediato por WhatsApp. Las videollamadas agendadas son solo para quienes tienen horario fijo. Si quieres ofrecerlas, entra a tu panel → Disponibilidad → "Por horario".
+>
+> 📋 *Dónde ver tus sesiones*
+> En tu panel hay una nueva sección "Videollamadas agendadas" con tus próximas citas y el historial.
+>
+> Como siempre, cualquier duda o sugerencia, respóndeme aquí. Gracias por acompañar 🙏
+
+**Follow-up notes:**
+- The server flag (`APPOINTMENTS_ENABLED` secret) and the client flag
+  (`VITE_APPOINTMENTS_ENABLED`) are two separate knobs — set both together.
+  See the CHANGELOG `[Unreleased]` entry for why they can't be one.
+- This message does NOT mention the support group promised on 2026-07-03;
+  that commitment is still open and tracked separately.
+
+---
+
 ## 2026-07-03 — Release notes (landing CTA, directory ordering, support group)
 
 **Channel:** WhatsApp broadcast to verified professionals.

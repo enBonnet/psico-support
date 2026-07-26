@@ -619,10 +619,51 @@ export const scheduleSchema = z.array(scheduleSlotSchema)
 
 export type AvailabilityMode = 'always' | 'scheduled' | 'inactive'
 
+// ponytail: the fixed set of meeting lengths a pro may offer. Adding a value
+// here + to the schema default is the only change needed to support a new
+// length. The agendar picker and createAppointment both validate against this.
+export const APPOINTMENT_DURATION_OPTIONS = [15, 30, 45, 60] as const
+export type AppointmentDuration = (typeof APPOINTMENT_DURATION_OPTIONS)[number]
+
+// ponytail: parse the JSON appointment_durations column; never throws. Drops
+// anything not in the allowed set; defaults to [45] on empty/garbage so a pro
+// with a malformed column still offers sessions instead of none.
+export function parseAppointmentDurations(
+  raw: string | null | undefined,
+): AppointmentDuration[] {
+  if (!raw) return [45]
+  try {
+    const v = JSON.parse(raw)
+    if (!Array.isArray(v) || v.length === 0) return [45]
+    const valid = (new Set(APPOINTMENT_DURATION_OPTIONS) as Set<number>)
+    const filtered = v.filter(
+      (x): x is AppointmentDuration =>
+        typeof x === 'number' && Number.isInteger(x) && valid.has(x),
+    )
+    // Dedupe + sort ascending so the picker tabs are stable. Fallback to [45]
+    // if filtering left nothing (e.g. '[7,99]' — all values invalid) so a
+    // malformed column still offers sessions instead of none.
+    const out = Array.from(new Set(filtered)).sort((a, b) => a - b)
+    return out.length ? out : [45]
+  } catch {
+    return [45]
+  }
+}
+
 export const setAvailabilityModeSchema = z.object({
   mode: z.enum(['always', 'scheduled', 'inactive']),
   schedule: scheduleSchema.default([]),
   timezone: z.string().trim().optional().nullable(),
+  // ponytail: durations the pro offers as strings ('15','30','45','60'). Zod
+  // enum-of-strings (not numbers) for literal type safety; coerced to numbers
+  // in the handler. Defaults to ['45'] so a pro who never touches the durations
+  // UI keeps the platform default. At least one is enforced by the refine.
+  durations: z
+    .array(z.enum(['15', '30', '45', '60']))
+    .default(['45'])
+    .refine((arr) => arr.length > 0, {
+      message: 'Selecciona al menos una duración',
+    }),
 })
 
 export type PublicProfessional = {
@@ -1386,6 +1427,9 @@ export const setAvailabilityMode = createServerFn({ method: 'POST' })
         .set({
           availabilityMode: 'always',
           availabilitySchedule: null,
+          // ponytail: durations persist across mode switches so a pro toggling
+          // always→scheduled→always keeps their chosen lengths. Null would lose
+          // the set on a round-trip; leave it untouched instead (omit from .set).
           available: true,
         })
         .where(mine)
@@ -1402,12 +1446,17 @@ export const setAvailabilityMode = createServerFn({ method: 'POST' })
       // ponytail: tz defaults to Caracas if the client omitted it (the panel
       // <select> seeds it from country, so this is a defensive fallback).
       const tz = data.timezone?.trim() || 'America/Caracas'
+      // Coerce the zod-validated string durations to numbers, dedupe, sort.
+      const durations = Array.from(new Set(data.durations.map(Number))).sort(
+        (a, b) => a - b,
+      ) as AppointmentDuration[]
       await db
         .update(professionals)
         .set({
           availabilityMode: 'scheduled',
           availabilitySchedule: JSON.stringify(data.schedule),
           timezone: tz,
+          appointmentDurations: JSON.stringify(durations),
           available: isActiveNow(data.schedule, tz),
         })
         .where(mine)
@@ -1516,6 +1565,7 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
         availabilityMode: professionals.availabilityMode,
         availabilityScheduleRaw: professionals.availabilitySchedule,
         timezone: professionals.timezone,
+        appointmentDurationsRaw: professionals.appointmentDurations,
       })
       .from(professionals)
       .where(eq(professionals.userId, session.user.id))
@@ -1554,6 +1604,7 @@ export const getMyProfessional = createServerFn({ method: 'GET' }).handler(
       availabilityMode: r.availabilityMode,
       availabilitySchedule: parseSchedule(r.availabilityScheduleRaw),
       timezone: r.timezone,
+      appointmentDurations: parseAppointmentDurations(r.appointmentDurationsRaw),
     }
   },
 )

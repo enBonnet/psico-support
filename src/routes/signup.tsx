@@ -6,12 +6,30 @@ import {
 } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
+import { z } from 'zod'
 import { authClient } from '#/lib/auth-client'
 import { track } from '#/lib/analytics-client'
 import { getCurrentUser } from '#/server/professionals'
 import { noindexHead } from '#/lib/seo'
 
+// ponytail: optional callbackURL search param so auth-gated flows (e.g. the
+// booking route) can redirect here and have signup return the user to where
+// they were trying to go. Validated to a same-origin absolute path (starts
+// with '/' and not '//') so an attacker can't redirect to an external host
+// after login. Defaults to /cuenta.
+const signupSearchSchema = z.object({
+  callbackURL: z
+    .string()
+    .refine((v) => v.startsWith('/') && !v.startsWith('//'), {
+      message: 'callbackURL must be a same-origin path',
+    })
+    .optional(),
+})
+
 export const Route = createFileRoute('/signup')({
+  // ponytail: validate the callbackURL search param so a bad/malicious value
+  // is rejected at the type level + runtime rather than reaching the navigate.
+  validateSearch: signupSearchSchema,
   beforeLoad: async () => {
     // ponytail: an authenticated user already has an account — creating
     // another is pointless. Send them to the role-aware account hub. One
@@ -30,6 +48,11 @@ export const Route = createFileRoute('/signup')({
 function SignupPage() {
   const navigate = useNavigate()
   const qc = useQueryClient()
+  // ponytail: where to go after a successful signup. Defaults to /cuenta; if
+  // a same-origin callbackURL was passed (validated in validateSearch), land
+  // there instead — used by the booking flow so the user returns to the slot
+  // picker instead of the account hub.
+  const callbackURL = Route.useSearch().callbackURL
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -69,7 +92,13 @@ function SignupPage() {
       await authClient.getSession()
       qc.invalidateQueries({ queryKey: ['me'] })
       track({ event: 'auth_signup', category: 'auth' })
-      await navigate({ to: '/cuenta' })
+      // ponytail: navigate to callbackURL if it's a validated same-origin
+      // path, else /cuenta. Route.useSearch already validated the shape; this
+      // re-check is defensive in case validateSearch is bypassed.
+      const dest = callbackURL && callbackURL.startsWith('/') && !callbackURL.startsWith('//')
+        ? callbackURL
+        : '/cuenta'
+      await navigate({ to: dest })
     } finally {
       setLoading(false)
     }

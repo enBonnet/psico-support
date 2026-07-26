@@ -1,3 +1,5 @@
+import { createEvent as buildIcs } from 'ics'
+
 import { getEmailBinding } from '#/db'
 import { SITE_NAME, SITE_URL } from '#/lib/seo'
 
@@ -29,6 +31,11 @@ type SendEmailInput = {
   subject: string
   html: string
   text: string
+  // ponytail: optional calendar/extra attachments. The Cloudflare Email Service
+  // binding's `send()` builder accepts an `attachments` array (each with
+  // disposition, filename, type, content). Kept optional so existing callers
+  // (password reset) are unchanged.
+  attachments?: EmailAttachment[]
 }
 
 type EmailLayoutInput = {
@@ -45,7 +52,13 @@ type EmailLayoutInput = {
 // transactional mail. No retry/backoff here; the binding queues on its side.
 // Ceiling: if volume grows or latency matters, configure
 // `advanced.backgroundTasks.handler` (ctx.waitUntil) in auth.ts.
-export async function sendEmail({ to, subject, html, text }: SendEmailInput) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  attachments,
+}: SendEmailInput) {
   const email = getEmailBinding()
   await email.send({
     from: { email: FROM_ADDRESS, name: FROM_NAME },
@@ -53,6 +66,7 @@ export async function sendEmail({ to, subject, html, text }: SendEmailInput) {
     subject,
     html,
     text,
+    ...(attachments && attachments.length > 0 ? { attachments } : {}),
   })
 }
 
@@ -63,10 +77,19 @@ function escapeAttr(value: string): string {
     .replace(/</g, '&lt;')
 }
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+}
+
 // Shared Medicall-branded shell: soft blue page bg, logo header, glass-like
 // white card, gradient section underline. Remote logo is intentional — emails
 // always target real users on the prod domain; SITE_URL matches seo.ts / OG.
-function emailLayout({ title, body }: EmailLayoutInput): string {
+// Exported so the meeting-confirmation/cancellation emails (and any future
+// transactional mail) compose the same branded shell.
+export function emailLayout({ title, body }: EmailLayoutInput): string {
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -112,7 +135,7 @@ function emailLayout({ title, body }: EmailLayoutInput): string {
 </html>`
 }
 
-function emailPrimaryButton(href: string, label: string): string {
+export function emailPrimaryButton(href: string, label: string): string {
   const safeHref = escapeAttr(href)
   return `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto">
     <tr>
@@ -123,7 +146,7 @@ function emailPrimaryButton(href: string, label: string): string {
   </table>`
 }
 
-function emailSoftNote(html: string): string {
+export function emailSoftNote(html: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:24px 0 0">
     <tr>
       <td style="background:${EMAIL.cardSoft};border:1px solid rgba(17,42,141,0.12);border-radius:12px;padding:14px 16px;font-size:14px;line-height:1.55;color:${EMAIL.textMuted}">
@@ -153,4 +176,167 @@ export function resetPasswordHtml(url: string): string {
     ${emailSoftNote('Si no pediste este cambio, puedes ignorar este correo: tu contraseña no cambiará.')}`
 
   return emailLayout({ title: 'Restablece tu contraseña', body })
+}
+
+// ── Scheduled video-call appointment emails (1.25.0) ─────────────────────────
+// ponytail: shared shape for the confirmation + cancellation emails. `whoFor`
+// is the recipient's perspective ('client' | 'professional') so the copy can
+// address them correctly while naming the other party. Times are pre-formatted
+// strings in the recipient's tz (the caller computes them via Intl.DateTimeFormat)
+// so the email body itself stays tz-agnostic.
+
+export type MeetingEmailInput = {
+  whoFor: 'client' | 'professional'
+  // The other party's display name (escaped before interpolation).
+  counterpartName: string
+  // Pre-formatted date+time in the recipient's tz, e.g. "lunes 28 de julio, 3:00 PM".
+  whenLabel: string
+  // Recipient's IANA tz label for display, e.g. "Hora de Caracas".
+  tzLabel: string
+  meetingUrl: string
+  cancelUrl: string
+}
+
+function meetingDetailsList(input: MeetingEmailInput): string {
+  const who = input.whoFor === 'client' ? 'Profesional' : 'Persona que te contacta'
+  return `
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;font-size:15px;line-height:1.7;color:${EMAIL.text}">
+      <tr><td style="color:${EMAIL.textMuted};width:140px;vertical-align:top">${who}:</td><td>${escapeHtml(input.counterpartName)}</td></tr>
+      <tr><td style="color:${EMAIL.textMuted};vertical-align:top">Fecha y hora:</td><td><strong style="color:${EMAIL.text}">${escapeHtml(input.whenLabel)}</strong><br><span style="font-size:13px;color:${EMAIL.textMuted}">${escapeHtml(input.tzLabel)}</span></td></tr>
+    </table>`
+}
+
+export function meetingConfirmationHtml(input: MeetingEmailInput): string {
+  const intro =
+    input.whoFor === 'client'
+      ? 'Tu videollamada de apoyo psicológico está agendada. Te esperamos en el enlace a la hora acordada.'
+      : 'Tienes una nueva videollamada agendada en PsicoAyudaVen. Revisa los datos abajo.'
+  const body = `
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${EMAIL.textMuted}">${intro}</p>
+    ${meetingDetailsList(input)}
+    ${emailPrimaryButton(input.meetingUrl, 'Unirse a la videollamada')}
+    <p style="margin:0;font-size:13px;line-height:1.55;color:${EMAIL.textMuted};word-break:break-all">
+      Si el botón no funciona, copia y abre este enlace:<br>
+      <a href="${escapeAttr(input.meetingUrl)}" style="color:${EMAIL.secondary};text-decoration:underline">${escapeAttr(input.meetingUrl)}</a>
+    </p>
+    ${emailSoftNote(
+      'Adjuntamos un archivo de calendario (<strong>.ics</strong>) para que agregues la cita a tu calendario con un clic. ' +
+        'Si necesitas cancelar, puedes hacerlo desde la app o con este enlace: ' +
+        `<a href="${escapeAttr(input.cancelUrl)}" style="color:${EMAIL.secondary};text-decoration:underline">cancelar cita</a>.`,
+    )}`
+
+  return emailLayout({ title: 'Videollamada agendada', body })
+}
+
+export function meetingCancellationHtml(input: {
+  whoFor: 'client' | 'professional'
+  counterpartName: string
+  whenLabel: string
+  tzLabel: string
+  reason?: string | null
+  bookAgainUrl?: string
+}): string {
+  const intro =
+    input.whoFor === 'client'
+      ? `La videollamada con ${input.counterpartName} fue cancelada.`
+      : `Una videollamada agendada contigo fue cancelada por la persona que la solicitó.`
+  const reasonBlock = input.reason?.trim()
+    ? `<p style="margin:12px 0 0;font-size:14px;line-height:1.55;color:${EMAIL.textMuted}"><strong style="color:${EMAIL.text}">Motivo:</strong> ${escapeHtml(input.reason.trim())}</p>`
+    : ''
+  const againBlock = input.bookAgainUrl
+    ? `<p style="margin:16px 0 0;font-size:14px;line-height:1.55;color:${EMAIL.textMuted}">¿Quieres reagendar? <a href="${escapeAttr(input.bookAgainUrl)}" style="color:${EMAIL.secondary};text-decoration:underline">Agendar otra hora</a>.</p>`
+    : ''
+  const body = `
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${EMAIL.textMuted}">${escapeHtml(intro)}</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 8px;font-size:15px;line-height:1.7;color:${EMAIL.text}">
+      <tr><td style="color:${EMAIL.textMuted};width:140px;vertical-align:top">Fecha y hora:</td><td>${escapeHtml(input.whenLabel)}<br><span style="font-size:13px;color:${EMAIL.textMuted}">${escapeHtml(input.tzLabel)}</span></td></tr>
+    </table>
+    ${reasonBlock}
+    ${againBlock}
+    ${emailSoftNote('No es necesario que hagas nada más. La cita ya no está activa.')}`
+
+  return emailLayout({ title: 'Videollamada cancelada', body })
+}
+
+// ponytail: builds an RFC-5545 .ics attachment for the confirmation email using
+// the `ics` npm package. UID is stable per appointment id so re-importing
+// updates the same calendar entry instead of duplicating. The METHOD:REQUEST +
+// STATUS:CONFIRMED pair is what makes most clients (Google/Apple/Outlook) treat
+// it as an invite. Returns the EmailAttachment shape the Cloudflare Email
+// binding expects, OR null if serialization fails — callers should send the
+// email WITHOUT the attachment in that case (the email itself must never fail
+// just because the calendar blob couldn't be built).
+export type IcsInput = {
+  appointmentId: number | string
+  title: string
+  description: string
+  startAt: Date
+  endAt: Date
+  meetingUrl: string
+  // organizerName + attendeeName + attendeeEmail make the invite carry both
+  // parties so calendar apps show "with Dr. X" context.
+  organizerName: string
+  attendeeName: string
+  attendeeEmail: string
+}
+
+export function buildIcsAttachment(input: IcsInput): EmailAttachment | null {
+  // ponytail: `ics` expects DateArray tuples (not number[]); build them as
+  // const tuples so the type checks. CalType values are string-literal unions.
+  const start: [
+    number, number, number, number, number,
+  ] = [
+    input.startAt.getUTCFullYear(),
+    input.startAt.getUTCMonth() + 1,
+    input.startAt.getUTCDate(),
+    input.startAt.getUTCHours(),
+    input.startAt.getUTCMinutes(),
+  ]
+  const end: [
+    number, number, number, number, number,
+  ] = [
+    input.endAt.getUTCFullYear(),
+    input.endAt.getUTCMonth() + 1,
+    input.endAt.getUTCDate(),
+    input.endAt.getUTCHours(),
+    input.endAt.getUTCMinutes(),
+  ]
+  const result = buildIcs({
+    title: input.title,
+    description: input.description,
+    location: input.meetingUrl,
+    url: input.meetingUrl,
+    start,
+    startInputType: 'utc',
+    end,
+    endInputType: 'utc',
+    uid: `appointment-${input.appointmentId}@psicoayudaven.com`,
+    method: 'REQUEST',
+    status: 'CONFIRMED',
+    organizer: { name: input.organizerName, email: 'noreply@psicoayudaven.com' },
+    attendees: [
+      {
+        name: input.attendeeName,
+        email: input.attendeeEmail,
+        rsvp: true,
+        partstat: 'NEEDS-ACTION',
+        role: 'REQ-PARTICIPANT',
+      },
+    ],
+  })
+  if (result.error || !result.value) {
+    // ponytail: defensive — return null instead of throwing so a caller that
+    // builds the attachment inside its sendEmail try block still sends the
+    // email (without the .ics) rather than suppressing it entirely. Logged
+    // upstream via the caller's Sentry capture.
+    return null
+  }
+  // ponytail: the `ics` lib returns a string; wrap as a UTF-8 attachment (the
+  // binding accepts raw string content).
+  return {
+    disposition: 'attachment',
+    filename: 'cita-psicoayudaven.ics',
+    type: 'text/calendar; charset=utf-8; method=REQUEST',
+    content: result.value,
+  }
 }

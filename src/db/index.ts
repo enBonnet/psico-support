@@ -13,6 +13,14 @@ export type CloudflareEnv = {
   // `npx wrangler secret put CF_ACCOUNT_ID` / `CF_ANALYTICS_TOKEN`.
   CF_ACCOUNT_ID?: string
   CF_ANALYTICS_TOKEN?: string
+  // ponytail: server-side feature flag for video-call scheduling (1.25.0).
+  // A wrangler secret (NOT a binding) so flipping it takes effect without
+  // redeploy. Truthy values: 'true' / '1'. Off by default — every appointment
+  // server fn checks appointmentsEnabled() first and rejects when off. Mirror
+  // with VITE_APPOINTMENTS_ENABLED (build-time) so the client CTA/cards hide
+  // too; the two are intentionally separate knobs (a secret can't reach the
+  // client bundle, a VITE_ var is baked at build) — set both together.
+  APPOINTMENTS_ENABLED?: string
 }
 
 let _env: CloudflareEnv | null = null
@@ -47,11 +55,19 @@ export function getDb(): Db {
 // the DB occasionally resets ("Internal error while starting up D1 DB storage
 // caused object to be reset", "Network connection lost", "storage operation
 // exceeded timeout", etc.). Cloudflare's own docs state "a handful of errors
-// every several hours is not unexpected" and that callers should retry. D1
-// auto-retries reads up to 2× internally, but that's not always enough for
+// every several hours is not expected" is the threshold — callers should retry.
+// D1 auto-retries reads up to 2× internally, but that's not always enough for
 // landing-cold-load paths. This wrapper adds a few more retries with jittered
 // backoff. Ceiling: if it ever grows, pull @cloudflare/actors and use its
 // Retryable (it bundles a proper exponential-with-jitter strategy).
+//
+// WEB-H note: drizzle wraps the raw D1 throw in DrizzleQueryError, whose
+// .message is "Failed query: <sql>\nparams: ..." — the underlying D1 error
+// lives on .cause. So we walk the cause chain and also match the two formats
+// a real D1 backend blip takes: "D1_ERROR: internal error; reference = ..."
+// (the canonical Cloudflare transient-backend error) and the older reset
+// strings. Without this, retries never fire and every transient blip surfaces
+// as a thrown 500 — which is what WEB-H was for 2+ weeks.
 const TRANSIENT_D1_MARKERS = [
   'storage caused object to be reset',
   'object to be reset',
@@ -59,11 +75,24 @@ const TRANSIENT_D1_MARKERS = [
   'storage operation exceeded timeout',
   'exceeded its memory limit',
   'reset because its code was updated',
+  // Cloudflare's canonical transient D1 backend error — always comes with a
+  // reference id that support can look up. Match the prefix + body, not the id.
+  'D1_ERROR: internal error',
+  'internal error; reference',
 ]
 
 export function isTransientD1Error(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err)
-  return TRANSIENT_D1_MARKERS.some((m) => msg.includes(m))
+  // Walk the cause chain: drizzle wraps D1 throws, Better Auth wraps drizzle,
+  // etc. The marker we care about is usually on the leaf.
+  const messages: string[] = []
+  let cur: unknown = err
+  for (let depth = 0; cur && depth < 5; depth++) {
+    const msg = cur instanceof Error ? cur.message : String(cur)
+    if (msg) messages.push(msg)
+    cur = (cur as { cause?: unknown }).cause
+  }
+  const haystack = messages.join('\n')
+  return TRANSIENT_D1_MARKERS.some((m) => haystack.includes(m))
 }
 
 export async function withD1Retry<T>(
