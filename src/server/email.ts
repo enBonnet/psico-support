@@ -263,8 +263,9 @@ export function meetingCancellationHtml(input: {
 // updates the same calendar entry instead of duplicating. The METHOD:REQUEST +
 // STATUS:CONFIRMED pair is what makes most clients (Google/Apple/Outlook) treat
 // it as an invite. Returns the EmailAttachment shape the Cloudflare Email
-// binding expects. Throws if `ics` fails to serialize (caller catches and sends
-// the email without the attachment — the email itself must never fail).
+// binding expects, OR null if serialization fails — callers should send the
+// email WITHOUT the attachment in that case (the email itself must never fail
+// just because the calendar blob couldn't be built).
 export type IcsInput = {
   appointmentId: number | string
   title: string
@@ -279,7 +280,7 @@ export type IcsInput = {
   attendeeEmail: string
 }
 
-export function buildIcsAttachment(input: IcsInput): EmailAttachment {
+export function buildIcsAttachment(input: IcsInput): EmailAttachment | null {
   // ponytail: `ics` expects DateArray tuples (not number[]); build them as
   // const tuples so the type checks. CalType values are string-literal unions.
   const start: [
@@ -323,8 +324,13 @@ export function buildIcsAttachment(input: IcsInput): EmailAttachment {
       },
     ],
   })
-  if (result.error) throw result.error
-  if (!result.value) throw new Error('ICS serialization returned no value')
+  if (result.error || !result.value) {
+    // ponytail: defensive — return null instead of throwing so a caller that
+    // builds the attachment inside its sendEmail try block still sends the
+    // email (without the .ics) rather than suppressing it entirely. Logged
+    // upstream via the caller's Sentry capture.
+    return null
+  }
   // ponytail: the `ics` lib returns a string; wrap as a UTF-8 attachment (the
   // binding accepts raw string content).
   return {

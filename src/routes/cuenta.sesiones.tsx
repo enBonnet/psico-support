@@ -38,10 +38,15 @@ export const Route = createFileRoute('/cuenta/sesiones')({
   component: SesionesPage,
 })
 
-function formatDateTime(ms: number, tz?: string | null): string {
+// ponytail: format in the VIEWER's browser tz (no timeZone option → Intl uses
+// the runtime default). The stored clientTz is hard-coded to America/Caracas
+// (MVP — no per-user tz column), so passing it here would show Caracas time
+// to a user abroad, mismatching the slot they picked on the booking page
+// (which formats in the browser tz). Omitting timeZone keeps both surfaces
+// consistent. Note: this route is ssr:false, so there's no hydration mismatch.
+function formatDateTime(ms: number): string {
   try {
     return new Intl.DateTimeFormat('es-VE', {
-      timeZone: tz ?? undefined,
       weekday: 'short', day: 'numeric', month: 'short',
       hour: '2-digit', minute: '2-digit', hour12: true,
     }).format(new Date(ms))
@@ -152,7 +157,7 @@ function SesionesPage() {
                           {a.professionalName}
                         </p>
                         <p className="mt-0.5 text-sm text-[var(--medi-text-secondary)]">
-                          {formatDateTime(a.startAt, a.clientTz)}
+                          {formatDateTime(a.startAt)}
                         </p>
                         <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
                           Duración: {a.durationMin} min
@@ -207,7 +212,7 @@ function SesionesPage() {
                         {a.professionalName}
                       </p>
                       <p className="text-xs text-[var(--medi-text-secondary)]">
-                        {formatDateTime(a.startAt, a.clientTz)}
+                        {formatDateTime(a.startAt)}
                       </p>
                     </div>
                     <Badge variant={a.status === 'cancelled' ? 'destructive' : 'secondary'}>

@@ -12,7 +12,7 @@ import type { BookableSlot } from '#/server/appointments'
 import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/cuenta/sesiones/agendar/$proId')({
-  beforeLoad: async () => {
+  beforeLoad: async ({ params }) => {
     // ponytail: gate the booking flow on the client feature flag. When off,
     // bounce to /cuenta so a deep link or stale tab doesn't strand the user.
     // The server fns also gate (the real security boundary), so even a direct
@@ -22,9 +22,12 @@ export const Route = createFileRoute('/cuenta/sesiones/agendar/$proId')({
     }
     const user = await getCurrentUser()
     if (!user) {
-      // ponytail: callbackURL brings the user back here after signup. Better
-      // Auth's /signup reads it from the search string.
-      throw redirect({ to: '/signup' })
+      // ponytail: carry the booking path as callbackURL so /signup returns
+      // the user here after auth (validated same-origin in the signup route).
+      throw redirect({
+        to: '/signup',
+        search: { callbackURL: `/cuenta/sesiones/agendar/${params.proId}` },
+      })
     }
   },
   // ponytail: CSR-only — auth-gated booking flow.
@@ -134,8 +137,14 @@ function AgendarPage() {
   // event and set a sessionStorage flag). This avoids double-counting the
   // normal profile → agendar path. The flag is cleared after reading so a
   // manual reload of the agendar page DOES track (genuine re-entry).
+  // ponytail: depend on me?.id (a stable primitive), NOT the me object —
+  // React Query returns a fresh object on every refetch (window focus,
+  // reconnect), which would re-run this effect and re-fire the intent event
+  // after the sessionStorage flag was already consumed. The id only changes
+  // when the actual signed-in user changes.
+  const meId = me?.id
   useEffect(() => {
-    if (!me) return
+    if (!meId) return
     let alreadyTracked = false
     try {
       const key = `appt-intent:${proId}`
@@ -147,9 +156,9 @@ function AgendarPage() {
       /* sessionStorage unavailable — track to avoid under-counting */
     }
     if (!alreadyTracked) {
-      track({ event: 'appointment_intent', category: 'public', param1: String(proId), actorId: me.id })
+      track({ event: 'appointment_intent', category: 'public', param1: String(proId), actorId: meId })
     }
-  }, [me, proId])
+  }, [meId, proId])
 
   const offeredDurations = data?.durations ?? []
   const showTabs = offeredDurations.length > 1

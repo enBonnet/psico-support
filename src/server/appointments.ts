@@ -464,30 +464,44 @@ export const getAvailableSlots = createServerFn({ method: 'GET' })
       if (!generated.length) {
         return { slots: [] as BookableSlot[], durations, reason: null, proTz: tz }
       }
-      // Filter out slots already booked by this pro in the window. A booked
-      // (startMs, durationMin) pair hides only that exact slot — a 15-min and
-      // a 45-min at the same start are distinct and the other still shows.
+      // ponytail: hide any offered slot that overlaps an existing 'booked'
+      // appointment — INTERVAL overlap, not exact-key match. This matters
+      // because a pro can offer multiple durations: a booked 45-min slot at
+      // 9:00 (ends 9:45) overlaps the offered 15-min slot at 9:00 (ends 9:15)
+      // AND the offered 30-min slot at 9:30 (ends 10:00), so both must be
+      // hidden even though none share an exact (start, duration) pair. The
+      // query is widened to include bookings that START before the window but
+      // END inside it (a booking from 23:30 yesterday ending 00:15 today
+      // overlaps a 00:00 slot today).
       const windowStart = now.getTime()
       const windowEnd = windowStart + BOOKING_WINDOW_DAYS * 86_400_000
       const booked = await db
         .select({
           startAt: appointments.startAt,
-          durationMin: appointments.durationMin,
+          endAt: appointments.endAt,
         })
         .from(appointments)
         .where(
           and(
             eq(appointments.professionalId, data.proId),
             eq(appointments.status, 'booked'),
-            gt(appointments.startAt, new Date(windowStart)),
+            // Overlaps [windowStart, windowEnd): starts before window ends,
+            // ends after window starts. Catches bookings that began yesterday
+            // but bleed into today's window.
             lt(appointments.startAt, new Date(windowEnd)),
+            gt(appointments.endAt, new Date(windowStart)),
           ),
         )
-      const bookedKeys = new Set(
-        booked.map((b) => `${b.startAt.getTime()}:${b.durationMin}`),
-      )
+      const bookedRanges = booked.map((b) => ({
+        start: b.startAt.getTime(),
+        end: b.endAt.getTime(),
+      }))
       const slots = generated.filter(
-        (s) => !bookedKeys.has(`${s.startMs}:${s.durationMin}`),
+        (s) =>
+          // A slot is hidden if it overlaps ANY booked range.
+          !bookedRanges.some(
+            (r) => s.startMs < r.end && s.endMs > r.start,
+          ),
       )
       return { slots, durations, reason: null, proTz: tz }
     }),
@@ -554,15 +568,22 @@ export const createAppointment = createServerFn({ method: 'POST' })
         throw new Error('Ese horario ya no está disponible. Elige otro.')
       }
 
-      // ponytail: optimistic overlap pre-check — gives a friendly error in the
-      // common case without waiting for the INSERT to fail. The REAL guard is
-      // the partial UNIQUE INDEX appointments_active_slot_uniq on
-      // (professional_id, start_at, end_at) WHERE status='booked' (see
-      // 0019_appointments.sql): two concurrent calls can both pass this SELECT
-      // and race to INSERT; the index makes the second one throw a uniqueness
-      // violation, caught below as the same friendly error. The index is
-      // partial (status='booked') so cancelled/completed slots don't collide —
-      // a cancelled slot at the same (pro, start, end) stays re-bookable.
+      // ponytail: overlap pre-check using INTERVAL semantics — a slot overlaps
+      // if startAt < slot.endMs AND endAt > slot.startMs. This is the real
+      // cross-duration guard: a 15-min and a 45-min slot starting at 9:00 have
+      // different end_at values, so the partial UNIQUE INDEX below (which keys
+      // on exact start_at+end_at) can't catch their overlap — only this query
+      // can. The index is a same-interval belt-and-suspenders for the rare
+      // exact-duplicate race; see the INSERT catch below.
+      //
+      // Residual race (accepted ceiling at MVP volume): two concurrent
+      // createAppointment calls for overlapping cross-duration slots can both
+      // pass this SELECT and both INSERT (the index won't reject them since
+      // end_at differs). Probability is low — requires two clients submitting
+      // overlapping slots for the same pro within ~100ms. Ceiling: serialize
+      // bookings per-pro via a Durable Object or a transaction with the check
+      // inside (D1's db.batch() runs serially but the overlap SELECT still
+      // wouldn't be atomic with the INSERT without a row lock).
       const overlap = await db
         .select({ id: appointments.id })
         .from(appointments)
@@ -670,6 +691,25 @@ export const createAppointment = createServerFn({ method: 'POST' })
       const proTzLabel = tzLabel(tz)
       const clientWhen = formatWhen(startAt, clientTz)
       const clientTzLabel = tzLabel(clientTz)
+      // ponytail: build the .ics attachments OUTSIDE the sendEmail try blocks.
+      // buildIcsAttachment returns null on a serialization failure (instead of
+      // throwing), so a calendar-blob failure degrades to "email without
+      // attachment" rather than suppressing the whole confirmation email.
+      // Capture the failure to Sentry but keep going.
+      let clientIcs: EmailAttachment | null = null
+      try {
+        clientIcs = buildIcsAttachment({
+          appointmentId: appt.id,
+          title: `Videollamada con ${row.name}`,
+          description: `Sesión de apoyo psicológico con ${row.name} a través de PsicoAyudaVen.`,
+          startAt, endAt, meetingUrl,
+          organizerName: row.name,
+          attendeeName: client.name,
+          attendeeEmail: client.email,
+        })
+      } catch (err) {
+        Sentry.captureException(err)
+      }
       try {
         // To the client (names the pro).
         const clientHtml = meetingConfirmationHtml({
@@ -680,22 +720,15 @@ export const createAppointment = createServerFn({ method: 'POST' })
           meetingUrl,
           cancelUrl,
         })
-        const clientIcs = buildIcsAttachment({
-          appointmentId: appt.id,
-          title: `Videollamada con ${row.name}`,
-          description: `Sesión de apoyo psicológico con ${row.name} a través de PsicoAyudaVen.`,
-          startAt, endAt, meetingUrl,
-          organizerName: row.name,
-          attendeeName: client.name,
-          attendeeEmail: client.email,
-        })
         const clientText = `Tu videollamada con ${row.name} está agendada para el ${clientWhen} (${clientTzLabel}). Únete aquí: ${meetingUrl}. Cancela desde ${cancelUrl}.`
         await sendEmail({
           to: client.email,
           subject: `Videollamada agendada con ${row.name}`,
           html: clientHtml,
           text: clientText,
-          attachments: [clientIcs],
+          // ponytail: only attach if the .ics built successfully; otherwise
+          // the email still sends without the calendar blob.
+          ...(clientIcs ? { attachments: [clientIcs] } : {}),
         })
       } catch (err) {
         // ponytail: email failure is non-fatal — the booking row is the source
@@ -712,6 +745,22 @@ export const createAppointment = createServerFn({ method: 'POST' })
             .limit(1)
           const proUser = proUserRows.at(0)
           if (proUser?.email) {
+            // ponytail: build the pro's .ics defensively (same pattern as the
+            // client's) so a serialization failure doesn't skip the email.
+            let proIcs: EmailAttachment | null = null
+            try {
+              proIcs = buildIcsAttachment({
+                appointmentId: appt.id,
+                title: `Videollamada con ${client.name}`,
+                description: `Sesión agendada con ${client.name} a través de PsicoAyudaVen.`,
+                startAt, endAt, meetingUrl,
+                organizerName: 'PsicoAyudaVen',
+                attendeeName: client.name,
+                attendeeEmail: client.email,
+              })
+            } catch (err) {
+              Sentry.captureException(err)
+            }
             const proHtml = meetingConfirmationHtml({
               whoFor: 'professional',
               counterpartName: client.name,
@@ -720,22 +769,13 @@ export const createAppointment = createServerFn({ method: 'POST' })
               meetingUrl,
               cancelUrl: `${SITE_URL}/profesional/sesiones`,
             })
-            const proIcs = buildIcsAttachment({
-              appointmentId: appt.id,
-              title: `Videollamada con ${client.name}`,
-              description: `Sesión agendada con ${client.name} a través de PsicoAyudaVen.`,
-              startAt, endAt, meetingUrl,
-              organizerName: 'PsicoAyudaVen',
-              attendeeName: client.name,
-              attendeeEmail: client.email,
-            })
             const proText = `Tienes una videollamada agendada con ${client.name} para el ${proWhen} (${proTzLabel}). Únete aquí: ${meetingUrl}.`
             await sendEmail({
               to: proUser.email,
               subject: `Nueva videollamada agendada con ${client.name}`,
               html: proHtml,
               text: proText,
-              attachments: [proIcs],
+              ...(proIcs ? { attachments: [proIcs] } : {}),
             })
           }
         }
@@ -842,6 +882,13 @@ export const getAppointmentForJoin = createServerFn({ method: 'GET' })
       }
       if (appt.status !== 'booked') {
         throw new Error('Esta cita ya no está activa.')
+      }
+      // ponytail: completion is set lazily by the list endpoints, so a long-
+      // past appointment that was never listed may still carry status='booked'.
+      // Bound the join window by endAt here so a stale row can't hand back the
+      // Jitsi URL weeks after the meeting ended.
+      if (appt.endAt.getTime() < Date.now()) {
+        throw new Error('Esta cita ya finalizó.')
       }
       return { meetingUrl: appt.meetingUrl, startAt: appt.startAt.getTime(), endAt: appt.endAt.getTime() }
     }),

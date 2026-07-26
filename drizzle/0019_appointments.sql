@@ -5,8 +5,10 @@
 -- The meeting is a public meet.jit.si room with an opaque unguessable name
 -- (meeting_room) — no JWT, no SDK. status: 'booked' → 'cancelled' (either party)
 -- or 'completed' (set lazily on read once past endAt; no cron). Double-booking
--- is prevented in createAppointment via a check-then-insert query — there is no
--- unique index because cancelled slots must be re-bookable.
+-- is guarded by an interval-overlap SELECT in createAppointment (the cross-
+-- duration real guard) PLUS the partial UNIQUE INDEX at the bottom of this
+-- migration (same-interval belt-and-suspenders for the exact-duplicate race
+-- the SELECT can lose under concurrency).
 --
 -- Note: drizzle-kit's journal was stale at this point (it only knew about
 -- migrations through 0016; 0017_specialized_areas.sql and
@@ -37,11 +39,12 @@ CREATE TABLE `appointments` (
 --> statement-breakpoint
 CREATE INDEX `appointments_pro_start_idx` ON `appointments` (`professional_id`,`start_at`);--> statement-breakpoint
 CREATE INDEX `appointments_client_start_idx` ON `appointments` (`client_user_id`,`start_at`);--> statement-breakpoint
--- ponytail: PARTIAL UNIQUE INDEX — the real double-book guard. Two concurrent
--- createAppointment calls can both pass the app-level overlap SELECT and then
--- both INSERT (check-then-insert race); this index makes the second INSERT
--- fail at the DB layer. Filtered to status='booked' so cancelled/completed
--- rows don't collide — a cancelled slot at the same (pro, start, end) MUST be
--- re-bookable. SQLite supports partial unique indexes natively (the WHERE
+-- ponytail: PARTIAL UNIQUE INDEX — same-interval guard against the exact-
+-- duplicate race (two concurrent inserts with identical pro+start+end). Does
+-- NOT cover cross-duration overlap (different end_at) — that is caught by the
+-- interval-overlap SELECT in createAppointment. Filtered to status='booked'
+-- so cancelled/completed rows don't collide; a cancelled slot at the same
+-- (pro, start, end) MUST be re-bookable. SQLite supports partial unique
+-- indexes natively (the WHERE
 -- clause). Drizzle's uniqueIndex().where() emits this DDL.
 CREATE UNIQUE INDEX `appointments_active_slot_uniq` ON `appointments` (`professional_id`,`start_at`,`end_at`) WHERE `status` = 'booked';

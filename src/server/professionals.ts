@@ -640,8 +640,11 @@ export function parseAppointmentDurations(
       (x): x is AppointmentDuration =>
         typeof x === 'number' && Number.isInteger(x) && valid.has(x),
     )
-    // Dedupe + sort ascending so the picker tabs are stable.
-    return Array.from(new Set(filtered)).sort((a, b) => a - b)
+    // Dedupe + sort ascending so the picker tabs are stable. Fallback to [45]
+    // if filtering left nothing (e.g. '[7,99]' — all values invalid) so a
+    // malformed column still offers sessions instead of none.
+    const out = Array.from(new Set(filtered)).sort((a, b) => a - b)
+    return out.length ? out : [45]
   } catch {
     return [45]
   }

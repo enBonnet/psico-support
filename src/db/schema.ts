@@ -402,8 +402,10 @@ export const followUps = sqliteTable(
 // becomes re-bookable); 'completed' = past its endAt (set lazily on read, no cron).
 // ON DELETE CASCADE on both FKs — if a user or pro row is hard-deleted, their
 // appointments go too (soft-delete of a pro leaves the row intact). Double-booking
-// is prevented in createAppointment via a check-then-insert query (no unique index
-// because cancelled slots must be re-bookable). Plain-TEXT enums (no CHECK; Zod
+// is guarded by an interval-overlap SELECT in createAppointment (the cross-
+// duration real guard) PLUS a partial UNIQUE INDEX on exact (pro, start, end)
+// for the rare exact-duplicate race the SELECT can lose under concurrency.
+// Plain-TEXT enums (no CHECK; Zod
 // validates on write), matching every other status column in this schema.
 export const appointments = sqliteTable(
   'appointments',
@@ -461,14 +463,15 @@ export const appointments = sqliteTable(
       table.clientUserId,
       table.startAt,
     ),
-    // ponytail: PARTIAL UNIQUE INDEX — the real double-book guard. Two
-    // concurrent createAppointment calls can both pass the app-level overlap
-    // SELECT and then both INSERT (check-then-insert race); this index makes
-    // the second INSERT fail at the DB layer with a uniqueness violation.
-    // Filtered to status='booked' so cancelled/completed rows don't collide —
-    // a cancelled slot at the same (pro, start, end) MUST be re-bookable.
-    // Drizzle's uniqueIndex doesn't support a WHERE clause directly, so we
-    // build it via sql and the migration writes the partial index DDL by hand.
+    // ponytail: PARTIAL UNIQUE INDEX — a SAME-INTERVAL guard against the exact-
+    // duplicate race (two concurrent inserts with identical pro+start+end). It
+    // does NOT cover cross-duration overlap (a 15-min and a 45-min slot
+    // starting at 9:00 have different end_at, so both pass this index) — that
+    // is caught by the interval-overlap SELECT in createAppointment. Think of
+    // this index as belt-and-suspenders for the rare exact-dup case the SELECT
+    // can lose under concurrency. Filtered to status='booked' so cancelled/
+    // completed rows don't collide — a cancelled slot at the same (pro, start,
+    // end) MUST be re-bookable. SQLite supports partial unique indexes natively.
     uniqueIndex('appointments_active_slot_uniq')
       .on(table.professionalId, table.startAt, table.endAt)
       .where(sql`status = 'booked'`),

@@ -21,9 +21,12 @@ stack. Always close with an invitation to reply with doubts/suggestions.
 **Channel:** TBD (WhatsApp broadcast to verified professionals, pending
 confirmation).
 **Status:** 🟡 **DRAFT — do not send until reviewed.** This feature is
-implemented (1.25.0) but **not yet deployed, and gated behind a feature
+implemented but **not yet deployed, and gated behind a feature
 flag that defaults to OFF**. Sending the announcement before flipping the
 flag + deploying would tell pros about a button that doesn't appear yet.
+(The version metadata in `package.json` is `1.25.0`; the CHANGELOG still
+lists this under `[Unreleased]` until the release is cut — align them
+before sending.)
 
 **Context:** new scheduled-video-call booking path. Up to now the only
 remote option was instant WhatsApp ("Necesito ayuda ahora"). This adds a
