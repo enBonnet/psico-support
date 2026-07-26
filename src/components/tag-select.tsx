@@ -7,6 +7,7 @@
 // and selected/unselected class strings live here once instead of being
 // copy-pasted into five <form.Field> blocks per route.
 
+import type { ReactNode } from 'react'
 import { FieldShell } from '#/components/professional-form'
 
 export const tagButtonCls = (selected: boolean): string =>
@@ -21,15 +22,19 @@ export function TagSelect({
   value,
   onChange,
   errors = [],
+  required = false,
+  hint,
 }: {
   label: string
   options: readonly string[]
   value: string[]
   onChange: (v: string[]) => void
   errors?: unknown[]
+  required?: boolean
+  hint?: ReactNode
 }) {
   return (
-    <FieldShell label={label} errors={errors}>
+    <FieldShell label={label} errors={errors} required={required} hint={hint}>
       <div className="flex flex-wrap gap-2">
         {options.map((opt) => {
           const selected = value.includes(opt)

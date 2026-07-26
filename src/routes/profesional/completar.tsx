@@ -28,6 +28,7 @@ import {
 import type { SupportDocValue } from '#/components/professional-form'
 import { TagSelect } from '#/components/tag-select'
 import { PhoneInput } from '#/components/phone-input'
+import { Switch } from '#/components/ui/switch'
 import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/completar')({
@@ -55,6 +56,10 @@ function CompletarPage() {
   const navigate = useNavigate()
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [attempted, setAttempted] = useState(false)
+  // ponytail: "Atención general" toggle (see registro.tsx). Derived UI state —
+  // when ON the four specialization axes are cleared and mode forced inclusive.
+  // Defaults ON (most new pros are generalists first).
+  const [generalAttention, setGeneralAttention] = useState(true)
 
   const mutation = useMutation({
     mutationFn: (vars: RegisterStep2Input) =>
@@ -133,7 +138,11 @@ function CompletarPage() {
         <SectionHeader>Ubicación</SectionHeader>
         <form.Field name="country">
           {(field) => (
-            <FieldShell label="País donde vives" errors={field.state.meta.errors}>
+            <FieldShell
+              label="País donde vives"
+              errors={field.state.meta.errors}
+              required
+            >
               <select
                 className={inputCls}
                 value={field.state.value}
@@ -165,7 +174,11 @@ function CompletarPage() {
               <>
                 <form.Field name="estado">
                   {(field) => (
-                    <FieldShell label="Estado" errors={field.state.meta.errors}>
+                    <FieldShell
+                      label="Estado"
+                      errors={field.state.meta.errors}
+                      required
+                    >
                       <select
                         className={inputCls}
                         value={field.state.value}
@@ -191,8 +204,12 @@ function CompletarPage() {
                 <form.Subscribe selector={(s) => s.values.estado}>
                   {(estado) => (
                     <form.Field name="ciudad">
-                      {(field) => (
-                        <FieldShell label="Ciudad" errors={field.state.meta.errors}>
+                          {(field) => (
+                            <FieldShell
+                              label="Ciudad"
+                              errors={field.state.meta.errors}
+                              required
+                            >
                           <select
                             className={inputCls}
                             value={field.state.value}
@@ -233,6 +250,7 @@ function CompletarPage() {
             <FieldShell
               label="País del colegio o certificación"
               errors={field.state.meta.errors}
+              required
             >
               <select
                 className={inputCls}
@@ -258,6 +276,7 @@ function CompletarPage() {
             <FieldShell
               label="Número de colegiación"
               errors={field.state.meta.errors}
+              required
             >
               <input
                 type="text"
@@ -320,113 +339,175 @@ function CompletarPage() {
           )}
         </form.Field>
 
-        <form.Field name="population">
-          {(field) => (
-            <TagSelect
-              label="¿Con quién trabajas?"
-              options={POPULATION_OPTIONS}
-              value={field.state.value}
-              onChange={(v) => field.handleChange(v)}
-              errors={field.state.meta.errors}
-            />
-          )}
-        </form.Field>
+        {/* ── Enfoque de atención ── */}
+        {/* ponytail: see registro.tsx — "Atención general" is the friendly face
+            of "no specialization preferences". When ON the four axes are
+            cleared and mode forced inclusive. */}
+        <SectionHeader>Enfoque de atención</SectionHeader>
+        <label className="flex items-start gap-3">
+          <Switch
+            checked={generalAttention}
+            onCheckedChange={(checked) => {
+              setGeneralAttention(checked)
+              if (checked) {
+                form.setFieldValue('population', [])
+                form.setFieldValue('focusGroups', [])
+                form.setFieldValue('practiceAreas', [])
+                form.setFieldValue('specializedAreas', [])
+                form.setFieldValue('specializationMode', 'inclusive')
+              }
+            }}
+            className="mt-0.5"
+          />
+          <span className="flex flex-col gap-0.5 text-sm">
+            <span className="font-medium text-[var(--medi-text-primary)]">
+              Atención general
+            </span>
+            <span className="text-xs text-[var(--medi-text-secondary)]">
+              Acompaño a cualquier persona, sin filtros de edad, grupo o área.
+              Aparezco en el directorio general y en el botón de “ayuda ahora”.
+            </span>
+          </span>
+        </label>
+        {generalAttention && (
+          <p className="-mt-2 text-xs text-[var(--medi-text-secondary)]">
+            No te pediremos preferencias específicas. Si en el futuro quieres
+            definir enfoques, desactiva esta opción.
+          </p>
+        )}
 
-        <form.Field name="focusGroups">
-          {(field) => (
-            <TagSelect
-              label="¿Con qué poblaciones específicas trabajas? (opcional)"
-              options={FOCUS_GROUP_OPTIONS}
-              value={field.state.value}
-              onChange={(v) => field.handleChange(v)}
-              errors={field.state.meta.errors}
-            />
-          )}
-        </form.Field>
+        {!generalAttention && (
+          <>
+            <form.Field name="population">
+              {(field) => (
+                <TagSelect
+                  label="¿Con qué edades trabajas?"
+                  options={POPULATION_OPTIONS}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  errors={field.state.meta.errors}
+                />
+              )}
+            </form.Field>
 
-        <form.Field name="practiceAreas">
-          {(field) => (
-            <TagSelect
-              label="¿En qué áreas intervienes? (opcional)"
-              options={PRACTICE_AREA_OPTIONS}
-              value={field.state.value}
-              onChange={(v) => field.handleChange(v)}
-              errors={field.state.meta.errors}
-            />
-          )}
-        </form.Field>
+            <form.Field name="focusGroups">
+              {(field) => (
+                <TagSelect
+                  label="¿Con qué comunidades o poblaciones específicas?"
+                  options={FOCUS_GROUP_OPTIONS}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  errors={field.state.meta.errors}
+                />
+              )}
+            </form.Field>
 
-        {/* ── Áreas específicas (sensibles) ── */}
-        {/* ponytail: see registro.tsx for the rationale. The exclusive toggle
-            is disabled until ≥1 specialized area is picked; the server
-            double-guards the empty-exclusive case. */}
-        <form.Field name="specializedAreas">
-          {(field) => (
-            <TagSelect
-              label="¿Acompañas en áreas específicas? (opcional)"
-              options={SPECIALIZED_AREA_OPTIONS}
-              value={field.state.value}
-              onChange={(v) => field.handleChange(v)}
-              errors={field.state.meta.errors}
-            />
-          )}
-        </form.Field>
+            <form.Field name="practiceAreas">
+              {(field) => (
+                <TagSelect
+                  label="¿En qué áreas intervienes?"
+                  options={PRACTICE_AREA_OPTIONS}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  errors={field.state.meta.errors}
+                />
+              )}
+            </form.Field>
 
-        <form.Field name="specializationMode">
-          {(field) => (
-            <FieldShell
-              label="¿Cómo quieres participar en estas áreas?"
-              errors={field.state.meta.errors}
-            >
-              <div className="flex flex-col gap-2">
-                <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
-                  <input
-                    type="radio"
-                    name="specializationMode"
-                    value="inclusive"
-                    checked={field.state.value === 'inclusive'}
-                    onChange={() => field.handleChange('inclusive')}
-                    className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
-                  />
-                  <span>
-                    <span className="font-medium text-[var(--medi-text-primary)]">
-                      Inclusiva
-                    </span>{' '}
-                    — aparezco en el directorio general y cuando alguien filtra
-                    por un área específica.
-                  </span>
-                </label>
-                <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
-                  <input
-                    type="radio"
-                    name="specializationMode"
-                    value="exclusive"
-                    checked={field.state.value === 'exclusive'}
-                    onChange={() => field.handleChange('exclusive')}
-                    disabled={
-                      form.getFieldValue('specializedAreas').length === 0
+            {/* ── Áreas específicas (sensibles) ── */}
+            {/* ponytail: see registro.tsx for the rationale. The exclusive
+                toggle is disabled until ≥1 specialized area is picked; the
+                server double-guards the empty-exclusive case. */}
+            <form.Field name="specializedAreas">
+              {(field) => (
+                <TagSelect
+                  label="¿Acompañas en áreas específicas? (Duelo, Trauma, etc.)"
+                  options={SPECIALIZED_AREA_OPTIONS}
+                  value={field.state.value}
+                  onChange={(v) => field.handleChange(v)}
+                  errors={field.state.meta.errors}
+                />
+              )}
+            </form.Field>
+
+            <form.Field name="specializationMode">
+              {(field) => {
+                // ponytail: see registro.tsx — make the exclusive gate obvious
+                // instead of a silently faded radio. Server double-guards it.
+                const exclusiveDisabled =
+                  form.getFieldValue('specializedAreas').length === 0
+                return (
+                  <FieldShell
+                    label="¿Cómo quieres participar en estas áreas?"
+                    errors={field.state.meta.errors}
+                    hint={
+                      exclusiveDisabled
+                        ? 'Selecciona al menos un área específica arriba para activar la opción Exclusiva.'
+                        : undefined
                     }
-                    className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
-                  />
-                  <span>
-                    <span className="font-medium text-[var(--medi-text-primary)]">
-                      Exclusiva
-                    </span>{' '}
-                    — solo aparezco cuando alguien filtra por una de mis áreas.
-                    No salgo en el directorio general ni en el botón de “ayuda
-                    ahora”.
-                  </span>
-                </label>
-              </div>
-            </FieldShell>
-          )}
-        </form.Field>
+                  >
+                    <div className="flex flex-col gap-2">
+                      <label className="flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]">
+                        <input
+                          type="radio"
+                          name="specializationMode"
+                          value="inclusive"
+                          checked={field.state.value === 'inclusive'}
+                          onChange={() => field.handleChange('inclusive')}
+                          className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                        />
+                        <span>
+                          <span className="font-medium text-[var(--medi-text-primary)]">
+                            Inclusiva
+                          </span>{' '}
+                          — aparezco en el directorio general y cuando alguien
+                          filtra por un área específica.
+                        </span>
+                      </label>
+                      <label
+                        className={
+                          'flex items-start gap-2 text-sm text-[var(--medi-text-secondary)]' +
+                          (exclusiveDisabled
+                            ? ' cursor-not-allowed opacity-60'
+                            : '')
+                        }
+                        aria-disabled={exclusiveDisabled || undefined}
+                      >
+                        <input
+                          type="radio"
+                          name="specializationMode"
+                          value="exclusive"
+                          checked={field.state.value === 'exclusive'}
+                          onChange={() => field.handleChange('exclusive')}
+                          disabled={exclusiveDisabled}
+                          className="mt-0.5 size-4 shrink-0 accent-[var(--medi-secondary)]"
+                        />
+                        <span>
+                          <span className="font-medium text-[var(--medi-text-primary)]">
+                            Exclusiva
+                          </span>{' '}
+                          — solo aparezco cuando alguien filtra por una de mis
+                          áreas. No salgo en el directorio general ni en el botón
+                          de “ayuda ahora”.
+                        </span>
+                      </label>
+                    </div>
+                  </FieldShell>
+                )
+              }}
+            </form.Field>
+          </>
+        )}
 
         {/* ── Contacto & modalidad ── */}
         <SectionHeader>Contacto &amp; modalidad</SectionHeader>
         <form.Field name="modality">
           {(field) => (
-            <FieldShell label="Modalidad" errors={field.state.meta.errors}>
+            <FieldShell
+              label="Modalidad"
+              errors={field.state.meta.errors}
+              required
+            >
               <select
                 className={inputCls}
                 value={field.state.value}
@@ -455,6 +536,7 @@ function CompletarPage() {
                   onPhoneChange={(p) => phoneField.handleChange(p)}
                   countryLabel="País del WhatsApp"
                   phoneLabel="WhatsApp / teléfono"
+                  phoneRequired
                 />
               )}
             </form.Field>

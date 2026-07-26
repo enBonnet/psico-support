@@ -1076,9 +1076,11 @@ const nullableWhenEmptyEstado = z.preprocess(
 const registerStep2Object = z.object({
   certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
   certifyingSchool: z.string().max(120).optional().nullable(),
-  population: z
-    .array(z.enum(POPULATION_OPTIONS))
-    .min(1, 'Selecciona al menos uno'),
+  // ponytail: population used to be required (.min(1)), but a generalist pro
+  // (Atención general toggle) intentionally leaves all four specialization
+  // axes empty — they support every age/group/area. An empty array here means
+  // "generalist"; the directory/profile render "Atención general" in that case.
+  population: z.array(z.enum(POPULATION_OPTIONS)),
   focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
   practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
   // ponytail: sensitive specialized areas (4th axis). Optional. When non-empty
@@ -1128,9 +1130,9 @@ export const registerSchema = z
     password: z.string().min(8, 'Mínimo 8 caracteres'),
     certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
     certifyingSchool: z.string().max(120).optional().nullable(),
-    population: z
-      .array(z.enum(POPULATION_OPTIONS))
-      .min(1, 'Selecciona al menos uno'),
+    // ponytail: mirrors registerStep2Object — population optional (empty =
+    // generalist / Atención general). Kept in sync manually with step2Object.
+    population: z.array(z.enum(POPULATION_OPTIONS)),
     focusGroups: z.array(z.enum(FOCUS_GROUP_OPTIONS)),
     practiceAreas: z.array(z.enum(PRACTICE_AREA_OPTIONS)),
     specializedAreas: z.array(z.enum(SPECIALIZED_AREA_OPTIONS)),

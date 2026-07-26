@@ -754,6 +754,17 @@ function ProfessionalCard({ p }: { p: PublicProfessional }) {
               Atiende a: {p.population.join(', ')}
             </p>
           )}
+          {/* ponytail: a generalist (all four specialization axes empty) shows
+              a positive "Atención general" line so the card doesn't read as
+              empty/unspecialized. Mirrored on the profile route. */}
+          {p.population.length === 0 &&
+            p.focusGroups.length === 0 &&
+            p.practiceAreas.length === 0 &&
+            p.specializedAreas.length === 0 && (
+              <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
+                Atención general
+              </p>
+            )}
           {[...p.focusGroups, ...p.practiceAreas].length > 0 && (
             <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
               Enfoque:{' '}
