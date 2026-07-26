@@ -432,17 +432,22 @@ function CompletarPage() {
 
             <form.Field name="specializationMode">
               {(field) => {
-                // ponytail: see registro.tsx — make the exclusive gate obvious
-                // instead of a silently faded radio. Server double-guards it.
-                const exclusiveDisabled =
-                  form.getFieldValue('specializedAreas').length === 0
+                // ponytail: see registro.tsx — exclusive needs ≥1 preference
+                // across ANY axis; gate is the whole focus, not just the
+                // sensitive axis. Server double-guards the all-empty case.
+                const hasAnyFocus =
+                  form.getFieldValue('population').length > 0 ||
+                  form.getFieldValue('focusGroups').length > 0 ||
+                  form.getFieldValue('practiceAreas').length > 0 ||
+                  form.getFieldValue('specializedAreas').length > 0
+                const exclusiveDisabled = !hasAnyFocus
                 return (
                   <FieldShell
-                    label="¿Cómo quieres participar en estas áreas?"
+                    label="¿Cómo quieres participar?"
                     errors={field.state.meta.errors}
                     hint={
                       exclusiveDisabled
-                        ? 'Selecciona al menos un área específica arriba para activar la opción Exclusiva.'
+                        ? 'Selecciona al menos una preferencia arriba (edad, grupo, área o área específica) para activar la opción Exclusiva.'
                         : undefined
                     }
                   >
@@ -460,8 +465,8 @@ function CompletarPage() {
                           <span className="font-medium text-[var(--medi-text-primary)]">
                             Inclusiva
                           </span>{' '}
-                          — aparezco en el directorio general y cuando alguien
-                          filtra por un área específica.
+                          — aparezco en el directorio general y también cuando
+                          alguien filtra por cualquiera de mis preferencias.
                         </span>
                       </label>
                       <label
@@ -487,8 +492,9 @@ function CompletarPage() {
                             Exclusiva
                           </span>{' '}
                           — solo aparezco cuando alguien filtra por una de mis
-                          áreas. No salgo en el directorio general ni en el botón
-                          de “ayuda ahora”.
+                          preferencias (edad, grupo, área o área específica). No
+                          salgo en el directorio general ni en el botón de “ayuda
+                          ahora” sin filtros.
                         </span>
                       </label>
                     </div>

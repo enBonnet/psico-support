@@ -24,3 +24,6 @@ dev.db.bak
 /professionals.csv
 # Local Pi runtime state
 .atl/
+
+# ZCode agent session plans (internal scratchpad)
+.zcode/

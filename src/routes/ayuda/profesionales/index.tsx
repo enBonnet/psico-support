@@ -294,6 +294,12 @@ function ProfessionalsList() {
           population,
           focusGroups,
           practiceAreas,
+          // ponytail: forward specialized too so the filtered random pick draws
+          // from the same pool the directory shows — including any matching
+          // exclusive pros (buildProfessionalWhere drops the mode exclusion
+          // once any tag filter is active). Without this, an exclusive pro
+          // visible in the filtered list could never be reached via "al azar".
+          specialized,
         },
       })
       if (!picked) {

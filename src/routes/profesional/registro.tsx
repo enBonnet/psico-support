@@ -641,13 +641,13 @@ function RegisterPage() {
 
                 {/* ── Áreas específicas (sensibles) ── */}
                 {/* ponytail: 4th specialization axis — sensitive areas. The pro
-                    can pick any subset, then choose inclusive (default — also
-                    appears in the general directory) or exclusive (hidden from
-                    default browse + random pick; surfaces only when a
-                    help-seeker filters by one of these via /ayuda/especifica).
-                    Exclusive is gated on ≥1 selected area — the toggle is
-                    disabled until then, and the server coerces empty-exclusive
-                    back to inclusive defensively. */}
+                    can pick any subset. Exclusivity now spans ALL four axes (see
+                    the specializationMode field below + buildProfessionalWhere):
+                    an exclusive pro is hidden from unfiltered browse/random and
+                    surfaces when a help-seeker filters by ANY of their selected
+                    tags (edad/grupo/área/área específica). The radio is disabled
+                    until ≥1 axis is picked, and the server coerces an all-empty
+                    exclusive back to inclusive defensively. */}
                 <form.Field name="specializedAreas">
                   {(field) => (
                     <TagSelect
@@ -662,21 +662,27 @@ function RegisterPage() {
 
                 <form.Field name="specializationMode">
                   {(field) => {
-                    // ponytail: exclusive needs ≥1 specialized area to be
-                    // meaningful (otherwise the pro is hidden with nothing to
-                    // surface). The server double-guards the empty-exclusive
-                    // case; here we only make the gate obvious instead of
-                    // leaving a silently faded radio that reads as
-                    // "broken/not clickable".
-                    const exclusiveDisabled =
-                      form.getFieldValue('specializedAreas').length === 0
+                    // ponytail: exclusive needs ≥1 preference across ANY axis
+                    // (edad/grupo/área/área específica) to be meaningful —
+                    // exclusivity is gated by buildProfessionalWhere on the
+                    // pro's whole configured focus, not just the sensitive
+                    // axis. An all-empty exclusive pro would be invisible
+                    // everywhere; the server (proEditableFields) coerces that
+                    // back to inclusive defensively, and we disable the radio
+                    // here until they pick ≥1 axis.
+                    const hasAnyFocus =
+                      form.getFieldValue('population').length > 0 ||
+                      form.getFieldValue('focusGroups').length > 0 ||
+                      form.getFieldValue('practiceAreas').length > 0 ||
+                      form.getFieldValue('specializedAreas').length > 0
+                    const exclusiveDisabled = !hasAnyFocus
                     return (
                       <FieldShell
-                        label="¿Cómo quieres participar en estas áreas?"
+                        label="¿Cómo quieres participar?"
                         errors={field.state.meta.errors}
                         hint={
                           exclusiveDisabled
-                            ? 'Selecciona al menos un área específica arriba para activar la opción Exclusiva.'
+                            ? 'Selecciona al menos una preferencia arriba (edad, grupo, área o área específica) para activar la opción Exclusiva.'
                             : undefined
                         }
                       >
@@ -694,8 +700,9 @@ function RegisterPage() {
                               <span className="font-medium text-[var(--medi-text-primary)]">
                                 Inclusiva
                               </span>{' '}
-                              — aparezco en el directorio general y cuando
-                              alguien filtra por un área específica.
+                              — aparezco en el directorio general y también
+                              cuando alguien filtra por cualquiera de mis
+                              preferencias.
                             </span>
                           </label>
                           <label
@@ -721,8 +728,9 @@ function RegisterPage() {
                                 Exclusiva
                               </span>{' '}
                               — solo aparezco cuando alguien filtra por una de
-                              mis áreas. No salgo en el directorio general ni en
-                              el botón de “ayuda ahora”.
+                              mis preferencias (edad, grupo, área o área
+                              específica). No salgo en el directorio general ni
+                              en el botón de “ayuda ahora” sin filtros.
                             </span>
                           </label>
                         </div>
