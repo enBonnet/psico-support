@@ -32,23 +32,28 @@ function LoginPage() {
         return
       }
       // ponytail: await navigation so the button stays loading until the
-      // panel is committed. Without this, setLoading(false) re-armed the
-      // button while the panel's beforeLoad/loaders (2 D1 server fns) were
-      // still pending — the idle button looked like the first click failed,
-      // prompting a second submit.
+      // destination is committed. Without this, setLoading(false) re-armed
+      // the button while the cuenta route's loaders were still pending — the
+      // idle button looked like the first click failed, prompting a second
+      // submit.
+      //
+      // Redirect to /cuenta (the role-aware hub) rather than hardcoding
+      // /profesional/panel: this same form is the login entry point for both
+      // professionals and basic users. /cuenta branches on role and routes
+      // each user to their correct destination (panel, completar, admin).
       //
       // CRITICAL: refresh the session + invalidate the cached anonymous
       // ['me'] BEFORE navigating. signIn.email sets the session cookie in its
-      // response, but the panel's beforeLoad → getCurrentUser() races against
-      // cookie propagation and could read a stale null → redirect back to
-      // login (or hit a transient server-fn error → router error boundary,
+      // response, but cuenta's queries → getCurrentUser() race against
+      // cookie propagation and could read a stale null → show the anonymous
+      // view (or hit a transient server-fn error → router error boundary,
       // the "Ups, algo salió mal" that only clears on refresh). Forcing a
       // fresh getSession round-trip guarantees the cookie is committed in the
-      // browser, and invalidating ['me'] means cuenta/panel re-read it.
+      // browser, and invalidating ['me'] means cuenta re-reads it.
       await authClient.getSession()
       qc.invalidateQueries({ queryKey: ['me'] })
       track({ event: 'auth_signin', category: 'auth' })
-      await navigate({ to: '/profesional/panel' })
+      await navigate({ to: '/cuenta' })
     } finally {
       setLoading(false)
     }
