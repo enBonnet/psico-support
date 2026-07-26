@@ -36,4 +36,12 @@ CREATE TABLE `appointments` (
 );
 --> statement-breakpoint
 CREATE INDEX `appointments_pro_start_idx` ON `appointments` (`professional_id`,`start_at`);--> statement-breakpoint
-CREATE INDEX `appointments_client_start_idx` ON `appointments` (`client_user_id`,`start_at`);
+CREATE INDEX `appointments_client_start_idx` ON `appointments` (`client_user_id`,`start_at`);--> statement-breakpoint
+-- ponytail: PARTIAL UNIQUE INDEX — the real double-book guard. Two concurrent
+-- createAppointment calls can both pass the app-level overlap SELECT and then
+-- both INSERT (check-then-insert race); this index makes the second INSERT
+-- fail at the DB layer. Filtered to status='booked' so cancelled/completed
+-- rows don't collide — a cancelled slot at the same (pro, start, end) MUST be
+-- re-bookable. SQLite supports partial unique indexes natively (the WHERE
+-- clause). Drizzle's uniqueIndex().where() emits this DDL.
+CREATE UNIQUE INDEX `appointments_active_slot_uniq` ON `appointments` (`professional_id`,`start_at`,`end_at`) WHERE `status` = 'booked';

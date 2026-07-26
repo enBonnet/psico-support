@@ -394,13 +394,29 @@ function ProfilePage() {
           <Link
             to="/cuenta/sesiones/agendar/$proId"
             params={{ proId: String(pro.id) }}
-            onClick={() =>
+            onClick={() => {
               track({
                 event: 'appointment_intent',
                 category: 'public',
                 param1: String(pro.id),
               })
-            }
+              // ponytail: set a per-pro sessionStorage flag so the agendar
+              // page's mount-time tracking can skip re-firing for the same
+              // pro (the profile CTA → agendar mount is the normal path; both
+              // track appointment_intent, which would double-count without
+              // this). The agendar mount clears it after reading. Keyed by
+              // proId so navigating profile→agendar→profile→agendar for a
+              // DIFFERENT pro still tracks the new intent.
+              try {
+                sessionStorage.setItem(
+                  `appt-intent:${pro.id}`,
+                  '1',
+                )
+              } catch {
+                /* sessionStorage may be unavailable (SSR, privacy mode) —
+                   the worst case is a duplicate intent event, not a failure */
+              }
+            }}
             className="glass-card-soft flex min-h-12 w-full items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] px-4 py-3 text-base font-semibold !text-white bg-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
           >
             <Video className="size-5" /> Agendar videollamada

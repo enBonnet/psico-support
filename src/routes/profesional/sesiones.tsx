@@ -13,7 +13,7 @@ import {
   cancelAppointment
   
 } from '#/server/appointments'
-import type {AppointmentView} from '#/server/appointments';
+import type {AppointmentListItem} from '#/server/appointments';
 import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/profesional/sesiones')({
@@ -46,12 +46,15 @@ function formatDateTime(ms: number, tz?: string | null): string {
   }
 }
 
-function isUpcoming(a: AppointmentView): boolean {
+function isUpcoming(a: AppointmentListItem): boolean {
   return a.status === 'booked' && a.endAt > Date.now()
 }
 
 function ProSesionesPage() {
   const qc = useQueryClient()
+  // ponytail: beforeLoad guarantees a session + the pro's existence is
+  // verified server-side in getMyAppointmentsPro, so no enabled:!!me gate —
+  // firing both queries in parallel avoids the serial round-trip delay.
   const { data: me } = useQuery({
     queryKey: ['my-professional'],
     queryFn: () => getMyProfessional(),
@@ -59,7 +62,6 @@ function ProSesionesPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['my-appointments-pro'],
     queryFn: () => getMyAppointmentsPro(),
-    enabled: !!me,
   })
 
   const join = useMutation({

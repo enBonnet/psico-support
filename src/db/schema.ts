@@ -1,5 +1,5 @@
 import { relations, sql } from 'drizzle-orm'
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core'
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core'
 
 export const user = sqliteTable('user', {
   id: text('id').primaryKey(),
@@ -450,7 +450,7 @@ export const appointments = sqliteTable(
       .notNull(),
   },
   (table) => [
-    // ponytail: covers the pro's upcoming list, the double-book guard
+    // ponytail: covers the pro's upcoming list, the double-book pre-check
     // (WHERE professional_id=? AND status='booked' AND start_at < ? AND end_at > ?),
     // and the per-pro "Mis sesiones" query — all leading on professional_id with
     // a start_at range/predicate.
@@ -461,6 +461,17 @@ export const appointments = sqliteTable(
       table.clientUserId,
       table.startAt,
     ),
+    // ponytail: PARTIAL UNIQUE INDEX — the real double-book guard. Two
+    // concurrent createAppointment calls can both pass the app-level overlap
+    // SELECT and then both INSERT (check-then-insert race); this index makes
+    // the second INSERT fail at the DB layer with a uniqueness violation.
+    // Filtered to status='booked' so cancelled/completed rows don't collide —
+    // a cancelled slot at the same (pro, start, end) MUST be re-bookable.
+    // Drizzle's uniqueIndex doesn't support a WHERE clause directly, so we
+    // build it via sql and the migration writes the partial index DDL by hand.
+    uniqueIndex('appointments_active_slot_uniq')
+      .on(table.professionalId, table.startAt, table.endAt)
+      .where(sql`status = 'booked'`),
   ],
 )
 

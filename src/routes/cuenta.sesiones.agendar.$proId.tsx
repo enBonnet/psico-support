@@ -129,9 +129,26 @@ function AgendarPage() {
     return groupByDay(forTab)
   }, [data?.slots, durationTab])
 
-  // Track funnel entry once per pro page mount.
+  // Track funnel entry once per pro page mount — UNLESS the user just clicked
+  // the "Agendar videollamada" CTA on the profile (which already fired the
+  // event and set a sessionStorage flag). This avoids double-counting the
+  // normal profile → agendar path. The flag is cleared after reading so a
+  // manual reload of the agendar page DOES track (genuine re-entry).
   useEffect(() => {
-    if (me) track({ event: 'appointment_intent', category: 'public', param1: String(proId), actorId: me.id })
+    if (!me) return
+    let alreadyTracked = false
+    try {
+      const key = `appt-intent:${proId}`
+      if (sessionStorage.getItem(key)) {
+        alreadyTracked = true
+        sessionStorage.removeItem(key)
+      }
+    } catch {
+      /* sessionStorage unavailable — track to avoid under-counting */
+    }
+    if (!alreadyTracked) {
+      track({ event: 'appointment_intent', category: 'public', param1: String(proId), actorId: me.id })
+    }
   }, [me, proId])
 
   const offeredDurations = data?.durations ?? []

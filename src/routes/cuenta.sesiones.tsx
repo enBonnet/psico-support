@@ -1,6 +1,6 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Video, CalendarOff, LogIn } from 'lucide-react'
+import { Video, CalendarOff } from 'lucide-react'
 import { notify } from '#/lib/notifications'
 import { APPOINTMENTS_ENABLED } from '#/lib/features'
 import { Button } from '#/components/ui/button'
@@ -13,7 +13,7 @@ import {
   cancelAppointment
   
 } from '#/server/appointments'
-import type {AppointmentView} from '#/server/appointments';
+import type {AppointmentListItem} from '#/server/appointments';
 import { noindexHead } from '#/lib/seo'
 
 export const Route = createFileRoute('/cuenta/sesiones')({
@@ -50,28 +50,29 @@ function formatDateTime(ms: number, tz?: string | null): string {
   }
 }
 
-function isUpcoming(a: AppointmentView): boolean {
+function isUpcoming(a: AppointmentListItem): boolean {
   return a.status === 'booked' && a.endAt > Date.now()
 }
 
 function SesionesPage() {
   const qc = useQueryClient()
-  const { data: me } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getCurrentUser(),
-  })
+  // ponytail: beforeLoad already guarantees a logged-in user (redirects to
+  // /signup otherwise), so the appointments query fires immediately without
+  // an `enabled: !!me` gate — that gate caused an unnecessary extra round-trip
+  // delay (wait for getCurrentUser, then fire the list query).
   const { data, isLoading } = useQuery({
     queryKey: ['my-appointments-client'],
     queryFn: () => getMyAppointmentsClient(),
-    enabled: !!me,
   })
 
   const join = useMutation({
     mutationFn: (id: number) => getAppointmentForJoin({ data: { id } }),
     onSuccess: (res) => {
-      // ponytail: open the meeting URL in a new tab. We resolve it server-side
-      // (instead of embedding meetingUrl in the list payload) so the link is
-      // only ever returned to a participant of the appointment.
+      // ponytail: the list payload (AppointmentListItem) intentionally omits
+      // meetingUrl — it's resolved only via this getAppointmentForJoin() call,
+      // which re-checks the caller is a participant AND the status is 'booked'
+      // before returning the Jitsi link. So a stale list never leaks the URL,
+      // and a cancelled appointment can't be joined.
       window.open(res.meetingUrl, '_blank', 'noopener,noreferrer')
     },
     onError: () =>
@@ -218,15 +219,6 @@ function SesionesPage() {
             </section>
           )}
         </>
-      )}
-
-      {!me && (
-        <div className="glass-card-soft mt-6 flex items-center gap-3 rounded-[var(--glass-radius-sm)] p-4">
-          <LogIn className="size-5 text-[var(--medi-secondary)]" />
-          <p className="text-sm text-[var(--medi-text-secondary)]">
-            Inicia sesión para ver y agendar tus videollamadas.
-          </p>
-        </div>
       )}
     </main>
   )

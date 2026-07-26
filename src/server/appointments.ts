@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { getRequestHeaders } from '@tanstack/react-start/server'
 import * as Sentry from '@sentry/tanstackstart-react'
-import { and, eq, gt, lt, asc, ne } from 'drizzle-orm'
+import { and, eq, gt, lt, asc, ne, inArray } from 'drizzle-orm'
 import { z } from 'zod'
 
 import { getCloudflareEnv, getDb } from '#/db'
@@ -75,11 +75,13 @@ export const WEEKDAY_LABEL_ES: Record<number, string> = {
 
 // ponytail: mirror of the private tzParts in professionals.ts (which isn't
 // exported). Kept local to avoid widening professionals.ts' surface. Returns
-// weekday + minutes-from-midnight of `now` in the given tz via
-// Intl.DateTimeFormat (supported in Workers + browsers). day=-1 on parse fail.
+// only the weekday (0-6) of `now` in the given tz via Intl.DateTimeFormat
+// (supported in Workers + browsers). day=-1 on parse fail. The minutes-from-
+// midnight the original computes isn't needed here — slot generation walks the
+// weekly grid by weekday and uses minuteInTzToUtcMs() for the actual instant.
 function tzParts(tz: string, now: Date): { day: number } {
   const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false,
+    timeZone: tz, weekday: 'short',
   }).formatToParts(now)
   const get = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
   return { day: WEEKDAY_SHORT_TO_NUM[get('weekday')] ?? -1 }
@@ -99,7 +101,14 @@ export type BookableSlot = {
 
 export type AppointmentStatus = 'booked' | 'cancelled' | 'completed'
 
-export type AppointmentView = {
+// ponytail: the list-view shape — everything the "Mis videollamadas" UI needs
+// EXCEPT meetingUrl. The join link is intentionally resolved only via the
+// separate getAppointmentForJoin() server fn (which re-checks the caller is a
+// participant + status is 'booked'), so a stale list payload never leaks the
+// Jitsi URL. createAppointment/cancelAppointment return the full
+// AppointmentView (with meetingUrl) because the caller just performed the
+// action and is known-authorized.
+export type AppointmentListItem = {
   id: number
   professionalId: number
   professionalName: string
@@ -109,12 +118,18 @@ export type AppointmentView = {
   startAt: number
   endAt: number
   durationMin: number
-  meetingUrl: string
   status: AppointmentStatus
   clientTz: string
   proTz: string | null
   cancelReason: string | null
   createdAt: number
+}
+
+// ponytail: full view including meetingUrl — returned only by the mutating
+// server fns (create/cancel) where the caller is freshly authorized. List
+// endpoints return AppointmentListItem[] instead.
+export type AppointmentView = AppointmentListItem & {
+  meetingUrl: string
 }
 
 // ── Slot generation (pure) ──────────────────────────────────────────────────
@@ -291,7 +306,10 @@ async function findMyProId(userId: string): Promise<number | null> {
   return row.at(0)?.id ?? null
 }
 
-// Hydrate an appointments row into the client-facing view (joins pro + user).
+// ponytail: hydrate a single appointments row into the FULL view (with
+// meetingUrl). Used only by create/cancel — the caller just performed the
+// action and is known-authorized. List endpoints use toListItems() instead,
+// which omits meetingUrl (resolved separately via getAppointmentForJoin).
 async function toView(row: typeof appointments.$inferSelect): Promise<AppointmentView | null> {
   const db = getDb()
   const [proRows, clientRows] = await Promise.all([
@@ -306,8 +324,6 @@ async function toView(row: typeof appointments.$inferSelect): Promise<Appointmen
       .where(eq(user.id, row.clientUserId))
       .limit(1),
   ])
-  // ponytail: .at(0) is type-honest (T | undefined) without needing
-  // noUncheckedIndexedAccess; rows[0] would type as always-present.
   const pro = proRows.at(0)
   const client = clientRows.at(0)
   if (!pro || !client) return null
@@ -327,6 +343,70 @@ async function toView(row: typeof appointments.$inferSelect): Promise<Appointmen
     proTz: pro.tz,
     cancelReason: row.cancelReason,
     createdAt: row.createdAt.getTime(),
+  }
+}
+
+// ponytail: batch-hydrate many rows into AppointmentListItem[] (NO meetingUrl)
+// using pre-fetched pro/client lookup maps. Fixes the N+1 the per-row toView()
+// caused (2 queries × up to 50 rows = 100 queries). Callers fetch the distinct
+// proId set + distinct clientUserId set ONCE, build these maps, then map over
+// rows without further DB hits. Rows whose pro/client vanished (hard-delete
+// race) are dropped.
+function toListItem(
+  row: typeof appointments.$inferSelect,
+  proMap: Map<number, { name: string; tz: string | null }>,
+  clientMap: Map<string, { name: string; email: string }>,
+): AppointmentListItem | null {
+  const pro = proMap.get(row.professionalId)
+  const client = clientMap.get(row.clientUserId)
+  if (!pro || !client) return null
+  return {
+    id: row.id,
+    professionalId: row.professionalId,
+    professionalName: pro.name,
+    clientUserId: row.clientUserId,
+    clientName: client.name,
+    clientEmail: client.email,
+    startAt: row.startAt.getTime(),
+    endAt: row.endAt.getTime(),
+    durationMin: row.durationMin,
+    status: row.status,
+    clientTz: row.clientTz,
+    proTz: pro.tz,
+    cancelReason: row.cancelReason,
+    createdAt: row.createdAt.getTime(),
+  }
+}
+
+// ponytail: build the pro + client lookup maps for a set of appointment rows
+// in exactly 2 queries (one IN pros, one IN users) regardless of row count.
+// Called by both list endpoints so the per-row hydration stays DB-free.
+async function buildLookupMaps(
+  rows: (typeof appointments.$inferSelect)[],
+): Promise<{
+  proMap: Map<number, { name: string; tz: string | null }>
+  clientMap: Map<string, { name: string; email: string }>
+}> {
+  const db = getDb()
+  const proIds = Array.from(new Set(rows.map((r) => r.professionalId)))
+  const clientIds = Array.from(new Set(rows.map((r) => r.clientUserId)))
+  const [proRows, clientRows] = await Promise.all([
+    proIds.length
+      ? db
+          .select({ id: professionals.id, name: professionals.name, tz: professionals.timezone })
+          .from(professionals)
+          .where(inArray(professionals.id, proIds))
+      : [],
+    clientIds.length
+      ? db
+          .select({ id: user.id, name: user.name, email: user.email })
+          .from(user)
+          .where(inArray(user.id, clientIds))
+      : [],
+  ])
+  return {
+    proMap: new Map(proRows.map((p) => [p.id, { name: p.name, tz: p.tz }])),
+    clientMap: new Map(clientRows.map((c) => [c.id, { name: c.name, email: c.email }])),
   }
 }
 
@@ -474,10 +554,15 @@ export const createAppointment = createServerFn({ method: 'POST' })
         throw new Error('Ese horario ya no está disponible. Elige otro.')
       }
 
-      // Double-book guard: reject if any active 'booked' appointment overlaps
-      // [slot.startMs, slot.endMs). check-then-insert is safe at this volume
-      // (D1 serializes writes per-DB); a unique index isn't used because
-      // cancelled slots must be re-bookable.
+      // ponytail: optimistic overlap pre-check — gives a friendly error in the
+      // common case without waiting for the INSERT to fail. The REAL guard is
+      // the partial UNIQUE INDEX appointments_active_slot_uniq on
+      // (professional_id, start_at, end_at) WHERE status='booked' (see
+      // 0019_appointments.sql): two concurrent calls can both pass this SELECT
+      // and race to INSERT; the index makes the second one throw a uniqueness
+      // violation, caught below as the same friendly error. The index is
+      // partial (status='booked') so cancelled/completed slots don't collide —
+      // a cancelled slot at the same (pro, start, end) stays re-bookable.
       const overlap = await db
         .select({ id: appointments.id })
         .from(appointments)
@@ -533,21 +618,36 @@ export const createAppointment = createServerFn({ method: 'POST' })
       const startAt = new Date(slot.startMs)
       const endAt = new Date(slot.endMs)
 
-      const inserted = await db
-        .insert(appointments)
-        .values({
-          professionalId: row.id,
-          clientUserId: session.user.id,
-          startAt,
-          endAt,
-          durationMin: data.durationMin,
-          meetingUrl,
-          meetingRoom: room,
-          status: 'booked',
-          clientTz,
-        })
-        .returning()
-      const appt = inserted.at(0)
+      let inserted: typeof appointments.$inferSelect | undefined
+      try {
+        const rows = await db
+          .insert(appointments)
+          .values({
+            professionalId: row.id,
+            clientUserId: session.user.id,
+            startAt,
+            endAt,
+            durationMin: data.durationMin,
+            meetingUrl,
+            meetingRoom: room,
+            status: 'booked',
+            clientTz,
+          })
+          .returning()
+        inserted = rows.at(0)
+      } catch (err) {
+        // ponytail: the partial UNIQUE INDEX appointments_active_slot_uniq
+        // fires here on a concurrent double-book race (the optimistic SELECT
+        // above can't prevent it). Surface as the same friendly Spanish error
+        // so the client just re-fetches slots and picks another. SQLite/D1
+        // reports uniqueness violations as SQLITE_CONSTRAINT_UNIQUE.
+        const msg = err instanceof Error ? err.message : String(err)
+        if (/constraint|unique/i.test(msg)) {
+          throw new Error('Ese horario acaba de ser reservado. Elige otro.')
+        }
+        throw err
+      }
+      const appt = inserted
       if (!appt) throw new Error('No se pudo crear la cita.')
 
       // Analytics (fire-and-forget; session-gated so we know the clientUserId).
@@ -674,10 +774,16 @@ export const getMyAppointmentsClient = createServerFn({ method: 'GET' }).handler
         .where(eq(appointments.clientUserId, session.user.id))
         .orderBy(asc(appointments.startAt))
         .limit(50)
-      const views = await Promise.all(rows.map(toView))
-      return { appointments: views.filter((v): v is AppointmentView => v !== null) }
+      // ponytail: batch the pro/client lookups (2 queries total) instead of
+      // per-row toView() (which was 2 × N). meetingUrl is intentionally NOT
+      // included — resolved via getAppointmentForJoin when the user clicks join.
+      const { proMap, clientMap } = await buildLookupMaps(rows)
+      const items = rows
+        .map((r) => toListItem(r, proMap, clientMap))
+        .filter((v): v is AppointmentListItem => v !== null)
+      return { appointments: items }
     }),
-)
+  )
 
 export const getMyAppointmentsPro = createServerFn({ method: 'GET' }).handler(
   async () =>
@@ -704,10 +810,13 @@ export const getMyAppointmentsPro = createServerFn({ method: 'GET' }).handler(
         .where(eq(appointments.professionalId, proId))
         .orderBy(asc(appointments.startAt))
         .limit(50)
-      const views = await Promise.all(rows.map(toView))
-      return { appointments: views.filter((v): v is AppointmentView => v !== null) }
+      const { proMap, clientMap } = await buildLookupMaps(rows)
+      const items = rows
+        .map((r) => toListItem(r, proMap, clientMap))
+        .filter((v): v is AppointmentListItem => v !== null)
+      return { appointments: items }
     }),
-)
+  )
 
 export const getAppointmentForJoin = createServerFn({ method: 'GET' })
   .validator(z.object({ id: z.number().int().positive() }))
@@ -808,16 +917,22 @@ export const cancelAppointment = createServerFn({ method: 'POST' })
       ])
       const pro = proRows.at(0)
       const client = clientRows.at(0)
-      const when = formatWhen(appt.startAt, pro?.tz ?? 'America/Caracas')
-      const tzL = tzLabel(pro?.tz ?? 'America/Caracas')
+      // ponytail: render the time in EACH recipient's tz — matches the
+      // confirmation emails in createAppointment. The client sees their own
+      // wall-clock time (appt.clientTz); the pro sees theirs. Both reference
+      // the same UTC instant (appt.startAt).
+      const clientWhen = formatWhen(appt.startAt, appt.clientTz)
+      const clientTzL = tzLabel(appt.clientTz)
+      const proWhen = formatWhen(appt.startAt, pro?.tz ?? 'America/Caracas')
+      const proTzL = tzLabel(pro?.tz ?? 'America/Caracas')
       try {
-        // To the client.
+        // To the client (in the client's tz).
         if (client?.email) {
           const html = meetingCancellationHtml({
             whoFor: 'client',
             counterpartName: pro?.name ?? 'el profesional',
-            whenLabel: when,
-            tzLabel: tzL,
+            whenLabel: clientWhen,
+            tzLabel: clientTzL,
             reason: data.reason,
             bookAgainUrl: `${SITE_URL}/cuenta/sesiones/agendar/${appt.professionalId}`,
           })
@@ -825,14 +940,14 @@ export const cancelAppointment = createServerFn({ method: 'POST' })
             to: client.email,
             subject: 'Videollamada cancelada',
             html,
-            text: `Tu videollamada con ${pro?.name ?? 'el profesional'} del ${when} fue cancelada.`,
+            text: `Tu videollamada con ${pro?.name ?? 'el profesional'} del ${clientWhen} fue cancelada.`,
           })
         }
       } catch (err) {
         Sentry.captureException(err)
       }
       try {
-        // To the pro.
+        // To the pro (in the pro's tz).
         if (pro?.userId) {
           const proUserRows = await db.select({ email: user.email }).from(user).where(eq(user.id, pro.userId)).limit(1)
           const proUser = proUserRows.at(0)
@@ -840,15 +955,15 @@ export const cancelAppointment = createServerFn({ method: 'POST' })
             const html = meetingCancellationHtml({
               whoFor: 'professional',
               counterpartName: client?.name ?? 'la persona',
-              whenLabel: when,
-              tzLabel: tzL,
+              whenLabel: proWhen,
+              tzLabel: proTzL,
               reason: data.reason,
             })
             await sendEmail({
               to: proUser.email,
               subject: 'Videollamada cancelada',
               html,
-              text: `La videollamada con ${client?.name ?? 'la persona'} del ${when} fue cancelada.`,
+              text: `La videollamada con ${client?.name ?? 'la persona'} del ${proWhen} fue cancelada.`,
             })
           }
         }
