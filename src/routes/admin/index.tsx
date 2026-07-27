@@ -866,7 +866,11 @@ function AudioCategoriesSection() {
   })
   const actorId = adminUser?.id
   const { data: categories = [], isLoading } = useQuery({
-    queryKey: ['audio-categories'],
+    // ponytail: encode includeInactive in the key so this admin list
+    // (inactive-included) doesn't collide with the pro recorder picker's
+    // active-only list under the same bare key. invalidateQueries matches by
+    // prefix, so ['audio-categories'] invalidations still hit both.
+    queryKey: ['audio-categories', { includeInactive: true }],
     queryFn: () => listAudioCategories({ data: { includeInactive: true } }),
   })
 
@@ -916,16 +920,22 @@ function AudioCategoriesSection() {
     mutationFn: (vars: { id: number; active: boolean }) =>
       toggleAudioCategory({ data: vars }),
     onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: ['audio-categories'] })
-      const prev = qc.getQueryData<AudioCategory[]>(['audio-categories'])
-      qc.setQueryData<AudioCategory[]>(['audio-categories'], (old) =>
+      // ponytail: exact-match the admin key (the one with includeInactive) —
+      // the pro picker's active-only key is unaffected and refetches normally.
+      const adminKey = ['audio-categories', { includeInactive: true }] as const
+      await qc.cancelQueries({ queryKey: adminKey })
+      const prev = qc.getQueryData<AudioCategory[]>(adminKey)
+      qc.setQueryData<AudioCategory[]>(adminKey, (old) =>
         old?.map((c) => (c.id === vars.id ? { ...c, active: vars.active } : c)),
       )
       return { prev }
     },
     onError: (_e, _vars, ctx) => {
       if (ctx?.prev)
-        qc.setQueryData<AudioCategory[]>(['audio-categories'], ctx.prev)
+        qc.setQueryData<AudioCategory[]>(
+          ['audio-categories', { includeInactive: true }],
+          ctx.prev,
+        )
       notify({
         type: 'error',
         title: 'No se pudo cambiar el estado',
@@ -941,9 +951,12 @@ function AudioCategoriesSection() {
   const deleteCat = useMutation({
     mutationFn: (id: number) => deleteAudioCategory({ data: { id } }),
     onSuccess: () => {
-      if (actorId) {
-        track({ event: 'admin_audio_review', category: 'admin', actorId })
-      }
+      // ponytail: no analytics here — admin_audio_review is specifically for
+      // pending-clip approve/reject (param1=status, param2=storyId). Firing it
+      // for a category delete would pollute that metric with paramless rows.
+      // A dedicated admin_audio_category_delete event would need adding to
+      // TRACKED_EVENTS (append-only contract); left out of this PR as it's not
+      // a decision to make silently.
       notify({ type: 'success', title: 'Categoría eliminada' })
       qc.invalidateQueries({ queryKey: ['audio-categories'] })
       qc.invalidateQueries({ queryKey: ['story-tray'] })

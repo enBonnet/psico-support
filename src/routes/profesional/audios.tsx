@@ -102,11 +102,12 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
     queryFn: () => listMyStories(),
   })
 
-  // ponytail: active categories for the picker. Public read (no auth); the
-  // admin gates writes, not this list. staleTime so a re-render after a
-  // successful upload doesn't refetch mid-session.
+  // ponytail: active-only categories for the picker. The {includeInactive}
+  // suffix in the key keeps this list distinct from the admin's inactive-
+  // included list (same base key, different cache entry); invalidateQueries
+  // with the bare ['audio-categories'] prefix still refreshes both.
   const { data: categories = [] } = useQuery({
-    queryKey: ['audio-categories'],
+    queryKey: ['audio-categories', { includeInactive: false }],
     queryFn: () => listAudioCategories({ data: { includeInactive: false } }),
     staleTime: 60_000,
   })
@@ -187,8 +188,8 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
         <>
           <p className="mt-1 text-sm text-[var(--medi-text-secondary)]">
             Mensajes cortos (idealmente 1:30, máx. 3 min). Cada audio pasa por
-            revisión antes de publicarse. No hay límite: graba los que quieras,
-            uno por categoría.
+            revisión antes de publicarse. No hay límite de cantidad: graba los
+            que quieras y elige la categoría que mejor represente cada mensaje.
           </p>
 
           {stories.length > 0 && (

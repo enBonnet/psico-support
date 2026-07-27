@@ -53,11 +53,11 @@ function ApoyoPage() {
     track({ event: 'apoyo_view', category: 'public' })
   }, [])
 
-  // ponytail: derive category sections from the flat tray. Iterate the
-  // category order as pros first appear in it (so a category leads the moment
-  // a pro contributes to it), then append the "Otros audios" bucket last if
-  // any uncategorized clips exist. Each pro appears once per section with
-  // ONLY that category's clips — the viewer then plays just that section.
+  // ponytail: derive category sections from the flat tray. Each pro appears
+  // once per section with ONLY that category's clips — the viewer then plays
+  // just that section. Categorized sections are ordered by the admin-managed
+  // sortOrder (ascending) so the admin's "orden — menor = más arriba" control
+  // actually governs the public page; "Otros audios" always lands last.
   const sections = useMemo<CategorySection[]>(() => {
     const byKey = new Map<string, CategorySection>()
     const otrosClipsByPro = new Map<number, StoryTrayPro>()
@@ -99,7 +99,14 @@ function ApoyoPage() {
         otrosClipsByPro.set(pro.professionalId, { ...pro, clips: otrosClips })
       }
     }
-    const result = Array.from(byKey.values())
+    // ponytail: sort categorized sections by the admin-managed sortOrder
+    // (ascending), falling back to id for stability. "Otros audios" is appended
+    // after the sort so it always sits at the bottom regardless of sort keys.
+    const result = Array.from(byKey.values()).sort(
+      (a, b) =>
+        (a.category?.sortOrder ?? 0) - (b.category?.sortOrder ?? 0) ||
+        (a.category?.id ?? 0) - (b.category?.id ?? 0),
+    )
     if (otrosClipsByPro.size > 0) {
       result.push({
         key: '__otros__',
@@ -270,20 +277,26 @@ function ApoyoPage() {
         </>
       )}
 
-      {viewer && (
-        <AudioStoryViewer
-          // ponytail: sectionIndex -1 = the "play everything" catch-all, which
-          // uses the full tray as its section. Otherwise scope to the chosen
-          // category section's pro subset.
-          tray={
-            viewer.sectionIndex === -1
-              ? tray
-              : sections[viewer.sectionIndex]?.pros ?? []
-          }
-          startPro={viewer.proIndex}
-          onClose={() => setViewer(null)}
-        />
-      )}
+      {(() => {
+        // ponytail: compute the viewer's tray once. If a background refetch of
+        // ['story-tray'] (staleTime 30s + refetch-on-focus) drops the open
+        // section while the viewer is mounted, the effective tray becomes []
+        // — the viewer dereferences tray[proIndex].clips[clipIndex]
+        // unguarded and would throw. Guard by not rendering it on empty.
+        if (!viewer) return null
+        const viewerTray =
+          viewer.sectionIndex === -1
+            ? tray
+            : sections[viewer.sectionIndex]?.pros ?? []
+        if (viewerTray.length === 0) return null
+        return (
+          <AudioStoryViewer
+            tray={viewerTray}
+            startPro={viewer.proIndex}
+            onClose={() => setViewer(null)}
+          />
+        )
+      })()}
     </main>
   )
 }
