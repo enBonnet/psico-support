@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.1] - 2026-07-27
+
+### Fixed
+- **Avatares de los psicólogos en "Voces que acompañan"** ([src/server/audio-stories.ts](src/server/audio-stories.ts), [src/components/audio-story-viewer.tsx](src/components/audio-story-viewer.tsx), [src/routes/apoyo/index.tsx](src/routes/apoyo/index.tsx)): la bandeja (`/apoyo`) y el visor a pantalla completa mostraban solo la inicial del nombre sobre un degradado, aunque la infraestructura de avatares (`professionals.avatarKey`, `publicAvatarUrl`, `/media/avatar/$`, el componente `Avatar`) ya existía. `listStoryTray` ahora selecciona `avatarKey` en `StoryTrayPro`; el visor renderiza la foto vía el `<Avatar>` compartido (con la inicial como fallback) en la fila de atribución y en el centro, y la bandeja la muestra dentro del anillo de degradado. El degradado se queda como capa de fondo detrás de la foto. No requiere migración — la columna `avatarKey` ya existe.
+
+### Changed
+- **Ledger de deuda `ponytail:`** ([PONYTAIL-DEBT.md](PONYTAIL-DEBT.md)): auditoría de los ~380 comentarios `ponytail:` del repo. La gran mayoría es documentación (no deuda); el ledger rastrea el único aplazamiento real (`getHeaders()` duplicado en 3 módulos de server-fn, disparador documentado en AGENTS.md #9), marca el comentario stale que este PR resolvió ("no profile photos yet") y separa los *guardrails* de seguridad (banner de crisis, contrato inmutable de analytics, retry de D1) de la deuda real para que los primeros no se "arreglen" por error.
+
 ## [1.29.0] - 2026-07-27
 
 ### Added

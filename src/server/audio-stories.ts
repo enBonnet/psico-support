@@ -144,6 +144,9 @@ export type StoryTrayPro = {
   professionalId: number
   name: string
   modality: 'in_person' | 'remote' | 'both'
+  // ponytail: null until the pro uploads one (post-signup, panel). The viewer
+  // + tray fall back to an initial; the per-pro gradient stays as background.
+  avatarKey: string | null
   clips: PublicStoryClip[]
 }
 
@@ -233,6 +236,7 @@ export const listStoryTray = createServerFn({ method: 'GET' }).handler(
         proId: professionals.id,
         name: professionals.name,
         modality: professionals.modality,
+        avatarKey: professionals.avatarKey,
         storyId: audioStories.id,
         audioKey: audioStories.audioKey,
         mime: audioStories.mime,
@@ -285,6 +289,7 @@ export const listStoryTray = createServerFn({ method: 'GET' }).handler(
           professionalId: r.proId,
           name: r.name,
           modality: r.modality,
+          avatarKey: r.avatarKey,
           clips: [],
         }
         byPro.set(r.proId, entry)

@@ -3,6 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { X, ChevronLeft, ChevronRight, Volume2, VolumeX } from 'lucide-react'
 
 import type { StoryTrayPro } from '#/server/audio-stories'
+import { Avatar } from '#/components/avatar'
 import { track } from '#/lib/analytics-client'
 
 // ponytail: IG-stories-style fullscreen audio viewer. The tray is hidden once
@@ -14,10 +15,11 @@ import { track } from '#/lib/analytics-client'
 // fires popstate → onClose. This keeps the browser history consistent (no
 // stale entries if the user navigates away mid-story).
 
-// ponytail: deterministic warm gradient per pro (no profile photos yet —
-// gradient + initial is the avatar substitute). Keyed by proId so a given pro
-// always gets the same background across sessions. Palette is calm/supportive,
-// not the urgent reds of the medical chrome.
+// ponytail: deterministic warm gradient per pro, used as the background even
+// when an avatar is present (photos sit on top, so the gradient fills the
+// letterbox / softens the edge). Keyed by proId so a given pro always gets
+// the same background across sessions. Palette is calm/supportive, not the
+// urgent reds of the medical chrome.
 const GRADIENTS = [
   'linear-gradient(160deg, #4a4e69 0%, #9a8c98 100%)',
   'linear-gradient(160deg, #355070 0%, #6a7b8c 100%)',
@@ -29,10 +31,6 @@ const GRADIENTS = [
 
 function gradientFor(proId: number): string {
   return GRADIENTS[proId % GRADIENTS.length]
-}
-
-function initialOf(name: string): string {
-  return name.trim().charAt(0).toUpperCase() || '?'
 }
 
 function modalityLabel(m: StoryTrayPro['modality']): string {
@@ -281,9 +279,11 @@ export function AudioStoryViewer({
               }}
               className="flex items-center gap-2 text-left"
             >
-              <span className="flex size-9 items-center justify-center rounded-full bg-white/25 text-sm font-bold !text-white backdrop-blur-sm">
-                {initialOf(currentPro.name)}
-              </span>
+              <Avatar
+                name={currentPro.name}
+                avatarKey={currentPro.avatarKey}
+                className="size-9 bg-white/25 text-sm !text-white backdrop-blur-sm"
+              />
               <span className="flex flex-col">
                 <span className="text-sm font-semibold !text-white">
                   {currentPro.name}
@@ -305,11 +305,13 @@ export function AudioStoryViewer({
         </div>
       </div>
 
-      {/* ── Center: title overlay + big initial avatar ── */}
+      {/* ── Center: title overlay + big avatar ── */}
       <div className="relative z-0 flex flex-1 flex-col items-center justify-center px-6 text-center">
-        <div className="pointer-events-none mb-4 flex size-24 items-center justify-center rounded-full bg-white/15 text-4xl font-bold !text-white backdrop-blur-sm">
-          {initialOf(currentPro.name)}
-        </div>
+        <Avatar
+          name={currentPro.name}
+          avatarKey={currentPro.avatarKey}
+          className="pointer-events-none mb-4 size-24 bg-white/15 text-4xl !text-white backdrop-blur-sm"
+        />
         {currentClip.title && (
           <p className="pointer-events-none max-w-md text-lg font-medium !text-white">
             {currentClip.title}

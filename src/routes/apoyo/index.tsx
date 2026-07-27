@@ -5,6 +5,7 @@ import { Headphones, Play } from 'lucide-react'
 
 import { listStoryTray } from '#/server/audio-stories'
 import type { StoryTrayPro, StoryClipCategory } from '#/server/audio-stories'
+import { publicAvatarUrl } from '#/server/professionals'
 import { AudioStoryViewer } from '#/components/audio-story-viewer'
 import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
@@ -303,7 +304,8 @@ function ApoyoPage() {
 
 // ponytail: tray avatar — gradient ring (matches the viewer's per-pro gradient
 // intent without importing the helper; the gradient here is purely cosmetic,
-// the viewer recomputes its own). Initial in the center; clip count badge.
+// the viewer recomputes its own). Photo when uploaded, else initial. Clip
+// count badge anchored bottom-right.
 function TrayAvatar({
   pro,
   onClick,
@@ -312,6 +314,7 @@ function TrayAvatar({
   onClick: () => void
 }) {
   const initial = pro.name.trim().charAt(0).toUpperCase() || '?'
+  const url = pro.avatarKey ? publicAvatarUrl(pro.avatarKey) : null
   return (
     <button
       type="button"
@@ -319,8 +322,25 @@ function TrayAvatar({
       className="flex w-20 flex-col items-center gap-1.5 text-center focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       aria-label={`Escuchar audio de ${pro.name}`}
     >
+      {/* ponytail: outer span is the badge's positioning context and must NOT
+          clip (overflow-visible) — the clip-count badge sits at -bottom-1
+          -right-1, half outside the circle. The inner wrapper clips the photo
+          to the circle instead. */}
       <span className="relative flex size-20 items-center justify-center rounded-full bg-gradient-to-br from-[var(--medi-primary)] to-[var(--medi-secondary)] text-2xl font-bold !text-white shadow-md transition-transform hover:scale-105">
-        {initial}
+        <span className="absolute inset-0 overflow-hidden rounded-full">
+          {url ? (
+            <img
+              src={url}
+              alt=""
+              className="h-full w-full object-cover"
+              loading="lazy"
+            />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center">
+              {initial}
+            </span>
+          )}
+        </span>
         {/* clip count badge */}
         <span className="absolute -bottom-1 -right-1 flex size-6 items-center justify-center rounded-full bg-white text-xs font-bold text-[var(--medi-primary)] shadow-sm">
           {pro.clips.length}
