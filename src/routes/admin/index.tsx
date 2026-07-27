@@ -162,7 +162,10 @@ function SectionSearch({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] bg-white/60 py-2 pl-9 pr-3 text-sm text-[var(--medi-text-primary)] outline-none focus:border-[var(--medi-secondary)]"
+        // ponytail: glass-input h-12 + text-base matches inputCls so this search
+        // box renders at the same height as the other form inputs on the page
+        // (category create/edit, etc.). pl-9 leaves room for the leading icon.
+        className="glass-input h-12 w-full pl-9 pr-3 text-base"
       />
     </div>
   )

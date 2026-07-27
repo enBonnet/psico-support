@@ -171,6 +171,47 @@ without per-usage styling:
   (saturated CTA). `outline`/`secondary`/`ghost` now use glass surfaces.
 - **`Switch`** → `.glass-pill` track, larger thumb (size-6) with drop shadow
 
+### Form controls — input/select height parity
+
+Every text input and select on a form surface renders at the **same height** so
+a `<select>` next to a `<input>` (e.g. the category picker + title field on
+`/profesional/audios`, or the admin category create form) never looks shorter
+or taller than its neighbour. There is one canonical size:
+
+| Token     | Class string                                  | Height | Font       |
+| --------- | --------------------------------------------- | ------ | ---------- |
+| `inputCls`| `glass-input h-12 w-full px-3 text-base`      | 48px   | 16px (`text-base`) |
+
+`inputCls` is exported from [`src/components/professional-form.tsx`](../src/components/professional-form.tsx)
+and is the single source of truth — native `<select>` and raw `<input>` elements
+in the professional forms (`registro`, `completar`, `perfil`, `disponibilidad`,
+`audios`), the directory filters, and `seguimiento` all apply it. The shadcn
+`<Input>` component ([`src/components/ui/input.tsx`](../src/components/ui/input.tsx))
+is aligned to the same `h-12` + `text-base` so it can sit beside a `inputCls`
+control without a gap.
+
+**Rules:**
+
+1. **Always pair `glass-input` with `h-12` + `text-base`** (or just use
+   `inputCls`). Don't hand-roll `bg-white/60 border py-2 …` inline — that
+   produces a shorter, unblurred input that breaks parity (the admin search
+   box was the historical offender).
+2. **`<select>` uses the same class as `<input>`.** A native `<select>` honors
+   `h-12` like any input; no separate select class exists. (Browsers still draw
+   their own dropdown arrow, so a select can look slightly heavier than an
+   input even at equal height — acceptable; do not add `appearance-none` unless
+   a dedicated chevron is designed.)
+3. **Small inline fields may opt out of `w-full`** (e.g. the admin sort-order
+   number box uses `glass-input h-12 w-24 px-2 text-sm`), but keep `h-12` so
+   the row stays aligned. `text-sm` is fine on a narrow numeric field.
+4. **Leading-icon inputs** keep the icon slot via `pl-9` (the admin `SectionSearch`
+   is the example) on top of the `glass-input h-12` base — never drop the height
+   class to fit the icon.
+5. **Don't reintroduce `h-9` / `h-11`.** Those were the shadcn default and a
+   one-off in `seguimiento`/the admin category form respectively; both were
+   normalized to `h-12`. If a denser control is genuinely needed (e.g. a
+   compact filter bar), document the exception here with its reason.
+
 ### Usage rules
 
 1. **One material per layer.** Don't nest `.glass-card` inside `.glass-card`
