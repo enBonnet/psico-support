@@ -29,7 +29,7 @@ import {
   getCurrentUser,
 } from '#/server/professionals'
 import { countMyOpenFollowUps } from '#/server/follow-ups'
-import { listMyStories, STORY_MAX_PER_PRO } from '#/server/audio-stories'
+import { listMyStories } from '#/server/audio-stories'
 import { noindexHead } from '#/lib/seo'
 
 // ponytail: direct support line to the admin. Constant, not env — mirrors the
@@ -317,7 +317,7 @@ function PanelPage() {
               meta={
                 activeAudios > 0 ? (
                   <span className="glass-pill shrink-0 px-2 py-0.5 text-xs font-medium text-[var(--medi-text-secondary)]">
-                    {activeAudios}/{STORY_MAX_PER_PRO}
+                    {activeAudios}
                   </span>
                 ) : undefined
               }

@@ -118,6 +118,11 @@ export const TRACKED_EVENTS = [
   'apoyo_view',
   'audio_play_all',
   'audio_play_pro',
+  // audio_play_category: a visitor opens the viewer from a category section on
+  // /apoyo. param1 = category slug (matches audio_categories.slug). Lets us see
+  // which categories actually drive playback (children's content vs tales vs
+  // crisis, etc.) distinct from the catch-all audio_play_all.
+  'audio_play_category',
   'audio_attribution_click',
   'audio_close',
   'recursos_tool_view',

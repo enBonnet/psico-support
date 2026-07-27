@@ -4,13 +4,14 @@ import { z } from 'zod'
 import { and, eq, asc, inArray, count } from 'drizzle-orm'
 
 import { getDb, getR2 } from '#/db'
-import { audioStories, professionals } from '#/db/schema'
+import { audioStories, audioCategories, professionals } from '#/db/schema'
 import { getAuth, isAdminEmail } from '#/lib/auth'
 
 // ponytail: "Voces que acompañan" — server fns for the audio-stories tray.
 // Stories are short supportive clips (≤180s) recorded by verified pros,
-// published as a sequential IG-style tray. See architecture/audio-stories
-// memory for the locked decisions (no expiry, ≤2 per pro, admin-reviewed).
+// published as a sequential IG-style tray grouped by category (children,
+// tales, breathing, sleep, etc.). No per-pro cap (the earlier ≤2 limit was
+// lifted when categories landed); admin review is the only gate.
 
 // ponytail: mirrors the getHeaders() helper in src/server/professionals.ts.
 // Duplicated rather than cross-imported to keep the two domains decoupled;
@@ -53,11 +54,6 @@ const STORY_EXT: Record<StoryAudioMime, string> = {
 export const STORY_MAX_SECONDS = 180
 export const STORY_MAX_BYTES = 3 * 1024 * 1024
 
-// ponytail: ≤2 stories per pro, counted as rows where status IN (pending,
-// approved). Rejected rows don't count (audit-only) so a rejection never
-// locks a pro out of retrying.
-export const STORY_MAX_PER_PRO = 2
-
 // ponytail: R2 key prefix; stripped when building the public /media/audio/...
 // URL (the worker route at src/routes/media/audio/$.ts re-adds it). Keeping the
 // prefix in the stored key (not just the URL) means R2 listing/quotas stay
@@ -65,6 +61,45 @@ export const STORY_MAX_PER_PRO = 2
 export const STORY_KEY_PREFIX = 'support-audio/'
 
 export const STORY_TITLE_MAX = 120
+
+// ── Category types + helpers ───────────────────────────────────────────────
+
+// ponytail: category row shape returned to clients. The public list (active
+// only) feeds the pro recorder picker; the admin list (includeInactive) feeds
+// the admin CRUD UI.
+export type AudioCategory = {
+  id: number
+  slug: string
+  title: string
+  description: string
+  sortOrder: number
+  active: boolean
+  createdAt: Date | null
+}
+
+// ponytail: the public-facing category slice embedded on each clip payload so
+// the client can group + render section headers without a second fetch. null
+// for legacy/uncategorized clips (rendered under "Otros audios").
+export type StoryClipCategory = {
+  id: number
+  slug: string
+  title: string
+  description: string
+}
+
+// ponytail: lowercase kebab slug from a free-text title. Strips accents so
+// "Para niños" → "para-ninos". Collisions are rejected at insert (unique slug
+// index) with a friendly error; admin can pass an explicit slug to override.
+function slugifyTitle(title: string): string {
+  return title
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
 
 // ponytail: pure helper — builds the public playback URL from a stored R2 key.
 // Imported by client routes (viewer + admin preview) since it's a pure string
@@ -90,6 +125,10 @@ export type PublicStoryClip = {
   // import the key-prefix convention; one source of truth for the mapping.
   url: string
   createdAt: Date | null
+  // ponytail: category the clip belongs to (one per clip). null for legacy
+  // rows added before categories landed; rendered under "Otros audios".
+  categoryId: number | null
+  category: StoryClipCategory | null
 }
 
 export type StoryTrayPro = {
@@ -103,7 +142,7 @@ export type StoryTrayPro = {
 // they can see review state. url is included for self-preview (the /media
 // route serves any key under the prefix regardless of status; security is
 // upheld by key unguessability + the fact that pending URLs aren't linked
-// publicly). Cap-count is computed client-side as (pending+approved).length.
+// publicly). categoryId + category title shown next to the status pill.
 export type MyStoryClip = {
   id: number
   status: 'pending' | 'approved' | 'rejected'
@@ -113,25 +152,61 @@ export type MyStoryClip = {
   title: string | null
   url: string
   createdAt: Date | null
+  categoryId: number | null
+  category: StoryClipCategory | null
 }
 
-function toPublicClip(r: {
-  id: number
-  audioKey: string
-  mime: string
-  durationSec: number
-  title: string | null
-  createdAt: Date | null
-}): PublicStoryClip {
-  return { ...r, url: publicAudioUrl(r.audioKey) }
+// ponytail: builds the public clip payload (url + denormalized category).
+// category fields come from the LEFT JOIN to audio_categories (may be all null
+// for uncategorized or soft-deleted-then-NULLed clips).
+function toPublicClip(
+  r: {
+    id: number
+    audioKey: string
+    mime: string
+    durationSec: number
+    title: string | null
+    createdAt: Date | null
+  },
+  cat: {
+    categoryId: number | null
+    catId: number | null
+    slug: string | null
+    title: string | null
+    description: string | null
+  },
+): PublicStoryClip {
+  const category: StoryClipCategory | null =
+    cat.catId != null && cat.slug && cat.title && cat.description
+      ? {
+          id: cat.catId,
+          slug: cat.slug,
+          title: cat.title,
+          description: cat.description,
+        }
+      : null
+  return {
+    id: r.id,
+    audioKey: r.audioKey,
+    mime: r.mime,
+    durationSec: r.durationSec,
+    title: r.title,
+    url: publicAudioUrl(r.audioKey),
+    createdAt: r.createdAt,
+    categoryId: cat.categoryId,
+    category,
+  }
 }
 
 // ── Public: tray ───────────────────────────────────────────────────────────
 
-// ponytail: one query, not N+1. Selects approved clips joined to verified pros,
+// ponytail: one query, not N+1. Selects approved clips joined to verified pros
+// (inner) and to audio_categories (LEFT, so uncategorized clips survive),
 // groups client-side into per-pro clip sets ordered by createdAt. Tray order
 // is newest-approved-first per pro (most recent contribution surfaces first),
 // pros ordered by their newest clip desc — so "who showed up today" leads.
+// The category slice is embedded on each clip so /apoyo can render section
+// headers without a second fetch.
 export const listStoryTray = createServerFn({ method: 'GET' }).handler(
   async () => {
     const db = getDb()
@@ -147,11 +222,20 @@ export const listStoryTray = createServerFn({ method: 'GET' }).handler(
         title: audioStories.title,
         status: audioStories.status,
         createdAt: audioStories.createdAt,
+        categoryId: audioStories.categoryId,
+        catId: audioCategories.id,
+        slug: audioCategories.slug,
+        catTitle: audioCategories.title,
+        catDescription: audioCategories.description,
       })
       .from(audioStories)
       .innerJoin(
         professionals,
         eq(professionals.id, audioStories.professionalId),
+      )
+      .leftJoin(
+        audioCategories,
+        eq(audioCategories.id, audioStories.categoryId),
       )
       .where(
         and(
@@ -178,14 +262,23 @@ export const listStoryTray = createServerFn({ method: 'GET' }).handler(
         byPro.set(r.proId, entry)
       }
       entry.clips.push(
-        toPublicClip({
-          id: r.storyId,
-          audioKey: r.audioKey,
-          mime: r.mime,
-          durationSec: r.durationSec,
-          title: r.title,
-          createdAt: r.createdAt,
-        }),
+        toPublicClip(
+          {
+            id: r.storyId,
+            audioKey: r.audioKey,
+            mime: r.mime,
+            durationSec: r.durationSec,
+            title: r.title,
+            createdAt: r.createdAt,
+          },
+          {
+            categoryId: r.categoryId,
+            catId: r.catId,
+            slug: r.slug,
+            title: r.catTitle,
+            description: r.catDescription,
+          },
+        ),
       )
     }
     return Array.from(byPro.values()).reverse()
@@ -219,11 +312,41 @@ export const listMyStories = createServerFn({ method: 'GET' }).handler(
         durationSec: audioStories.durationSec,
         title: audioStories.title,
         createdAt: audioStories.createdAt,
+        categoryId: audioStories.categoryId,
+        catId: audioCategories.id,
+        slug: audioCategories.slug,
+        catTitle: audioCategories.title,
+        catDescription: audioCategories.description,
       })
       .from(audioStories)
+      .leftJoin(
+        audioCategories,
+        eq(audioCategories.id, audioStories.categoryId),
+      )
       .where(eq(audioStories.professionalId, pro.id))
       .orderBy(asc(audioStories.createdAt))
-    return rows.map((r) => ({ ...r, url: publicAudioUrl(r.audioKey) }))
+    return rows.map((r) => {
+      const clip = toPublicClip(
+        {
+          id: r.id,
+          audioKey: r.audioKey,
+          mime: r.mime,
+          durationSec: r.durationSec,
+          title: r.title,
+          createdAt: r.createdAt,
+        },
+        {
+          categoryId: r.categoryId,
+          catId: r.catId,
+          slug: r.slug,
+          title: r.catTitle,
+          description: r.catDescription,
+        },
+      )
+      // ponytail: MyStoryClip carries the review status (absent from the public
+      // shape); spread the public clip + re-add status.
+      return { ...clip, status: r.status }
+    })
   },
 )
 
@@ -243,6 +366,9 @@ const storyAudioSchema = z.object({
     .max(STORY_TITLE_MAX, `Máximo ${STORY_TITLE_MAX} caracteres.`)
     .optional()
     .nullable(),
+  // ponytail: required on upload — every clip belongs to exactly one category.
+  // Existence + active check happens in the handler (zod can't reach the DB).
+  categoryId: z.number().int().positive('Selecciona una categoría.'),
   data: z
     .string()
     .max(
@@ -306,23 +432,22 @@ export const uploadMyStory = createServerFn({ method: 'POST' })
       )
     }
 
-    // ponytail: cap = ≤2 rows where status IN (pending, approved). Rejected
-    // rows don't count (audit-only). Pre-check here so we never write a row
-    // that would exceed the cap; the migration has no CHECK constraint
-    // (SQLite can't express "count per group").
-    const countRows = await db
-      .select({ n: count() })
-      .from(audioStories)
+    // ponytail: validate the category exists and is active before writing, so
+    // a pro can't attach a clip to a retired/unknown category. The select is
+    // cheap (PK hit) and gates the R2 put too — failing here is free.
+    const catRows = await db
+      .select({ id: audioCategories.id })
+      .from(audioCategories)
       .where(
         and(
-          eq(audioStories.professionalId, pro.id),
-          inArray(audioStories.status, ['pending', 'approved']),
+          eq(audioCategories.id, data.categoryId),
+          eq(audioCategories.active, true),
         ),
       )
-    const activeCount = countRows.at(0)?.n ?? 0
-    if (activeCount >= STORY_MAX_PER_PRO) {
+      .limit(1)
+    if (catRows.length === 0) {
       throw new Error(
-        `Ya tienes ${STORY_MAX_PER_PRO} audios. Elimina uno para grabar uno nuevo.`,
+        'Esa categoría ya no está disponible. Recarga la página e inténtalo de nuevo.',
       )
     }
 
@@ -349,6 +474,7 @@ export const uploadMyStory = createServerFn({ method: 'POST' })
           durationSec: data.durationSec,
           title: data.title?.trim() || null,
           status: 'pending',
+          categoryId: data.categoryId,
         })
         .returning({ id: audioStories.id })
       return { ok: true as const, id: inserted[0]?.id }
@@ -416,6 +542,9 @@ export type PendingStoryRow = {
   title: string | null
   createdAt: Date | null
   url: string
+  // ponytail: shown on the admin review card so reviewers can sanity-check the
+  // category tag the pro picked before approving.
+  category: StoryClipCategory | null
 }
 
 export const listPendingStories = createServerFn({ method: 'GET' }).handler(
@@ -435,15 +564,45 @@ export const listPendingStories = createServerFn({ method: 'GET' }).handler(
         durationSec: audioStories.durationSec,
         title: audioStories.title,
         createdAt: audioStories.createdAt,
+        catId: audioCategories.id,
+        slug: audioCategories.slug,
+        catTitle: audioCategories.title,
+        catDescription: audioCategories.description,
       })
       .from(audioStories)
       .innerJoin(
         professionals,
         eq(professionals.id, audioStories.professionalId),
       )
+      .leftJoin(
+        audioCategories,
+        eq(audioCategories.id, audioStories.categoryId),
+      )
       .where(eq(audioStories.status, 'pending'))
       .orderBy(asc(audioStories.createdAt))
-    return rows.map((r) => ({ ...r, url: publicAudioUrl(r.audioKey) }))
+    return rows.map((r) => {
+      const category: StoryClipCategory | null =
+        r.catId != null && r.slug && r.catTitle && r.catDescription
+          ? {
+              id: r.catId,
+              slug: r.slug,
+              title: r.catTitle,
+              description: r.catDescription,
+            }
+          : null
+      return {
+        id: r.id,
+        professionalId: r.professionalId,
+        proName: r.proName,
+        audioKey: r.audioKey,
+        mime: r.mime,
+        durationSec: r.durationSec,
+        title: r.title,
+        createdAt: r.createdAt,
+        url: publicAudioUrl(r.audioKey),
+        category,
+      }
+    })
   },
 )
 
@@ -467,3 +626,202 @@ export const reviewStory = createServerFn({ method: 'POST' })
     return { ok: true as const }
   },
 )
+
+// ── Admin + public: category CRUD ──────────────────────────────────────────
+//
+// ponytail: categories are admin-managed reference rows. listAudioCategories is
+// PUBLIC (no auth) so the pro recorder picker and the /apoyo page can read
+// them; the create/update/toggle/delete fns are admin-only. All admin fns use
+// the inline session + isAdminEmail gate (matching the rest of this module;
+// lib/auth.ts:requireAdmin exists as an alternative but isn't used here to
+// keep the gating pattern consistent within the file).
+
+function toCategoryRow(r: typeof audioCategories.$inferSelect): AudioCategory {
+  return {
+    id: r.id,
+    slug: r.slug,
+    title: r.title,
+    description: r.description,
+    sortOrder: r.sortOrder,
+    active: r.active,
+    createdAt: r.createdAt,
+  }
+}
+
+const listCategoriesSchema = z.object({
+  includeInactive: z.boolean().optional().default(false),
+})
+
+// ponytail: public read (no auth). Default returns active-only, ordered by
+// sortOrder then id; includeInactive=true is intended for the admin list (the
+// caller is admin, but the fn itself doesn't re-gate — the admin UI just needs
+// the rows; mutations are what's gated).
+export const listAudioCategories = createServerFn({ method: 'GET' })
+  .validator(listCategoriesSchema)
+  .handler(async ({ data }) => {
+    const db = getDb()
+    const rows = await db
+      .select()
+      .from(audioCategories)
+      .where(
+        data.includeInactive ? undefined : eq(audioCategories.active, true),
+      )
+      .orderBy(asc(audioCategories.sortOrder), asc(audioCategories.id))
+    return rows.map(toCategoryRow)
+  })
+
+const createCategorySchema = z.object({
+  title: z
+    .string()
+    .trim()
+    .min(2, 'El título es demasiado corto.')
+    .max(80, 'Máximo 80 caracteres.'),
+  description: z
+    .string()
+    .trim()
+    .min(4, 'La descripción es demasiado corta.')
+    .max(200, 'Máximo 200 caracteres.'),
+  slug: z
+    .string()
+    .trim()
+    .min(2)
+    .max(80)
+    .regex(
+      /^[a-z0-9-]+$/,
+      'El slug solo puede tener minúsculas, números y guiones.',
+    )
+    .optional(),
+  sortOrder: z.number().int().min(0).optional(),
+})
+
+export const createAudioCategory = createServerFn({ method: 'POST' })
+  .validator(createCategorySchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    const slug = (data.slug?.trim() || slugifyTitle(data.title)).slice(0, 80)
+    if (!slug) {
+      throw new Error(
+        'No se pudo generar un slug a partir del título. Usa uno explícito.',
+      )
+    }
+    try {
+      const inserted = await db
+        .insert(audioCategories)
+        .values({
+          slug,
+          title: data.title.trim(),
+          description: data.description.trim(),
+          sortOrder: data.sortOrder ?? 1000,
+          active: true,
+        })
+        .returning()
+      return toCategoryRow(inserted[0])
+    } catch (err) {
+      // ponytail: unique slug collision is the expected error here; surface it
+      // as a friendly Spanish message instead of leaking the SQL.
+      console.error('[audio-stories] category insert failed:', err)
+      throw new Error(
+        `Ya existe una categoría con el slug “${slug}”. Usa otro título o slug.`,
+      )
+    }
+  })
+
+const updateCategorySchema = z.object({
+  id: z.number().int().positive(),
+  title: z
+    .string()
+    .trim()
+    .min(2, 'El título es demasiado corto.')
+    .max(80, 'Máximo 80 caracteres.')
+    .optional(),
+  description: z
+    .string()
+    .trim()
+    .min(4, 'La descripción es demasiado corta.')
+    .max(200, 'Máximo 200 caracteres.')
+    .optional(),
+  sortOrder: z.number().int().min(0).optional(),
+})
+
+export const updateAudioCategory = createServerFn({ method: 'POST' })
+  .validator(updateCategorySchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    // ponytail: slug is immutable (it's the stable analytics/URL id) — only
+    // title/description/sortOrder are editable. Build the patch from defined
+    // fields so partial updates don't null anything out.
+    const patch: Record<string, unknown> = {}
+    if (data.title !== undefined) patch.title = data.title.trim()
+    if (data.description !== undefined)
+      patch.description = data.description.trim()
+    if (data.sortOrder !== undefined) patch.sortOrder = data.sortOrder
+    if (Object.keys(patch).length === 0) {
+      return { ok: true as const }
+    }
+    await db
+      .update(audioCategories)
+      .set(patch)
+      .where(eq(audioCategories.id, data.id))
+    return { ok: true as const }
+  })
+
+const toggleCategorySchema = z.object({
+  id: z.number().int().positive(),
+  active: z.boolean(),
+})
+
+export const toggleAudioCategory = createServerFn({ method: 'POST' })
+  .validator(toggleCategorySchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    await db
+      .update(audioCategories)
+      .set({ active: data.active })
+      .where(eq(audioCategories.id, data.id))
+    return { ok: true as const }
+  })
+
+const deleteCategorySchema = z.object({ id: z.number().int().positive() })
+
+export const deleteAudioCategory = createServerFn({ method: 'POST' })
+  .validator(deleteCategorySchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    // ponytail: refuse if any clip still references this category — deleting
+    // would mass-NULL the FK and silently ungroup a bunch of live clips.
+    // Counting pending+approved only (rejected clips don't surface publicly,
+    // so NULLing their category is harmless; the pro can re-pick on retry).
+    const usedRows = await db
+      .select({ n: count() })
+      .from(audioStories)
+      .where(
+        and(
+          eq(audioStories.categoryId, data.id),
+          inArray(audioStories.status, ['pending', 'approved']),
+        ),
+      )
+    const inUse = usedRows.at(0)?.n ?? 0
+    if (inUse > 0) {
+      throw new Error(
+        `${inUse} audio(s) usan esta categoría. Mueve o elimina esos audios primero, o desactiva la categoría en su lugar.`,
+      )
+    }
+    await db.delete(audioCategories).where(eq(audioCategories.id, data.id))
+    return { ok: true as const }
+  })
