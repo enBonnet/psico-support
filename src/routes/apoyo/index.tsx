@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Headphones, Play } from 'lucide-react'
 
 import { listStoryTray } from '#/server/audio-stories'
-import type { StoryTrayPro } from '#/server/audio-stories'
+import type { StoryTrayPro, StoryClipCategory } from '#/server/audio-stories'
 import { AudioStoryViewer } from '#/components/audio-story-viewer'
 import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
@@ -18,11 +18,23 @@ export const Route = createFileRoute('/apoyo/')({
     seoHead({
       title: 'Voces que acompañan — PsicoAyudaVen',
       description:
-        'Escucha mensajes en voz de psicólogos verificados. Si necesitas acompañamiento ahora, empieza aquí.',
+        'Escucha mensajes en voz de psicólogos verificados, agrupados por lo que necesitas: cuentos, respiración, dormir, ánimo y más.',
       path: '/apoyo',
     }),
   component: ApoyoPage,
 })
+
+// ponytail: a category section is the union of the category's display copy +
+// the subset of pros who have ≥1 clip in that category (each pro scoped to
+// only that category's clips, so the viewer plays just that section). The
+// "Otros audios" bucket uses category=null + a synthetic title/description.
+type CategorySection = {
+  key: string // category slug, or '__otros__' for the uncategorized bucket
+  category: StoryClipCategory | null
+  title: string
+  description: string
+  pros: StoryTrayPro[]
+}
 
 function ApoyoPage() {
   const { data: tray = [], isLoading } = useQuery({
@@ -30,16 +42,92 @@ function ApoyoPage() {
     queryFn: () => listStoryTray(),
     staleTime: 30_000,
   })
-  // ponytail: null = viewer closed; number = viewer open at that pro index.
-  // The viewer owns its own clip-advance + close-on-exhaustion logic; this
-  // state just gates whether it's mounted and where it starts.
-  const [viewerStart, setViewerStart] = useState<number | null>(null)
+  // ponytail: null = viewer closed; { sectionIndex, proIndex } = viewer open
+  // scoped to that category section, starting at that pro within it.
+  const [viewer, setViewer] = useState<{
+    sectionIndex: number
+    proIndex: number
+  } | null>(null)
 
   useEffect(() => {
     track({ event: 'apoyo_view', category: 'public' })
   }, [])
 
+  // ponytail: derive category sections from the flat tray. Each pro appears
+  // once per section with ONLY that category's clips — the viewer then plays
+  // just that section. Categorized sections are ordered by the admin-managed
+  // sortOrder (ascending) so the admin's "orden — menor = más arriba" control
+  // actually governs the public page; "Otros audios" always lands last.
+  const sections = useMemo<CategorySection[]>(() => {
+    const byKey = new Map<string, CategorySection>()
+    const otrosClipsByPro = new Map<number, StoryTrayPro>()
+    for (const pro of tray) {
+      // bucket this pro's clips by category
+      const clipsByCat = new Map<number, StoryTrayPro>()
+      const otrosClips: StoryTrayPro['clips'] = []
+      for (const clip of pro.clips) {
+        if (clip.category) {
+          const existing = clipsByCat.get(clip.category.id)
+          if (existing) {
+            existing.clips.push(clip)
+          } else {
+            clipsByCat.set(clip.category.id, {
+              ...pro,
+              clips: [clip],
+            })
+          }
+        } else {
+          otrosClips.push(clip)
+        }
+      }
+      for (const scopedPro of clipsByCat.values()) {
+        const cat = scopedPro.clips[0].category!
+        let section = byKey.get(cat.slug)
+        if (!section) {
+          section = {
+            key: cat.slug,
+            category: cat,
+            title: cat.title,
+            description: cat.description,
+            pros: [],
+          }
+          byKey.set(cat.slug, section)
+        }
+        section.pros.push(scopedPro)
+      }
+      if (otrosClips.length > 0) {
+        otrosClipsByPro.set(pro.professionalId, { ...pro, clips: otrosClips })
+      }
+    }
+    // ponytail: sort categorized sections by the admin-managed sortOrder
+    // (ascending), falling back to id for stability. "Otros audios" is appended
+    // after the sort so it always sits at the bottom regardless of sort keys.
+    const result = Array.from(byKey.values()).sort(
+      (a, b) =>
+        (a.category?.sortOrder ?? 0) - (b.category?.sortOrder ?? 0) ||
+        (a.category?.id ?? 0) - (b.category?.id ?? 0),
+    )
+    if (otrosClipsByPro.size > 0) {
+      result.push({
+        key: '__otros__',
+        category: null,
+        title: 'Otros audios',
+        description: 'Mensajes que no encajan en una categoría específica.',
+        pros: Array.from(otrosClipsByPro.values()),
+      })
+    }
+    return result
+  }, [tray])
+
   const totalClips = tray.reduce((n, p) => n + p.clips.length, 0)
+  const sectionRefs = useRef<(HTMLElement | null)[]>([])
+
+  function scrollToSection(i: number) {
+    sectionRefs.current[i]?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  }
 
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
@@ -58,14 +146,22 @@ function ApoyoPage() {
         </h1>
         <div className="section-underline mt-3" />
         <p className="mt-4 text-sm text-[var(--medi-text-secondary)]">
-          Mensajes en voz de psicólogos verificados. Toca para escuchar — una
-          voz tras otra, hasta donde necesites.
+          Mensajes en voz de psicólogos verificados, agrupados por lo que
+          necesitas. Toca una categoría o empieza desde donde estés.
         </p>
       </header>
 
       {isLoading ? (
         <div className="mt-8 flex flex-col gap-4" aria-busy="true">
           <div className="glass-card h-16 w-full animate-pulse rounded-[var(--glass-radius-sm)]" />
+          <div className="flex flex-wrap gap-2">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="h-9 w-28 animate-pulse rounded-full bg-[var(--medi-border)]/40"
+              />
+            ))}
+          </div>
           <div className="flex gap-3 overflow-hidden">
             {[0, 1, 2, 3].map((i) => (
               <div
@@ -96,12 +192,16 @@ function ApoyoPage() {
         </div>
       ) : (
         <>
-          {/* Catch-all: lean-back "I don't know what I need, just play me something" */}
+          {/* Catch-all: lean-back "I don't know what I need, just play me
+              something" — plays every clip across every category. */}
           <button
             type="button"
             onClick={() => {
               track({ event: 'audio_play_all', category: 'public' })
-              setViewerStart(0)
+              // ponytail: build a flat "all clips" section by passing the full
+              // tray scoped to section 0. We synthesize a virtual section list
+              // for the viewer by treating the whole tray as one section.
+              setViewer({ sectionIndex: -1, proIndex: 0 })
             }}
             className="glass-primary mt-6 flex min-h-16 items-center justify-center gap-3 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold !text-white transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
           >
@@ -114,38 +214,89 @@ function ApoyoPage() {
             {tray.length === 1 ? 'psicólogo' : 'psicólogos'}
           </p>
 
-          {/* Tray: horizontal scroll of pros with ≥1 approved clip */}
-          <h2 className="mt-8 border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-            Elige una voz
-          </h2>
-          <ul className="mt-4 flex gap-4 overflow-x-auto pb-4">
-            {tray.map((pro, i) => (
-              <li key={pro.professionalId} className="shrink-0">
-                <TrayAvatar
-                  pro={pro}
-                  onClick={() => {
-                    track({
-                      event: 'audio_play_pro',
-                      category: 'public',
-                      param1: String(pro.professionalId),
-                      value: i,
-                    })
-                    setViewerStart(i)
-                  }}
-                />
-              </li>
+          {/* Category chips: jump-to-section for each non-empty category. */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            {sections.map((s, i) => (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => scrollToSection(i)}
+                className="glass-card-soft rounded-full px-3 py-1.5 text-xs font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px]"
+              >
+                {s.title}
+              </button>
             ))}
-          </ul>
+          </div>
+
+          {/* Category sections: one per category with ≥1 clip, in
+              first-appearance order (so a category surfaces the moment a pro
+              contributes to it). Each shows title + description + a tray of
+              pros scoped to that category's clips. */}
+          {sections.map((section, i) => (
+            <section
+              key={section.key}
+              ref={(el) => {
+                sectionRefs.current[i] = el
+              }}
+              className="mt-8 scroll-mt-4"
+            >
+              <h2 className="border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
+                {section.title}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
+                {section.description}
+              </p>
+              <ul className="mt-4 flex gap-4 overflow-x-auto pb-4">
+                {section.pros.map((pro, j) => (
+                  <li key={pro.professionalId} className="shrink-0">
+                    <TrayAvatar
+                      pro={pro}
+                      onClick={() => {
+                        if (section.category) {
+                          track({
+                            event: 'audio_play_category',
+                            category: 'public',
+                            param1: section.category.slug,
+                          })
+                        } else {
+                          track({
+                            event: 'audio_play_pro',
+                            category: 'public',
+                            param1: String(pro.professionalId),
+                            value: j,
+                          })
+                        }
+                        setViewer({ sectionIndex: i, proIndex: j })
+                      }}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
         </>
       )}
 
-      {viewerStart !== null && (
-        <AudioStoryViewer
-          tray={tray}
-          startPro={viewerStart}
-          onClose={() => setViewerStart(null)}
-        />
-      )}
+      {(() => {
+        // ponytail: compute the viewer's tray once. If a background refetch of
+        // ['story-tray'] (staleTime 30s + refetch-on-focus) drops the open
+        // section while the viewer is mounted, the effective tray becomes []
+        // — the viewer dereferences tray[proIndex].clips[clipIndex]
+        // unguarded and would throw. Guard by not rendering it on empty.
+        if (!viewer) return null
+        const viewerTray =
+          viewer.sectionIndex === -1
+            ? tray
+            : sections[viewer.sectionIndex]?.pros ?? []
+        if (viewerTray.length === 0) return null
+        return (
+          <AudioStoryViewer
+            tray={viewerTray}
+            startPro={viewer.proIndex}
+            onClose={() => setViewer(null)}
+          />
+        )
+      })()}
     </main>
   )
 }

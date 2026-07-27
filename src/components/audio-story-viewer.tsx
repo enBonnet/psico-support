@@ -315,6 +315,13 @@ export function AudioStoryViewer({
             {currentClip.title}
           </p>
         )}
+        {/* ponytail: optional per-clip description (pro wrote it at record
+            time). Smaller + dimmer than the title so it reads as a subtitle. */}
+        {currentClip.description && (
+          <p className="pointer-events-none mt-1.5 max-w-md text-sm !text-white/80">
+            {currentClip.description}
+          </p>
+        )}
         {paused && (
           <p className="pointer-events-none mt-4 text-sm !text-white/80">
             En pausa — toca el centro para seguir

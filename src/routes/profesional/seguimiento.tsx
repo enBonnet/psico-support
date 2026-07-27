@@ -1,6 +1,5 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import type { ReactNode } from 'react'
 import { useForm } from '@tanstack/react-form'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -22,6 +21,7 @@ import type {
   FollowUpInput,
 } from '#/server/follow-ups'
 import { PhoneInput } from '#/components/phone-input'
+import { FieldShell } from '#/components/professional-form'
 import { Input } from '#/components/ui/input'
 import { Button } from '#/components/ui/button'
 import { notify } from '#/lib/notifications'
@@ -159,7 +159,7 @@ function SeguimientoPage() {
               }}
               placeholder="Buscar por teléfono, nombre o motivo…"
               aria-label="Buscar seguimientos"
-              className="glass-input h-11 w-full px-3 text-base sm:flex-1"
+              className="glass-input h-12 w-full px-3 text-base sm:flex-1"
             />
             <select
               value={status}
@@ -168,7 +168,7 @@ function SeguimientoPage() {
                 setPage(1)
               }}
               aria-label="Filtrar por estado"
-              className="glass-input h-11 w-full px-3 text-base sm:w-40"
+              className="glass-input h-12 w-full px-3 text-base sm:w-40"
             >
               <option value="">Todo estado</option>
               {FOLLOWUP_STATUSES.map((s) => (
@@ -184,7 +184,7 @@ function SeguimientoPage() {
                 setPage(1)
               }}
               aria-label="Filtrar por riesgo"
-              className="glass-input h-11 w-full px-3 text-base sm:w-40"
+              className="glass-input h-12 w-full px-3 text-base sm:w-40"
             >
               <option value="">Todo riesgo</option>
               {RISK_LEVELS.map((r) => (
@@ -432,22 +432,22 @@ function FollowUpForm({
 
       <form.Field name="name">
         {(field) => (
-          <FormField label="Nombre (opcional)" error={field.state.meta.errors}>
+          <FieldShell label="Nombre (opcional)" errors={field.state.meta.errors}>
             <Input
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
               placeholder="Cómo se llama la persona"
             />
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
       <form.Field name="reason">
         {(field) => (
-          <FormField
+          <FieldShell
             label="Motivo de consulta (opcional)"
-            error={field.state.meta.errors}
+            errors={field.state.meta.errors}
           >
             <textarea
               className="glass-input min-h-20 w-full px-3 py-2 text-base"
@@ -455,13 +455,13 @@ function FollowUpForm({
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
             />
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
       <form.Field name="riskLevel">
         {(field) => (
-          <FormField label="Nivel de riesgo" error={field.state.meta.errors}>
+          <FieldShell label="Nivel de riesgo" errors={field.state.meta.errors}>
             <select
               className="glass-input h-12 w-full px-3 text-base"
               value={field.state.value}
@@ -482,13 +482,13 @@ function FollowUpForm({
                 crisis correspondiente.
               </p>
             )}
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
       <form.Field name="actionTaken">
         {(field) => (
-          <FormField label="Acción realizada (opcional)" error={field.state.meta.errors}>
+          <FieldShell label="Acción realizada (opcional)" errors={field.state.meta.errors}>
             <div className="flex flex-wrap gap-2">
               {ACTION_TAKEN_OPTIONS.map((opt) => {
                 const selected = field.state.value.includes(opt)
@@ -516,13 +516,13 @@ function FollowUpForm({
                 )
               })}
             </div>
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
       <form.Field name="status">
         {(field) => (
-          <FormField label="Estado" error={field.state.meta.errors}>
+          <FieldShell label="Estado" errors={field.state.meta.errors}>
             <select
               className="glass-input h-12 w-full px-3 text-base"
               value={field.state.value}
@@ -537,15 +537,15 @@ function FollowUpForm({
                 </option>
               ))}
             </select>
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
       <form.Field name="nextContactAt">
         {(field) => (
-          <FormField
+          <FieldShell
             label="Próximo contacto (opcional)"
-            error={field.state.meta.errors}
+            errors={field.state.meta.errors}
           >
             <input
               type="date"
@@ -554,20 +554,20 @@ function FollowUpForm({
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
             />
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
       <form.Field name="notes">
         {(field) => (
-          <FormField label="Notas (opcional)" error={field.state.meta.errors}>
+          <FieldShell label="Notas (opcional)" errors={field.state.meta.errors}>
             <textarea
               className="glass-input min-h-28 w-full px-3 py-2 text-base"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               onBlur={field.handleBlur}
             />
-          </FormField>
+          </FieldShell>
         )}
       </form.Field>
 
@@ -599,32 +599,8 @@ function FollowUpForm({
   )
 }
 
-// ponytail: tiny label+error wrapper, local to this route (mirrors FieldShell
-// but tuned for this form's vertical rhythm). Kept inline rather than imported
-// so the error-text styling matches the rest of this page.
-function FormField({
-  label,
-  error,
-  children,
-}: {
-  label: string
-  error: unknown[]
-  children: ReactNode
-}) {
-  const msg =
-    error.length > 0
-      ? ((error[0] as { message?: string }).message ?? 'Inválido')
-      : null
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-sm font-medium text-[var(--medi-text-primary)]">
-        {label}
-      </span>
-      {children}
-      {msg && <span className="text-sm text-red-600">{msg}</span>}
-    </label>
-  )
-}
+// ponytail: label+error wrapper consolidated into the shared FieldShell
+// (professional-form.tsx) — same markup, single source of truth.
 
 // ponytail: pull the first error message off TanStack Form's meta.errors
 // (array OR object shape). Typed unknown to keep narrowing honest.

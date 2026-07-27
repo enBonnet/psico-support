@@ -22,6 +22,7 @@ import { notify } from '#/lib/notifications'
 import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
+import { FieldShell } from '#/components/professional-form'
 import {
   getMyProfessional,
   deleteMyProfessional,
@@ -29,7 +30,7 @@ import {
   getCurrentUser,
 } from '#/server/professionals'
 import { countMyOpenFollowUps } from '#/server/follow-ups'
-import { listMyStories, STORY_MAX_PER_PRO } from '#/server/audio-stories'
+import { listMyStories } from '#/server/audio-stories'
 import { noindexHead } from '#/lib/seo'
 
 // ponytail: direct support line to the admin. Constant, not env — mirrors the
@@ -317,7 +318,7 @@ function PanelPage() {
               meta={
                 activeAudios > 0 ? (
                   <span className="glass-pill shrink-0 px-2 py-0.5 text-xs font-medium text-[var(--medi-text-secondary)]">
-                    {activeAudios}/{STORY_MAX_PER_PRO}
+                    {activeAudios}
                   </span>
                 ) : undefined
               }
@@ -512,17 +513,18 @@ function DeleteAccountModal({
         <p className="mt-2 text-sm font-semibold text-[var(--medi-text-primary)]">
           {name}
         </p>
-        <Input
-          ref={inputRef}
-          value={typedName}
-          onChange={(e) => onTypedNameChange(e.target.value)}
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          aria-label="Escribe tu nombre para confirmar"
-          className="mt-3"
-        />
+        <FieldShell label="Confirma tu nombre" errors={[]}>
+          <Input
+            ref={inputRef}
+            value={typedName}
+            onChange={(e) => onTypedNameChange(e.target.value)}
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            className="mt-3"
+          />
+        </FieldShell>
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             type="button"

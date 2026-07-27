@@ -254,13 +254,17 @@ export const professionals = sqliteTable(
 )
 
 // ponytail: "Voces que acompañan" — short supportive audio clips recorded by
-// verified professionals, played back as an IG-stories-style tray. No expiry
-// (option B): clips live until the pro removes/replaces them. The cap is
-// enforced in app code (≤2 rows per pro where status IN pending,approved), not
-// by a CHECK — SQLite CHECK can't express "count per group". The status enum
-// mirrors professionals.verifiedStatus so the same review pattern applies.
-// 'rejected' rows are kept for audit (don't count toward the cap; pro can
-// delete them). Key prefix support-audio/ is stripped when building the public
+// verified professionals, played back as an IG-stories-style tray grouped by
+// category. No expiry (option B): clips live until the pro removes/replaces
+// them. There is no per-pro cap (the earlier ≤2 limit was lifted when
+// categories landed); admin review is the only gate. The status enum mirrors
+// professionals.verifiedStatus so the same review pattern applies. 'rejected'
+// rows are kept for audit (pro can delete them). categoryId points at
+// audio_categories (nullable so the column could be added without backfilling
+// legacy rows; new uploads pick an active category, and legacy/uncategorized
+// clips fall into an "Otros audios" bucket on the tray). ON DELETE SET NULL
+// means retiring+deleting a category never strands or deletes clips.
+// Key prefix support-audio/ is stripped when building the public
 // /media/audio/... URL (see src/server/audio-stories.ts publicAudioUrl).
 export const audioStories = sqliteTable(
   'audio_stories',
@@ -276,25 +280,75 @@ export const audioStories = sqliteTable(
     mime: text('mime').notNull(),
     durationSec: integer('duration_sec').notNull(),
     title: text('title'),
+    // ponytail: optional per-clip description shown under the title in the
+    // /apoyo viewer (a short note about what the audio is for). Nullable so the
+    // migration could add it without backfilling; legacy rows stay valid.
+    description: text('description'),
     status: text('status', {
       enum: ['pending', 'approved', 'rejected'],
     })
       .notNull()
       .default('pending'),
+    // ponytail: nullable FK → audio_categories. Nullable so legacy rows (added
+    // before categories) keep working; new uploads always pick an active one.
+    // ON DELETE SET NULL so deleting a category never strands/deletes clips.
+    categoryId: integer('category_id').references(() => audioCategories.id, {
+      onDelete: 'set null',
+    }),
     createdAt: integer('created_at', { mode: 'timestamp' }).default(
       sql`(unixepoch())`,
     ),
   },
   (table) => [
-    // ponytail: tray query filters status='approved'; the cap-count query
-    // filters by professionalId + status IN (pending, approved); the admin
-    // queue filters status='pending'. One composite covers all three hot paths
-    // (leading column professionalId serves the cap-count + per-pro tray
-    // fetches; status as second column still lets SQLite range-scan the
-    // approved/pending subsets efficiently for the admin + count queries).
+    // ponytail: tray query filters status='approved'; the admin queue filters
+    // status='pending'; the per-pro self-list filters by professionalId. One
+    // composite (leading column professionalId) covers the per-pro fetches;
+    // status as second column lets SQLite range-scan approved/pending subsets.
     index('audio_stories_pro_status_idx').on(
       table.professionalId,
       table.status,
+    ),
+    // ponytail: public tray groups clips by category; this index serves the
+    // "all approved clips in category X" range scan + the delete-guard count.
+    index('audio_stories_category_idx').on(table.categoryId),
+  ],
+)
+
+// ponytail: "Voces que acompañan" categories — admin-managed lookup table that
+// groups audio clips on the public tray (each clip belongs to exactly one
+// category via audio_stories.category_id). slug is the stable URL/analytics id
+// (never reused); title + description are user-facing Spanish copy shown as the
+// section header + subtitle on /apoyo. active=false retires a category: it
+// stops being offered on new uploads and the public tray hides its section,
+// but existing clips keep their FK (the public tray still joins by id, so a
+// retired-but-not-deleted category's clips stay grouped under their title).
+// sortOrder sets the public-page section order (smaller = higher up; seeded
+// categories get explicit order, admin-added ones default to 1000 → bottom).
+// Kept as a table (not a code const) so admins can edit copy + add categories
+// live without a deploy. Seed rows are inserted by 0021_audio_categories.sql.
+export const audioCategories = sqliteTable(
+  'audio_categories',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    // ponytail: stable id used in analytics params; lowercase, kebab-case,
+    // derived from title on create if not supplied. Unique so two categories
+    // can't share a slug.
+    slug: text('slug').notNull(),
+    title: text('title').notNull(),
+    description: text('description').notNull(),
+    sortOrder: integer('sort_order').notNull().default(1000),
+    active: integer('active', { mode: 'boolean' }).notNull().default(true),
+    createdAt: integer('created_at', { mode: 'timestamp' }).default(
+      sql`(unixepoch())`,
+    ),
+  },
+  (table) => [
+    uniqueIndex('audio_categories_slug_idx').on(table.slug),
+    // ponytail: public list reads WHERE active=1 ORDER BY sort_order; this
+    // index serves both the filter and the sort in one range scan.
+    index('audio_categories_active_sort_idx').on(
+      table.active,
+      table.sortOrder,
     ),
   ],
 )

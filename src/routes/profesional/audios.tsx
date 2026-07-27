@@ -8,6 +8,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { AudioRecorder } from '#/components/audio-recorder'
 import type { StoryAudioValue } from '#/components/audio-recorder'
+import { inputCls, FieldShell } from '#/components/professional-form'
 import {
   getMyProfessional,
   getCurrentUser,
@@ -16,8 +17,9 @@ import {
   listMyStories,
   uploadMyStory,
   deleteMyStory,
-  STORY_MAX_PER_PRO,
+  listAudioCategories,
   STORY_TITLE_MAX,
+  STORY_DESC_MAX,
 } from '#/server/audio-stories'
 import { noindexHead } from '#/lib/seo'
 
@@ -79,10 +81,12 @@ function AudiosPage() {
   )
 }
 
-// ponytail: pro's own "Voces que acompañan" manager. Counts toward the cap
-// (≤2 active) and gates on verified — pending/rejected pros see a waiting
-// message instead of the recorder. Upload reuses the same base64 + R2 path
-// as certificates; delete hard-deletes the row + its R2 object.
+// ponytail: pro's own "Voces que acompañan" manager. Gates on verified —
+// pending/rejected pros see a waiting message instead of the recorder. No
+// per-pro cap (lifted when categories landed); admin review is the gate.
+// Upload reuses the same base64 + R2 path as certificates; delete hard-deletes
+// the row + its R2 object. Each clip picks exactly one category from the
+// admin-managed audio_categories table.
 function MyStoriesSection({ verified }: { verified: boolean }) {
   const qc = useQueryClient()
   const { data: user } = useQuery({
@@ -91,6 +95,8 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
   })
   const actorId = user?.id
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [categoryId, setCategoryId] = useState<number | ''>('')
   const [audio, setAudio] = useState<StoryAudioValue | null>(null)
 
   const { data: stories = [] } = useQuery({
@@ -98,21 +104,32 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
     queryFn: () => listMyStories(),
   })
 
-  // ponytail: cap counts only pending + approved (rejected = audit, doesn't
-  // block). Server re-checks, so a race here just produces a friendly error.
-  const activeCount = stories.filter(
-    (s) => s.status === 'pending' || s.status === 'approved',
-  ).length
-  const atCap = activeCount >= STORY_MAX_PER_PRO
+  // ponytail: active-only categories for the picker. The {includeInactive}
+  // suffix in the key keeps this list distinct from the admin's inactive-
+  // included list (same base key, different cache entry); invalidateQueries
+  // with the bare ['audio-categories'] prefix still refreshes both.
+  const { data: categories = [] } = useQuery({
+    queryKey: ['audio-categories', { includeInactive: false }],
+    queryFn: () => listAudioCategories({ data: { includeInactive: false } }),
+    staleTime: 60_000,
+  })
 
   const upload = useMutation({
-    mutationFn: (vars: StoryAudioValue & { title: string | null }) =>
+    mutationFn: (
+      vars: StoryAudioValue & {
+        title: string | null
+        description: string | null
+        categoryId: number
+      },
+    ) =>
       uploadMyStory({
         data: {
           mime: vars.mime,
           durationSec: vars.durationSec,
           data: vars.data,
           title: vars.title,
+          description: vars.description,
+          categoryId: vars.categoryId,
         },
       }),
     onSuccess: () => {
@@ -126,6 +143,8 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
       })
       setAudio(null)
       setTitle('')
+      setDescription('')
+      setCategoryId('')
       qc.invalidateQueries({ queryKey: ['my-stories'] })
     },
     onError: (err: Error) =>
@@ -155,17 +174,17 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
 
   function submit() {
     if (!audio) return
-    upload.mutate({ ...audio, title: title.trim() || null })
+    if (typeof categoryId !== 'number') return
+    upload.mutate({
+      ...audio,
+      title: title.trim() || null,
+      description: description.trim() || null,
+      categoryId,
+    })
   }
 
   return (
     <section className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-medium text-[var(--medi-text-secondary)]">
-          {activeCount}/{STORY_MAX_PER_PRO}
-        </span>
-      </div>
-
       {!verified ? (
         <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
           Cuando tu credencial sea verificada podrás grabar mensajes en voz
@@ -182,7 +201,8 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
         <>
           <p className="mt-1 text-sm text-[var(--medi-text-secondary)]">
             Mensajes cortos (idealmente 1:30, máx. 3 min). Cada audio pasa por
-            revisión antes de publicarse.
+            revisión antes de publicarse. No hay límite de cantidad: graba los
+            que quieras y elige la categoría que mejor represente cada mensaje.
           </p>
 
           {stories.length > 0 && (
@@ -193,21 +213,28 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
                   className="rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] bg-white/50 p-3"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span
-                      className={`glass-pill px-2 py-0.5 text-xs font-medium ${
-                        s.status === 'approved'
-                          ? 'text-green-700'
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span
+                        className={`glass-pill px-2 py-0.5 text-xs font-medium ${
+                          s.status === 'approved'
+                            ? 'text-green-700'
+                            : s.status === 'pending'
+                              ? 'text-amber-700'
+                              : 'text-red-700'
+                        }`}
+                      >
+                        {s.status === 'approved'
+                          ? 'Aprobado'
                           : s.status === 'pending'
-                            ? 'text-amber-700'
-                            : 'text-red-700'
-                      }`}
-                    >
-                      {s.status === 'approved'
-                        ? 'Aprobado'
-                        : s.status === 'pending'
-                          ? 'En revisión'
-                          : 'Rechazado'}
-                    </span>
+                            ? 'En revisión'
+                            : 'Rechazado'}
+                      </span>
+                      {s.category && (
+                        <span className="glass-pill px-2 py-0.5 text-xs font-medium text-[var(--medi-secondary)]">
+                          {s.category.title}
+                        </span>
+                      )}
+                    </div>
                     <button
                       type="button"
                       onClick={() => del.mutate(s.id)}
@@ -234,31 +261,55 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
             </ul>
           )}
 
-          {atCap ? (
-            <p className="glass-card-soft mt-3 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm text-[var(--medi-text-secondary)]">
-              Tienes {STORY_MAX_PER_PRO} audios. Elimina uno para grabar uno
-              nuevo.
-            </p>
-          ) : (
-            <div className="mt-3 flex flex-col gap-2">
+          <div className="mt-3 flex flex-col gap-2">
+            {/* ponytail: required category picker — native select (no shadcn
+                registry in this project). Mirrors the país picker in registro. */}
+            <FieldShell label="Categoría" errors={[]} required>
+              <select
+                className={inputCls}
+                value={categoryId}
+                onChange={(e) =>
+                  setCategoryId(
+                    e.target.value ? Number(e.target.value) : '',
+                  )
+                }
+              >
+                <option value="" disabled>
+                  Selecciona una categoría…
+                </option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            </FieldShell>
+            <FieldShell label="Título (opcional)" errors={[]}>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 maxLength={STORY_TITLE_MAX}
-                placeholder="Título (opcional) — ej. “Para cuando la soledad pesa”"
-                aria-label="Título del audio (opcional)"
+                placeholder="ej. “Para cuando la soledad pesa”"
               />
-              <AudioRecorder value={audio} onChange={setAudio} />
-              <Button
-                type="button"
-                onClick={submit}
-                disabled={!audio || upload.isPending}
-                className="glass-primary mt-1 min-h-12 rounded-[var(--glass-radius-sm)] !text-white disabled:opacity-50"
-              >
-                {upload.isPending ? 'Enviando…' : 'Enviar para revisión'}
-              </Button>
-            </div>
-          )}
+            </FieldShell>
+            <FieldShell label="Descripción (opcional)" errors={[]}>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={STORY_DESC_MAX}
+                placeholder="ej. “Para escuchar cuando cueste dormir”"
+              />
+            </FieldShell>
+            <AudioRecorder value={audio} onChange={setAudio} />
+            <Button
+              type="button"
+              onClick={submit}
+              disabled={!audio || typeof categoryId !== 'number' || upload.isPending}
+              className="glass-primary mt-1 min-h-12 rounded-[var(--glass-radius-sm)] !text-white disabled:opacity-50"
+            >
+              {upload.isPending ? 'Enviando…' : 'Enviar para revisión'}
+            </Button>
+          </div>
         </>
       )}
     </section>

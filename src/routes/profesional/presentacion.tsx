@@ -7,6 +7,7 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { Avatar } from '#/components/avatar'
+import { FieldShell } from '#/components/professional-form'
 import { cn } from '#/lib/utils'
 import {
   getMyProfessional,
@@ -258,33 +259,36 @@ function SocialsSection({ me }: { me: NonNullable<MyPro> }) {
         Opcional. Se muestran en tu perfil público.
       </p>
       <div className="mt-3 flex flex-col gap-2">
-        <Input
-          value={x}
-          onChange={(e) => setX(e.target.value)}
-          placeholder="@usuario (X)"
-          aria-label="Usuario de X"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-        <Input
-          value={ig}
-          onChange={(e) => setIg(e.target.value)}
-          placeholder="@usuario (Instagram)"
-          aria-label="Usuario de Instagram"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
-        <Input
-          value={tt}
-          onChange={(e) => setTt(e.target.value)}
-          placeholder="@usuario (TikTok)"
-          aria-label="Usuario de TikTok"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-        />
+        <FieldShell label="X" errors={[]}>
+          <Input
+            value={x}
+            onChange={(e) => setX(e.target.value)}
+            placeholder="@usuario"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </FieldShell>
+        <FieldShell label="Instagram" errors={[]}>
+          <Input
+            value={ig}
+            onChange={(e) => setIg(e.target.value)}
+            placeholder="@usuario"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </FieldShell>
+        <FieldShell label="TikTok" errors={[]}>
+          <Input
+            value={tt}
+            onChange={(e) => setTt(e.target.value)}
+            placeholder="@usuario"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+          />
+        </FieldShell>
       </div>
       <Button
         type="button"

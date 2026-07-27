@@ -373,3 +373,14 @@ public/
   (`/signup`, `/profesional/{login,registro,completar}`).
 - **`.page-wrap`** caps to `32rem` centered at ≥640px (single-column fallback).
   The directory opts out via `.page-wrap--wide` for its 2-column grid.
+- **Label/input relationship** (standardized): data-entry fields render a
+  **visible label above the control** via the shared `FieldShell`
+  (`src/components/professional-form.tsx`) — `<label className="flex
+  flex-col gap-1"><span>…</span>{control}</label>`. Never use a placeholder as
+  the only affordance for a real input. Search bars and compact filter grids
+  are a deliberately different control type: icon-led, `placeholder` +
+  `aria-label`, no visible label (see the directory and admin search bars).
+  The control class is the shared `inputCls = 'glass-input h-12 w-full px-3
+  text-base'`; the `<Input>` UI component bakes in the same height. There is
+  no floating-label pattern and no `<Label>` shadcn component (that file was
+  dead code and removed).
