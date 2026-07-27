@@ -159,7 +159,7 @@ function SeguimientoPage() {
               }}
               placeholder="Buscar por teléfono, nombre o motivo…"
               aria-label="Buscar seguimientos"
-              className="glass-input h-11 w-full px-3 text-base sm:flex-1"
+              className="glass-input h-12 w-full px-3 text-base sm:flex-1"
             />
             <select
               value={status}
@@ -168,7 +168,7 @@ function SeguimientoPage() {
                 setPage(1)
               }}
               aria-label="Filtrar por estado"
-              className="glass-input h-11 w-full px-3 text-base sm:w-40"
+              className="glass-input h-12 w-full px-3 text-base sm:w-40"
             >
               <option value="">Todo estado</option>
               {FOLLOWUP_STATUSES.map((s) => (
@@ -184,7 +184,7 @@ function SeguimientoPage() {
                 setPage(1)
               }}
               aria-label="Filtrar por riesgo"
-              className="glass-input h-11 w-full px-3 text-base sm:w-40"
+              className="glass-input h-12 w-full px-3 text-base sm:w-40"
             >
               <option value="">Todo riesgo</option>
               {RISK_LEVELS.map((r) => (

@@ -976,7 +976,7 @@ function AudioCategoriesSection() {
         className="glass-card-soft mt-3 flex flex-col gap-2 rounded-[var(--glass-radius-sm)] p-3"
       >
         <input
-          className="glass-input h-11 w-full px-3 text-sm"
+          className="glass-input h-12 w-full px-3 text-base"
           value={nTitle}
           onChange={(e) => setNTitle(e.target.value)}
           placeholder="Título — ej. “Meditación guiada”"
@@ -984,7 +984,7 @@ function AudioCategoriesSection() {
           aria-label="Título de la nueva categoría"
         />
         <input
-          className="glass-input h-11 w-full px-3 text-sm"
+          className="glass-input h-12 w-full px-3 text-base"
           value={nDesc}
           onChange={(e) => setNDesc(e.target.value)}
           placeholder="Descripción corta (se muestra bajo el título)"
@@ -1087,14 +1087,14 @@ function CategoryRow({
       <li className="glass-card p-3">
         <form onSubmit={save} className="flex flex-col gap-2">
           <input
-            className="glass-input h-11 w-full px-3 text-sm"
+            className="glass-input h-12 w-full px-3 text-base"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             maxLength={80}
             aria-label="Título"
           />
           <input
-            className="glass-input h-11 w-full px-3 text-sm"
+            className="glass-input h-12 w-full px-3 text-base"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             maxLength={200}
@@ -1105,7 +1105,7 @@ function CategoryRow({
             <input
               type="number"
               min={0}
-              className="glass-input h-9 w-24 px-2 text-sm"
+              className="glass-input h-12 w-24 px-2 text-sm"
               value={sortOrder}
               onChange={(e) => setSortOrder(e.target.value)}
             />
