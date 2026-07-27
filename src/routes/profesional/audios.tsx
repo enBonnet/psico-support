@@ -19,6 +19,7 @@ import {
   deleteMyStory,
   listAudioCategories,
   STORY_TITLE_MAX,
+  STORY_DESC_MAX,
 } from '#/server/audio-stories'
 import { noindexHead } from '#/lib/seo'
 
@@ -94,6 +95,7 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
   })
   const actorId = user?.id
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [categoryId, setCategoryId] = useState<number | ''>('')
   const [audio, setAudio] = useState<StoryAudioValue | null>(null)
 
@@ -114,7 +116,11 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
 
   const upload = useMutation({
     mutationFn: (
-      vars: StoryAudioValue & { title: string | null; categoryId: number },
+      vars: StoryAudioValue & {
+        title: string | null
+        description: string | null
+        categoryId: number
+      },
     ) =>
       uploadMyStory({
         data: {
@@ -122,6 +128,7 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
           durationSec: vars.durationSec,
           data: vars.data,
           title: vars.title,
+          description: vars.description,
           categoryId: vars.categoryId,
         },
       }),
@@ -136,6 +143,7 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
       })
       setAudio(null)
       setTitle('')
+      setDescription('')
       setCategoryId('')
       qc.invalidateQueries({ queryKey: ['my-stories'] })
     },
@@ -167,7 +175,12 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
   function submit() {
     if (!audio) return
     if (typeof categoryId !== 'number') return
-    upload.mutate({ ...audio, title: title.trim() || null, categoryId })
+    upload.mutate({
+      ...audio,
+      title: title.trim() || null,
+      description: description.trim() || null,
+      categoryId,
+    })
   }
 
   return (
@@ -281,6 +294,13 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
               maxLength={STORY_TITLE_MAX}
               placeholder="Título (opcional) — ej. “Para cuando la soledad pesa”"
               aria-label="Título del audio (opcional)"
+            />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              maxLength={STORY_DESC_MAX}
+              placeholder="Descripción (opcional) — ej. “Para escuchar cuando cueste dormir”"
+              aria-label="Descripción del audio (opcional)"
             />
             <AudioRecorder value={audio} onChange={setAudio} />
             <Button

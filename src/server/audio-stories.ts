@@ -61,6 +61,9 @@ export const STORY_MAX_BYTES = 3 * 1024 * 1024
 export const STORY_KEY_PREFIX = 'support-audio/'
 
 export const STORY_TITLE_MAX = 120
+// ponytail: optional per-clip description shown under the title in the /apoyo
+// viewer. 200 matches the audio_categories.description cap for consistency.
+export const STORY_DESC_MAX = 200
 
 // ── Category types + helpers ───────────────────────────────────────────────
 
@@ -124,6 +127,9 @@ export type PublicStoryClip = {
   mime: string
   durationSec: number
   title: string | null
+  // ponytail: optional per-clip note shown under the title in the /apoyo
+  // viewer. null when the pro left it blank.
+  description: string | null
   // ponytail: playback URL pre-computed server-side so the client doesn't
   // import the key-prefix convention; one source of truth for the mapping.
   url: string
@@ -153,6 +159,7 @@ export type MyStoryClip = {
   mime: string
   durationSec: number
   title: string | null
+  description: string | null
   url: string
   createdAt: Date | null
   categoryId: number | null
@@ -169,6 +176,7 @@ function toPublicClip(
     mime: string
     durationSec: number
     title: string | null
+    description: string | null
     createdAt: Date | null
   },
   cat: {
@@ -200,6 +208,7 @@ function toPublicClip(
     mime: r.mime,
     durationSec: r.durationSec,
     title: r.title,
+    description: r.description,
     url: publicAudioUrl(r.audioKey),
     createdAt: r.createdAt,
     categoryId: cat.categoryId,
@@ -229,6 +238,7 @@ export const listStoryTray = createServerFn({ method: 'GET' }).handler(
         mime: audioStories.mime,
         durationSec: audioStories.durationSec,
         title: audioStories.title,
+        description: audioStories.description,
         status: audioStories.status,
         createdAt: audioStories.createdAt,
         categoryId: audioStories.categoryId,
@@ -287,6 +297,7 @@ export const listStoryTray = createServerFn({ method: 'GET' }).handler(
             mime: r.mime,
             durationSec: r.durationSec,
             title: r.title,
+            description: r.description,
             createdAt: r.createdAt,
           },
           {
@@ -330,6 +341,7 @@ export const listMyStories = createServerFn({ method: 'GET' }).handler(
         mime: audioStories.mime,
         durationSec: audioStories.durationSec,
         title: audioStories.title,
+        description: audioStories.description,
         createdAt: audioStories.createdAt,
         categoryId: audioStories.categoryId,
         catId: audioCategories.id,
@@ -353,6 +365,7 @@ export const listMyStories = createServerFn({ method: 'GET' }).handler(
           mime: r.mime,
           durationSec: r.durationSec,
           title: r.title,
+          description: r.description,
           createdAt: r.createdAt,
         },
         {
@@ -385,6 +398,13 @@ const storyAudioSchema = z.object({
     .string()
     .trim()
     .max(STORY_TITLE_MAX, `Máximo ${STORY_TITLE_MAX} caracteres.`)
+    .optional()
+    .nullable(),
+  // ponytail: optional per-clip description shown under the title in /apoyo.
+  description: z
+    .string()
+    .trim()
+    .max(STORY_DESC_MAX, `Máximo ${STORY_DESC_MAX} caracteres.`)
     .optional()
     .nullable(),
   // ponytail: required on upload — every clip belongs to exactly one category.
@@ -494,6 +514,7 @@ export const uploadMyStory = createServerFn({ method: 'POST' })
           mime: data.mime,
           durationSec: data.durationSec,
           title: data.title?.trim() || null,
+          description: data.description?.trim() || null,
           status: 'pending',
           categoryId: data.categoryId,
         })

@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Descripción opcional por audio** ([src/db/schema.ts](src/db/schema.ts), [drizzle/0022_audio_clip_description.sql](drizzle/0022_audio_clip_description.sql), [src/server/audio-stories.ts](src/server/audio-stories.ts), [src/routes/profesional/audios.tsx](src/routes/profesional/audios.tsx), [src/components/audio-story-viewer.tsx](src/components/audio-story-viewer.tsx)): nuevo campo opcional `description` (≤200 chars) en cada clip de "Voces que acompañan". El pro lo escribe al grabar (input "Descripción (opcional)" bajo el título en `/profesional/audios`); se muestra bajo el título en el viewer de `/apoyo` como subtítulo (más pequeño + atenuado). Nullable para no backfillar filas legacy — los clips existentes simplemente no muestran nada. No aparece en la lista del pro ni en la tarjeta de revisión admin (se mantiene limpio ahí; el pro ya sabe qué escribió y la descripción es para quien escucha). Migración `0022` hand-authored (el journal sigue stale desde 0017).
+
 ## [1.27.0] - 2026-07-26
 
 ### Added

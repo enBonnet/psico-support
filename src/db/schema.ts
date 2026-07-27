@@ -280,6 +280,10 @@ export const audioStories = sqliteTable(
     mime: text('mime').notNull(),
     durationSec: integer('duration_sec').notNull(),
     title: text('title'),
+    // ponytail: optional per-clip description shown under the title in the
+    // /apoyo viewer (a short note about what the audio is for). Nullable so the
+    // migration could add it without backfilling; legacy rows stay valid.
+    description: text('description'),
     status: text('status', {
       enum: ['pending', 'approved', 'rejected'],
     })
