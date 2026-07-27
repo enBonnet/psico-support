@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.29.0] - 2026-07-27
+
+### Added
+- **Botón "Soy psicólogo" con contexto de sesión en la landing** ([src/routes/index.tsx](src/routes/index.tsx)): el CTA "Soy psicólogo, quiero ayudar" ahora se adapta al estado del usuario logueado (vía `getCurrentUser` + `getMyProfessional`, client-side con React Query). Un **profesional verificado y prestando servicio** ve "Ir a mi panel profesional" → `/profesional/panel`; un profesional en cualquier otro estado (pendiente / rechazado / suspendido / solo-colaborador) ve "Completar mi perfil profesional" → `/profesional/completar` (cuyo `beforeLoad` rebota a `/profesional/panel` si ya tiene fila); visitantes anónimos o no-profesionales siguen viendo el CTA original → `/profesional/registro`. La lectura de sesión es **client-side post-hydrate** (no en el loader SSR), así el HTML de la landing se queda genérico y SEO/auth-free — un pro logueado ve el botón genérico por un instante y luego cambia. Nuevos valores de `param1` para `cta_click`: `pro_panel` y `pro_completar` (sin cambios al catálogo de eventos — `cta_click` ya es param-driven).
+
 ## [1.28.0] - 2026-07-27
 
 ### Added ([src/db/schema.ts](src/db/schema.ts), [drizzle/0022_audio_clip_description.sql](drizzle/0022_audio_clip_description.sql), [src/server/audio-stories.ts](src/server/audio-stories.ts), [src/routes/profesional/audios.tsx](src/routes/profesional/audios.tsx), [src/components/audio-story-viewer.tsx](src/components/audio-story-viewer.tsx)): nuevo campo opcional `description` (≤200 chars) en cada clip de "Voces que acompañan". El pro lo escribe al grabar (input "Descripción (opcional)" bajo el título en `/profesional/audios`); se muestra bajo el título en el viewer de `/apoyo` como subtítulo (más pequeño + atenuado). Nullable para no backfillar filas legacy — los clips existentes simplemente no muestran nada. No aparece en la lista del pro ni en la tarjeta de revisión admin (se mantiene limpio ahí; el pro ya sabe qué escribió y la descripción es para quien escucha). Migración `0022` hand-authored (el journal sigue stale desde 0017).

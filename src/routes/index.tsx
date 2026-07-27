@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { HeartPulse, LifeBuoy, Stethoscope, UserCheck } from 'lucide-react'
 import { track, trackProContactHelpNow } from '#/lib/analytics-client'
@@ -8,6 +9,8 @@ import { InstallCard } from '#/lib/install-prompt'
 import { whatsappHref } from '#/lib/whatsapp'
 import {
   countVerifiedProfessionals,
+  getCurrentUser,
+  getMyProfessional,
   pickRandomProfessional,
 } from '#/server/professionals'
 
@@ -41,6 +44,26 @@ function Landing() {
   const STEP = 10
   const claim = Math.floor(count / STEP) * STEP
   const [picking, setPicking] = useState(false)
+  // ponytail: client-side session read (not the SSR loader) so the landing HTML
+  // stays generic + auth-free for crawlers/anonymous visitors. Only after hydrate
+  // does the "Soy psicólogo" button swap to a panel/completar shortcut for a
+  // signed-in pro. Mirrors the cuenta.tsx three-way branch. A signed-in pro sees
+  // the generic button for the brief hydrate→RPC window, then it swaps.
+  const { data: me } = useQuery({
+    queryKey: ['me'],
+    queryFn: () => getCurrentUser(),
+  })
+  const { data: pro } = useQuery({
+    queryKey: ['my-professional'],
+    queryFn: () => getMyProfessional(),
+    enabled: !!me,
+  })
+  // ponytail: "ready" matches buildProfessionalWhere's public-surface gate
+  // (verifiedStatus === 'verified' && providesService === true). Anything else
+  // (pending/rejected/disabled, or a content-only pro) routes to completar,
+  // whose beforeLoad bounces an existing pro row to the panel anyway.
+  const proReady =
+    !!pro && pro.verifiedStatus === 'verified' && pro.providesService === true
   // ponytail: landing_view fires once per mount (CSR hydrate), not on every
   // SSR render — the component effect runs only client-side. route is implicit
   // (the helper defaults to location.pathname).
@@ -226,20 +249,62 @@ function Landing() {
           <HeartPulse aria-hidden="true" className="size-5" />
           Herramientas de autocuidado
         </Link>
-        <Link
-          to="/profesional/registro"
-          onClick={() =>
-            track({
-              event: 'cta_click',
-              category: 'public',
-              param1: 'ofrezco_ayuda',
-            })
-          }
-          className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-        >
-          <Stethoscope aria-hidden="true" className="size-5" />
-          Soy psicólogo, quiero ayudar
-        </Link>
+        {/* ponytail: pro-aware CTA. Anonymous/non-pro visitors get the
+            registration path. A signed-in pro who is verified+providing gets a
+            shortcut to their panel; any other pro state (pending/rejected/
+            disabled/content-only) is nudged to completar, whose beforeLoad
+            bounces an existing pro row to the panel. Label/destination resolve
+            client-side after hydrate (see the useQuery block above); until then
+            the generic registration button renders. Two explicit <Link> branches
+            keep TanStack Router's `to` literal-typed. */}
+        {pro ? (
+          proReady ? (
+            <Link
+              to="/profesional/panel"
+              onClick={() =>
+                track({
+                  event: 'cta_click',
+                  category: 'public',
+                  param1: 'pro_panel',
+                })
+              }
+              className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+            >
+              <Stethoscope aria-hidden="true" className="size-5" />
+              Ir a mi panel profesional
+            </Link>
+          ) : (
+            <Link
+              to="/profesional/completar"
+              onClick={() =>
+                track({
+                  event: 'cta_click',
+                  category: 'public',
+                  param1: 'pro_completar',
+                })
+              }
+              className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+            >
+              <Stethoscope aria-hidden="true" className="size-5" />
+              Completar mi perfil profesional
+            </Link>
+          )
+        ) : (
+          <Link
+            to="/profesional/registro"
+            onClick={() =>
+              track({
+                event: 'cta_click',
+                category: 'public',
+                param1: 'ofrezco_ayuda',
+              })
+            }
+            className="glass-card-soft flex min-h-16 items-center justify-center gap-2 rounded-[var(--glass-radius)] px-6 py-5 text-lg font-semibold text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+          >
+            <Stethoscope aria-hidden="true" className="size-5" />
+            Soy psicólogo, quiero ayudar
+          </Link>
+        )}
       </nav>
 
       <InstallCard />
