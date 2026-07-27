@@ -8,7 +8,7 @@ import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import { AudioRecorder } from '#/components/audio-recorder'
 import type { StoryAudioValue } from '#/components/audio-recorder'
-import { inputCls } from '#/components/professional-form'
+import { inputCls, FieldShell } from '#/components/professional-form'
 import {
   getMyProfessional,
   getCurrentUser,
@@ -264,10 +264,7 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
           <div className="mt-3 flex flex-col gap-2">
             {/* ponytail: required category picker — native select (no shadcn
                 registry in this project). Mirrors the país picker in registro. */}
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-[var(--medi-text-secondary)]">
-                Categoría
-              </span>
+            <FieldShell label="Categoría" errors={[]} required>
               <select
                 className={inputCls}
                 value={categoryId}
@@ -276,7 +273,6 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
                     e.target.value ? Number(e.target.value) : '',
                   )
                 }
-                aria-label="Categoría del audio"
               >
                 <option value="" disabled>
                   Selecciona una categoría…
@@ -287,21 +283,23 @@ function MyStoriesSection({ verified }: { verified: boolean }) {
                   </option>
                 ))}
               </select>
-            </label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              maxLength={STORY_TITLE_MAX}
-              placeholder="Título (opcional) — ej. “Para cuando la soledad pesa”"
-              aria-label="Título del audio (opcional)"
-            />
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={STORY_DESC_MAX}
-              placeholder="Descripción (opcional) — ej. “Para escuchar cuando cueste dormir”"
-              aria-label="Descripción del audio (opcional)"
-            />
+            </FieldShell>
+            <FieldShell label="Título (opcional)" errors={[]}>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                maxLength={STORY_TITLE_MAX}
+                placeholder="ej. “Para cuando la soledad pesa”"
+              />
+            </FieldShell>
+            <FieldShell label="Descripción (opcional)" errors={[]}>
+              <Input
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                maxLength={STORY_DESC_MAX}
+                placeholder="ej. “Para escuchar cuando cueste dormir”"
+              />
+            </FieldShell>
             <AudioRecorder value={audio} onChange={setAudio} />
             <Button
               type="button"
