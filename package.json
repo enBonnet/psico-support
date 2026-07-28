@@ -7,7 +7,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "dotenv -e .env.local -- vite dev --port 3000",
+    "dev": "node scripts/db-check.mjs && dotenv -e .env.local -- vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",
@@ -21,6 +21,7 @@
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
+    "db:status": "node scripts/db-check.mjs",
     "db:reset-passwords": "tsx scripts/reset-local-passwords.ts",
     "db:seed": "tsx scripts/seed-local.ts",
     "analytics": "tsx scripts/analytics.ts",

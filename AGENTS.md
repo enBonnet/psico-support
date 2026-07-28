@@ -53,12 +53,29 @@ bindings are declared in `wrangler.jsonc` and exist automatically in
 
 ### Database (D1)
 
-Local D1 lives in `dev.db` (gitignored). After editing `src/db/schema.ts`:
+Local D1 lives at `.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite`
+(the filename hash is derived from the `database_id` in `wrangler.jsonc`, so it's
+deterministic across runs). It is **not** `dev.db` — there is no `path` field in
+`wrangler.jsonc`; any `dev.db` at the repo root is a stale artifact and should be
+deleted. After editing `src/db/schema.ts`:
 
 ```bash
 npm run db:generate                                         # writes drizzle/000N_*.sql
 npx wrangler d1 migrations apply psico-support-db --local   # local
+npm run db:status                                           # sanity-check: schema applied?
 ```
+
+**Symptom of a missing local schema:** every query 500s with `Failed query: ...
+no such table`. This happens when `.wrangler/` is wiped (git clean, wrangler
+upgrade, manual delete) — `wrangler dev` then recreates a **blank** D1 with no
+tables and no `d1_migrations`. Re-running `migrations apply --local` fixes it.
+
+**`migrations list --local` is NOT a reliable check** — it lists the files in
+`drizzle/`, and when the DB is empty the `d1_migrations` table doesn't exist so
+the comparison is misleading. The reliable check is `npm run db:status`, which
+opens the real `.sqlite` file and counts rows in `d1_migrations` / confirms the
+`user` table exists. `npm run dev` runs this same check as a preflight and warns
+loudly when the schema is missing so the blank-DB failure mode is caught early.
 
 ### Versioning
 
