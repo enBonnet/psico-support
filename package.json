@@ -21,6 +21,7 @@
     "db:push": "drizzle-kit push",
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
+    "db:pull-prod": "node scripts/pull-prod-sanitized.mjs",
     "db:reset-passwords": "tsx scripts/reset-local-passwords.ts",
     "db:seed": "tsx scripts/seed-local.ts",
     "analytics": "tsx scripts/analytics.ts",
