@@ -1,0 +1,705 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PsicoAyudaVen — Mapa de la app (vistas, navegación y funciones)</title>
+<style>
+  :root{
+    --bg:#0b1228; --bg2:#0f1a3a;
+    --panel:#ffffff08; --panel-solid:#111c3d;
+    --ink:#e8edff; --ink-dim:#a9b6dd; --ink-faint:#7686b3;
+    --line:#2a3a66; --line-soft:#1f2c54;
+    --accent:#7aa2ff; --accent2:#9ad7ff;
+    --blue:#3b82f6; --green:#34d399; --amber:#fbbf24; --red:#f87171;
+    --purple:#c084fc; --teal:#5eead4; --pink:#f9a8d4; --orange:#fb923c;
+    --radius:14px;
+    --shadow:0 10px 30px -12px #000a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(1200px 700px at 12% -8%, #1b2c63 0, transparent 55%),
+      radial-gradient(1000px 600px at 95% 0%, #2a1c55 0, transparent 50%),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    color:var(--ink);
+    font:15px/1.55 "Open Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1320px;margin:0 auto;padding:32px 22px 80px}
+
+  /* ---------- Header ---------- */
+  header.hero{
+    border:1px solid var(--line); background:linear-gradient(180deg,#101a3d,#0c1530);
+    border-radius:22px; padding:30px 30px; margin-bottom:26px; box-shadow:var(--shadow);
+  }
+  .hero .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent2);font-weight:600}
+  .hero h1{font-size:30px;margin:8px 0 4px;letter-spacing:-.01em}
+  .hero p.sub{margin:0 0 14px;color:var(--ink-dim);max-width:62ch}
+  .legend{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:16px}
+  .legend .item{display:flex;gap:10px;align-items:center;font-size:13px;color:var(--ink-dim)}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;box-shadow:0 0 0 3px #ffffff0d}
+  .pill{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#ffffff0a;
+        padding:3px 9px;border-radius:999px;font-size:12px;color:var(--ink-dim)}
+
+  /* ---------- Shared section ---------- */
+  .group{margin-top:30px}
+  .group > h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);
+              margin:0 0 14px;display:flex;align-items:center;gap:10px}
+  .group > h2 .num{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:8px;
+                   background:#1c2a55;border:1px solid var(--line);font-size:12px;color:var(--accent2)}
+  .lane{
+    border:1px solid var(--line-soft); border-radius:18px; padding:16px 14px 6px;
+    background:linear-gradient(180deg,#0d1632,#0b1228);
+    box-shadow:inset 0 1px 0 #ffffff0a;
+  }
+  .lane-title{font-size:12px;color:var(--ink-faint);font-weight:600;letter-spacing:.06em;
+              text-transform:uppercase;margin:2px 6px 12px;display:flex;gap:8px;align-items:center}
+
+  /* ---------- Card grid ---------- */
+  .grid{display:grid;gap:14px}
+  @media (min-width:780px){ .grid.cols-2{grid-template-columns:1fr 1fr} }
+  @media (min-width:1080px){ .grid.cols-3{grid-template-columns:repeat(3,1fr)} }
+
+  .card{
+    position:relative; border:1px solid var(--line); border-radius:var(--radius);
+    background:linear-gradient(180deg,#101a3d,#0c1430);
+    padding:14px 15px 13px; box-shadow:var(--shadow); overflow:hidden;
+  }
+  .card::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;
+    background:var(--bar,var(--accent))}
+  .card h3{margin:0 0 2px;font-size:15.5px}
+  .card h3 .route{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+                  font-size:12px;color:var(--ink-faint);font-weight:500;display:block;margin-top:1px;
+                  word-break:break-all}
+  .card .role-line{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0 10px}
+  .tag{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid transparent;white-space:nowrap;line-height:1.5}
+  .t-public{background:#16331f;color:var(--green);border-color:#1e5130}
+  .t-ssr{background:#0e2a3a;color:var(--teal);border-color:#155666}
+  .t-csr{background:#2a1d3f;color:var(--purple);border-color:#4a2f72}
+  .t-auth{background:#3a2410;color:var(--amber);border-color:#5b3a17}
+  .t-admin{background:#3a1010;color:var(--red);border-color:#5b1818}
+  .t-pro{background:#10223a;color:var(--accent);border-color:#1e3a66}
+  .t-flag{background:#3a2010;color:var(--orange);border-color:#5b3217}
+  .t-redirect{background:#2a2410;color:var(--amber);border-color:#4a4017}
+  .t-hide{background:#241030;color:var(--pink);border-color:#3e1a4a}
+
+  .card ul{list-style:none;margin:0;padding:0}
+  .card li{position:relative;padding:3px 0 3px 16px;color:var(--ink-dim);font-size:13px}
+  .card li::before{content:"";position:absolute;left:2px;top:11px;width:6px;height:6px;border-radius:50%;
+                   background:var(--bar,var(--accent));opacity:.7}
+  .card li b{color:var(--ink);font-weight:600}
+  .card li code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+                background:#0a1226;padding:1px 5px;border-radius:5px;color:var(--accent2)}
+  .card .links{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line-soft);
+               display:flex;flex-wrap:wrap;gap:6px 14px;font-size:11.5px;color:var(--ink-faint)}
+  .card .links span b{color:var(--ink-dim)}
+
+  /* ---------- Roles & media tables ---------- */
+  .tables{display:grid;gap:16px}
+  @media (min-width:900px){ .tables{grid-template-columns:1fr 1fr} }
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{color:var(--ink-faint);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+  td code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;color:var(--accent2)}
+  td .muted{color:var(--ink-faint)}
+
+  /* ---------- Nav / shell diagram ---------- */
+  .shell-wrap{display:grid;gap:18px}
+  @media (min-width:920px){ .shell-wrap{grid-template-columns:1.15fr .85fr} }
+  .device{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:#0b1228}
+  .device .screen{background:linear-gradient(180deg,#0e1733,#0a1124);padding:16px;min-height:280px;position:relative}
+  .topnav{display:flex;gap:8px;align-items:center;background:#ffffff0a;border:1px solid var(--line);
+          border-radius:999px;padding:7px 12px;margin-bottom:14px;font-size:13px}
+  .topnav .brand{font-weight:700;color:var(--ink);margin-right:8px}
+  .topnav a{color:var(--ink-dim);text-decoration:none}
+  .topnav a.on{color:var(--accent2);font-weight:600}
+  .content-mock{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--ink-faint);font-size:12.5px;min-height:120px}
+  .content-mock b{color:var(--ink-dim)}
+  .bottomnav{display:none;justify-content:space-around;border-top:1px solid var(--line);
+             background:#0c1430;padding:9px 0;margin:14px -16px -16px}
+  @media (max-width:767px){
+    .topnav{display:none}
+    .bottomnav{display:flex}
+  }
+  .bottomnav .tab{font-size:11px;color:var(--ink-dim);text-align:center}
+  .rules{font-size:13px}
+  .rules li{padding:5px 0;color:var(--ink-dim)}
+  .rules li b{color:var(--ink)}
+  .rules code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;
+              background:#0a1226;padding:1px 5px;border-radius:5px;color:var(--accent2)}
+
+  /* ---------- Flow arrows (simple legend) ---------- */
+  .note{font-size:12.5px;color:var(--ink-faint);margin:10px 2px 0}
+
+  footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line-soft);
+         color:var(--ink-faint);font-size:12.5px;display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:space-between}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- =================== HERO =================== -->
+<header class="hero">
+  <div class="eyebrow">Documentación · Mapa de la aplicación</div>
+  <h1>PsicoAyudaVen — Vistas, navegación y funciones</h1>
+  <p class="sub">Plataforma de apoyo psicológico para Venezuela (respuesta a desastres).
+     TanStack Start (React 19) + Cloudflare Workers/D1/R2. Diagrama vivo de las rutas, su render (SSR/CSR),
+     el control de acceso por rol y las funciones que cada vista expone al usuario.</p>
+
+  <div class="legend">
+    <div class="item"><span class="dot" style="background:var(--green)"></span> Pública (sin sesión)</div>
+    <div class="item"><span class="dot" style="background:var(--teal)"></span> Render SSR (SEO)</div>
+    <div class="item"><span class="dot" style="background:var(--purple)"></span> Render CSR (cliente)</div>
+    <div class="item"><span class="dot" style="background:var(--amber)"></span> Requiere sesión</div>
+    <div class="item"><span class="dot" style="background:var(--red)"></span> Solo administrador</div>
+    <div class="item"><span class="dot" style="background:var(--accent)"></span> Rol profesional</div>
+    <div class="item"><span class="dot" style="background:var(--orange)"></span> Feature flag</div>
+    <div class="item"><span class="dot" style="background:var(--pink)"></span> Sin navegación (chromeless)</div>
+  </div>
+</header>
+
+<!-- =================== NAV + SHELL =================== -->
+<section class="group">
+  <h2><span class="num">1</span> Shell de la app y navegación global</h2>
+  <div class="shell-wrap">
+    <!-- Device mockup -->
+    <div class="device">
+      <div class="screen">
+        <!-- Desktop nav (md:flex) -->
+        <div class="topnav">
+          <span class="brand">🧭 PsicoAyudaVen</span>
+          <a class="on">Inicio</a><a>Ayuda</a><a>Cuenta</a>
+        </div>
+        <div class="content-mock">
+          <b>Contenido de la ruta</b> (outlet de TanStack Router)<br><br>
+          Aquí se renderiza la vista activa. Las rutas chromeless ocultan ambas barras.
+          El <code>&lt;NotificationStack/&gt;</code> (toasts) y el registro del Service Worker
+          (solo PROD) viven siempre en el <code>__root.tsx</code>.
+        </div>
+        <!-- Mobile bottom bar (md:hidden) -->
+        <div class="bottomnav">
+          <div class="tab">🏠<br>Inicio</div>
+          <div class="tab">🛟<br>Ayuda</div>
+          <div class="tab">👤<br>Cuenta</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rules -->
+    <div class="rules">
+      <p style="margin:0 0 10px;color:var(--ink)"><b>3 pestañas (idénticas en móvil y escritorio)</b></p>
+      <ul style="margin:0 0 14px;padding-left:18px">
+        <li><b>Inicio</b> → <code>/</code> (match exacto)</li>
+        <li><b>Ayuda</b> → <code>/ayuda</code> (match por prefijo)</li>
+        <li><b>Cuenta</b> → <code>/cuenta</code> (match por prefijo)</li>
+      </ul>
+      <p style="margin:0 0 8px;color:var(--ink)"><b>Visibilidad (por ruta, no por rol)</b></p>
+      <ul style="margin:0 0 14px;padding-left:18px">
+        <li>Barra inferior <span class="pill">md:hidden</span> · barra superior <span class="pill">hidden md:flex</span> (nunca coexisten).</li>
+        <li><b>Chromeless</b> (sin nav): <code>/signup</code>, <code>/profesional/login</code>, <code>/profesional/registro</code>, <code>/profesional/completar</code>.</li>
+        <li>El <code>__root.tsx</code> inyecta siempre: meta/viewport, <code>theme-color #112a8d</code>, manifest, favicons, Open Sans y el host de toasts.</li>
+      </ul>
+      <p style="margin:0;color:var(--ink-faint)">El Service Worker (offline app-shell + SWR) solo se registra en producción —
+      probar con <code>npm run build &amp;&amp; npx wrangler dev</code>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- =================== AYUDA (PUBLIC) =================== -->
+<section class="group">
+  <h2><span class="num">2</span> Buscar ayuda · flujos públicos (help-seeker)</h2>
+  <div class="lane">
+    <div class="lane-title">🛟 Embudo: landing → modalidad → directorio → contacto</div>
+    <div class="grid cols-3">
+
+      <!-- Landing -->
+      <div class="card" style="--bar:var(--green)">
+        <h3>Apoyo psicológico ante los terremotos
+          <span class="route">/ &nbsp;· index.tsx</span></h3>
+        <div class="role-line">
+          <span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span>
+        </div>
+        <ul>
+          <li><b>Conteo dinámico</b> de profesionales verificados (oculto si &lt;10).</li>
+          <li>CTA <b>“Necesito ayuda ahora”</b>: elige un pro contactable al azar y abre WhatsApp (<code>wa.me</code>).</li>
+          <li>CTA secundario “Ver todos los profesionales” → directorio remoto.</li>
+          <li>Cards: “Ayuda específica”, “Herramientas de autocuidado”.</li>
+          <li>CTA <b>consciente del rol</b> (cambia tras hidratar): registro / panel / completar perfil pro.</li>
+          <li><code>&lt;InstallCard/&gt;</code> (instalar PWA) + enlaces a cómo-funciona / acerca-de.</li>
+        </ul>
+        <div class="links"><span>→ <code>/ayuda/profesionales?modality=remote</code></span><span>→ <code>/ayuda/especifica</code>, <code>/recursos</code></span></div>
+      </div>
+
+      <!-- Modalidad -->
+      <div class="card" style="--bar:var(--green)">
+        <h3>¿Qué tipo de apoyo necesitas?
+          <span class="route">/ayuda &nbsp;· ayuda/index.tsx</span></h3>
+        <div class="role-line">
+          <span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span>
+        </div>
+        <ul>
+          <li>Card <b>“Asistencia a distancia”</b> → directorio <code>modality=remote</code>.</li>
+          <li>Card <b>“Asistencia presencial”</b> → directorio <code>modality=in_person</code>.</li>
+          <li>Card <b>“Voces que acompañan”</b> → <code>/apoyo</code>.</li>
+          <li>Botón “Atrás” → <code>/</code>.</li>
+        </ul>
+        <div class="links"><span>track: <code>modality_select</code></span></div>
+      </div>
+
+      <!-- Directorio -->
+      <div class="card" style="--bar:var(--green)">
+        <h3>Profesionales verificados
+          <span class="route">/ayuda/profesionales &nbsp;· ayuda/profesionales/index.tsx</span></h3>
+        <div class="role-line">
+          <span class="tag t-public">Pública</span><span class="tag t-csr">CSR</span><span class="tag t-ssr">Query 20s</span>
+        </div>
+        <ul>
+          <li><b>Filtros colapsables</b>: búsqueda por nombre (debounce) + 6 selects (Estado→Ciudad en cascada, población, enfoque…).</li>
+          <li><b>Grid de tarjetas</b> por pro: nombre (→perfil), ubicación, “Atiende a”, enfoque, horario legible.</li>
+          <li>Badges <b>Confirmado</b> + disponibilidad en vivo (Siempre / Ahora / Vuelve… / No conectado).</li>
+          <li>Botón <b>WhatsApp</b> por tarjeta (deshabilitado si no contactable) y <b>“Contactar al azar”</b> (escritorio + FAB móvil).</li>
+          <li>Estados: skeleton, error con “Reintentar”, vacío, “ninguno disponible ahora” — todos derivan a <code>/recursos</code>.</li>
+          <li><b>Paginación</b> con <code>page</code> en la URL.</li>
+        </ul>
+        <div class="links"><span>→ <code>/ayuda/profesionales/$id</code></span><span>→ WhatsApp</span><span>fallback → <code>/recursos</code></span></div>
+      </div>
+
+      <!-- Perfil pro -->
+      <div class="card" style="--bar:var(--green)">
+        <h3>Perfil del profesional
+          <span class="route">/ayuda/profesionales/$id &nbsp;· ayuda/profesionales/$id.tsx</span></h3>
+        <div class="role-line">
+          <span class="tag t-public">Pública</span><span class="tag t-ssr">SSR · SEO</span><span class="tag t-hide">OG + JSON-LD</span>
+        </div>
+        <ul>
+          <li>Avatar, badges Confirmado + disponibilidad <b>calculada en SSR</b>, nombre.</li>
+          <li>Redes sociales (X / Instagram / TikTok) salientes cuando existen.</li>
+          <li>Detalle <code>&lt;dl&gt;</code>: ubicación, modalidad, horario, población, enfoques, especialidades.</li>
+          <li>CTA <b>WhatsApp</b> o “No disponible ahora”.</li>
+          <li>CTA condicional <b>“Agendar videollamada”</b> (flag + remoto + grid horario).</li>
+          <li><b>“Compartir perfil”</b> (Web Share API con fallback a portapapeles).</li>
+          <li>Perfiles no verificados → <b>404</b> (nunca filtran estado).</li>
+        </ul>
+        <div class="links"><span>↩ <code>/ayuda/profesionales</code> (con su modalidad)</span><span>→ <code>/cuenta/sesiones/agendar/$proId</code> (flag)</span></div>
+      </div>
+
+      <!-- Apoyo / audios -->
+      <div class="card" style="--bar:var(--green)">
+        <h3>Voces que acompañan
+          <span class="route">/apoyo &nbsp;· apoyo/index.tsx</span></h3>
+        <div class="role-line">
+          <span class="tag t-public">Pública</span><span class="tag t-csr">CSR</span>
+        </div>
+        <ul>
+          <li>Bandejas de <b>audios de psicólogos verificados</b> agrupadas por categoría (admin).</li>
+          <li>CTA <b>“Solo necesito escuchar algo”</b>: reproduce todos los clips.</li>
+          <li><b>Chips de categoría</b> (scroll suave a la sección) + conteo de audios/pros.</li>
+          <li>Trays horizontales con avatares (gradiente); abre <code>&lt;AudioStoryViewer/&gt;</code>.</li>
+          <li>Estado vacío → “Buscar un psicólogo ahora”.</li>
+        </ul>
+        <div class="links"><span>→ directorio remoto (vacío)</span></div>
+      </div>
+
+      <!-- Vanities -->
+      <div class="card" style="--bar:var(--amber)">
+        <h3>Redirecciones vanity (sin UI)
+          <span class="route">/psicologos &nbsp;· /ayudame &nbsp;· /ya</span></h3>
+        <div class="role-line">
+          <span class="tag t-redirect">Redirect 307</span><span class="tag t-ssr">SSR</span>
+        </div>
+        <ul>
+          <li>URLs cortas para compartir/marketing → aterrizan en el directorio remoto con filtros canónicos.</li>
+          <li>Trackean <code>vanity_redirect</code> y redirigen vía <code>throw redirect()</code> en <code>beforeLoad</code>.</li>
+          <li><b>/ya</b> se promociona para compartir en crisis (“psicoayudaven.com/ya”).</li>
+        </ul>
+        <div class="links"><span>→ <code>/ayuda/profesionales?modality=remote</code></span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =================== RECURSOS =================== -->
+<section class="group">
+  <h2><span class="num">3</span> Recursos de autocuidado</h2>
+  <div class="lane">
+    <div class="lane-title">🧰 Herramientas offline-amigables (todas incluyen &lt;CrisisBanner/&gt; + &lt;ProCta/&gt;)</div>
+    <div class="grid cols-3">
+
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Hub de herramientas
+          <span class="route">/recursos &nbsp;· recursos/index.tsx</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul>
+          <li>Intro: “funciona offline una vez visitado”.</li>
+          <li>6 tarjetas con icono + título + descripción + etiqueta de audiencia (“Para ti” / “Para ayudar a otros”).</li>
+          <li>Cross-link a <code>/apoyo</code>.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Respiración calmante
+          <span class="route">/recursos/respirar</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Orbe animado <b>4-4-4-4 (box breathing)</b> con etiqueta de fase + cuenta regresiva.</li>
+          <li>Botón Comenzar / Detener (sin tope de duración).</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Técnica de enraizamiento
+          <span class="route">/recursos/enraizamiento</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Caminata de <b>5 pasos</b> anclaje-corporal (pies, manos, hombros, respiración, tacto).</li>
+          <li>Barra de progreso + Anterior/Siguiente; al final “Empezar de nuevo”.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Autochequeo “¿Cómo estoy?”
+          <span class="route">/recursos/autochequeo</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Máquina de estados: intro → <b>gate (ASQ)</b> → <b>K6 (Kessler-6)</b> → resultado.</li>
+          <li>Si gate = “Sí” → rama de <b>crisis</b> (no guarda nada; todo en el dispositivo).</li>
+          <li>Resultado con puntaje X/24, banda (Bienestar / Moderado / Alto) y derivación a <code>/recursos</code> o pro.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Reacciones normales
+          <span class="route">/recursos/reacciones-normales</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Psicoeducación: qué esperar tras un evento (derivada desde autochequeo en crisis).</li></ul>
+      </div>
+
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Primeros auxilios
+          <span class="route">/recursos/primeros-auxilios</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Guía psicoeducativa de primeros auxilios psicológicos.</li></ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =================== AUTH =================== -->
+<section class="group">
+  <h2><span class="num">4</span> Autenticación (cuenta básica + recuperación)</h2>
+  <div class="lane">
+    <div class="lane-title">🔐 Better Auth · email/password · reseteo con token de 30 min</div>
+    <div class="grid cols-3">
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Crear cuenta básica
+          <span class="route">/signup</span></h3>
+        <div class="role-line"><span class="tag t-csr">CSR</span><span class="tag t-auth">Redirige si sesión</span><span class="tag t-hide">Chromeless</span></div>
+        <ul>
+          <li>Campos: Nombre (mín 2), Correo, Contraseña (mín 8).</li>
+          <li>Caja de errores inteligente (cuenta existente / débil / genérico).</li>
+          <li>Tras éxito: fuerza sesión, invalida <code>['me']</code>, va a <code>/cuenta</code>.</li>
+        </ul>
+        <div class="links"><span>↩ <code>/</code></span><span>→ <code>/recuperar</code>, <code>/profesional/login</code></span></div>
+      </div>
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Iniciar sesión
+          <span class="route">/profesional/login</span></h3>
+        <div class="role-line"><span class="tag t-csr">CSR</span><span class="tag t-hide">Chromeless</span></div>
+        <ul>
+          <li>Campos: Correo, Contraseña. Entrada para usuarios básicos y profesionales.</li>
+          <li>Enlace “¿Olvidaste tu contraseña?” → <code>/recuperar</code>.</li>
+          <li>Tras éxito: <code>/cuenta</code> (que enruta por rol).</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Recuperar contraseña
+          <span class="route">/recuperar &nbsp;(3 vistas según search params)</span></h3>
+        <div class="role-line"><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li><b>Solicitar</b> (correo) — neutra ante timing-attack, nunca revela existencia.</li>
+          <li><b>Nueva contraseña</b> (<code>?token=</code>) — confirma, revoca sesiones al guardar.</li>
+          <li><b>Token inválido</b> (<code>?error=</code>) — enlace caducado/ya usado.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--accent)">
+        <h3>Hub de cuenta (por rol)
+          <span class="route">/cuenta</span></h3>
+        <div class="role-line"><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li><b>Anónimo:</b> botones Iniciar sesión / Crear cuenta.</li>
+          <li><b>Autenticado:</b> tarjeta con nombre/correo.</li>
+          <li>Si existe pro → “Mi panel” (subtítulo varía por <code>verifiedStatus</code>).</li>
+          <li>Si no hay pro → “Completar perfil profesional”.</li>
+          <li>Si admin → “Administración”. Botón “Cerrar sesión”. Footer con versión de app.</li>
+        </ul>
+        <div class="links"><span>→ <code>/profesional/{panel,completar,login}</code>, <code>/admin</code>, <code>/signup</code></span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- =================== PROFESIONAL =================== -->
+<section class="group">
+  <h2><span class="num">5</span> Área del profesional (CSR, requiere sesión)</h2>
+  <div class="lane">
+    <div class="lane-title">🩺 Registro + panel hub que ramifica a sub-rutas enfocadas</div>
+
+    <div class="grid cols-2" style="margin-bottom:14px">
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Registro profesional (2 pasos)
+          <span class="route">/profesional/registro</span></h3>
+        <div class="role-line"><span class="tag t-csr">CSR</span><span class="tag t-auth">Redirige si sesión</span><span class="tag t-hide">Chromeless</span></div>
+        <ul>
+          <li><b>Paso 1 — cuenta:</b> Nombre, Correo, Contraseña + checkbox de términos (→ <code>/terminos</code>).</li>
+          <li><b>Paso 2 — perfil pro:</b> ubicación (País; Venezuela→Estado/Ciudad), credencial (nº, escuela, certificado, soportes),
+              enfoque (“Atención general” o 4 TagSelect + modo Inclusiva/Exclusiva), modalidad + WhatsApp.</li>
+          <li>Crea cuenta + fila pro, auto-inicia sesión → <code>/profesional/panel</code>.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--purple)">
+        <h3>Completar perfil (cuenta existente)
+          <span class="route">/profesional/completar</span></h3>
+        <div class="role-line"><span class="tag t-csr">CSR</span><span class="tag t-auth">Requiere sesión</span><span class="tag t-hide">Chromeless</span></div>
+        <ul>
+          <li>Mismo Paso 2 del registro (sin paso de cuenta).</li>
+          <li>Si ya existe fila pro → redirige a <code>/profesional/panel</code> (los soft-deleted no cuentan).</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Panel hub -->
+    <div class="card" style="--bar:var(--accent);margin-bottom:14px">
+      <h3>Panel profesional (hub de acciones)
+        <span class="route">/profesional/panel</span></h3>
+      <div class="role-line"><span class="tag t-csr">CSR</span><span class="tag t-auth">Requiere sesión</span><span class="tag t-pro">Central</span></div>
+      <ul>
+        <li><b>Banner de verificación</b> en 3 estados: verificado (verde) / suspendido (rojo) / en revisión (ámbar).</li>
+        <li>Identidad (nombre + modalidad). Enlace a <code>/admin</code> si es admin.</li>
+        <li>Nav de tarjetas hacia las sub-rutas (ver abajo).</li>
+        <li><b>Seguimiento clínico</b> y <b>Mis audios</b> llevan badge con conteo en vivo.</li>
+        <li>Pros de servicio: pill con modo de disponibilidad. Solo contenido: nota “Colaborador de contenido”.</li>
+        <li>Soporte: WhatsApp de soporte con mensaje prellenado.</li>
+        <li><b>Zona peligrosa:</b> “Eliminar mi cuenta” (modal de confirmar-tipeando-nombre; soft-delete + signOut).</li>
+      </ul>
+      <div class="links"><span>↘ <code>/profesional/{perfil,presentacion,disponibilidad,sesiones,seguimiento,audios}</code></span></div>
+    </div>
+
+    <div class="grid cols-3">
+      <div class="card" style="--bar:var(--accent)">
+        <h3>Perfil profesional
+          <span class="route">/profesional/perfil</span></h3>
+        <div class="role-line"><span class="tag t-auth">Sesión</span></div>
+        <ul>
+          <li>Edita datos visibles en el directorio: nombre, credencial, enfoques, ubicación, contacto.</li>
+          <li>Cambiar nº/colegio de credencial <b>re-dispara verificación</b>.</li>
+          <li><b>Documentos de soporte</b>: lista (n/SUPPORT_DOC_MAX) + subir PDF/imagen, quitar.</li>
+          <li>Botón “Guardar perfil” con dirty-gate.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--accent)">
+        <h3>Foto y redes sociales
+          <span class="route">/profesional/presentacion</span></h3>
+        <div class="role-line"><span class="tag t-auth">Sesión</span></div>
+        <ul>
+          <li><b>Avatar:</b> previsualización + subir/cambiar/quitar (optimista).</li>
+          <li><b>Redes:</b> X, Instagram, TikTok (normaliza handles/URLs a usuario).</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--accent)">
+        <h3>Disponibilidad
+          <span class="route">/profesional/disponibilidad</span></h3>
+        <div class="role-line"><span class="tag t-auth">Sesión</span><span class="tag t-pro">Solo servicio</span></div>
+        <ul>
+          <li>Toggle 3 estados: <b>Siempre</b> / <b>Por horario</b> / <b>No disponible</b>.</li>
+          <li>Modo horario: zona horaria, duraciones de videollamada y <b>grid semanal</b> (Lun…Dom) con varios bloques por día.</li>
+          <li>Aviso: se activa solo al ser aprobado.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--accent)">
+        <h3>Seguimiento clínico (privado)
+          <span class="route">/profesional/seguimiento</span></h3>
+        <div class="role-line"><span class="tag t-auth">Sesión</span><span class="tag t-pro">Solo propietario</span></div>
+        <ul>
+          <li>Registros privados de personas atendidas (“Solo tú ves estos registros”).</li>
+          <li><b>Filtros:</b> búsqueda, estado (Abierto/Contactado/Cerrado), nivel de riesgo.</li>
+          <li>Form: teléfono, nombre, motivo, acción tomada, riesgo, próximo contacto, notas.</li>
+          <li>Paginación (12/pág). Sin acceso admin ni público.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--accent)">
+        <h3>Mis audios de apoyo
+          <span class="route">/profesional/audios</span></h3>
+        <div class="role-line"><span class="tag t-auth">Sesión</span><span class="tag t-pro">Verificado</span></div>
+        <ul>
+          <li>Grabadora de audios para “Voces que acompañan”.</li>
+          <li>Campos: categoría (req), título, descripción + <code>&lt;AudioRecorder/&gt;</code>.</li>
+          <li>Lista con reproductor + pill de estado (Aprobado/En revisión/Rechazado) y Eliminar.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--orange)">
+        <h3>Videollamadas agendadas
+          <span class="route">/profesional/sesiones</span></h3>
+        <div class="role-line"><span class="tag t-flag">Feature flag</span><span class="tag t-auth">Sesión</span></div>
+        <ul>
+          <li>Solo aparece cuando <code>APPOINTMENTS_ENABLED</code> está activo.</li>
+          <li>Gestión de sesiones de videollamada reservadas desde el perfil público.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== ADMIN =================== -->
+<section class="group">
+  <h2><span class="num">6</span> Administración (solo <code>user.role = 'admin'</code>)</h2>
+  <div class="lane">
+    <div class="lane-title">🛡️ /admin — beforeLoad requiere sesión + amIAdmin()</div>
+    <div class="grid cols-2">
+      <div class="card" style="--bar:var(--red)">
+        <h3>Auditoría de profesionales
+          <span class="route">/admin · sección Profesionales</span></h3>
+        <div class="role-line"><span class="tag t-admin">Admin</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Badge de conteo de verificados. Filtros: Todos / Pendientes / Verificados / Suspendidos / Rechazados + búsqueda.</li>
+          <li>Tarjeta por pro: credencial, ubicación, enfoques, modalidad, WhatsApp, certificado, soportes.</li>
+          <li><b>Transiciones de estado</b>: aprobar / rechazar / suspender / reactivar / eliminar (según estado actual).</li>
+          <li>Switch <b>providesService</b> (solo verificado/suspendido) → “solo contenido” lo saca del directorio.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--red)">
+        <h3>Revisión de audios
+          <span class="route">/admin · sección Audios de apoyo</span></h3>
+        <div class="role-line"><span class="tag t-admin">Admin</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Cola <code>listPendingStories()</code>: pro, categoría, título, duración, preview de audio.</li>
+          <li>Botones <b>Aprobar / Rechazar</b> (optimista; invalida bandeja pública).</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--red)">
+        <h3>Categorías de audios (CRUD)
+          <span class="route">/admin · sección Categorías</span></h3>
+        <div class="role-line"><span class="tag t-admin">Admin</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Crear (título + descripción; slug automático), editar inline, activar/desactivar, eliminar.</li>
+          <li>Controla orden (<code>sortOrder</code>); invalida bandeja de <code>/apoyo</code>.</li>
+        </ul>
+      </div>
+
+      <div class="card" style="--bar:var(--red)">
+        <h3>Gestión de usuarios
+          <span class="route">/admin · sección Usuarios</span></h3>
+        <div class="role-line"><span class="tag t-admin">Admin</span><span class="tag t-csr">CSR</span></div>
+        <ul>
+          <li>Lista paginada con búsqueda por nombre/correo.</li>
+          <li>Badge “admin” si lo es; si no, botón <b>“Hacer admin”</b> (solo promover, sin degradar).</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== PÁGINAS ESTÁTICAS =================== -->
+<section class="group">
+  <h2><span class="num">7</span> Páginas informativas / estáticas</h2>
+  <div class="lane">
+    <div class="grid cols-3">
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Cómo funciona <span class="route">/como-funciona</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Dos listas numeradas: “Si necesitas ayuda” y “Si eres psicólogo” con deep-links.</li>
+            <li>Bloque de seguridad/privacidad y transición a voluntariado.</li></ul>
+      </div>
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Acerca de <span class="route">/acerca-de</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Misión, “hacia dónde vamos”, open-source, Build4Venezuela, autor.</li>
+            <li>Enlaces a equipo / voluntariado / privacidad.</li></ul>
+      </div>
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Equipo <span class="route">/equipo</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Lista <code>TEAM</code> (nombre, rol, país, enlaces).</li></ul>
+      </div>
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Términos (profesionales) <span class="route">/terminos</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Legal: plataforma sin fines de lucro, conexión-only, regla de gratuidad (con aviso rojo), compromisos del pro.</li></ul>
+      </div>
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Instalar la app (PWA) <span class="route">/app</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Guía paso a paso Android/Chrome e iPhone/Safari para instalar el PWA.</li></ul>
+      </div>
+      <div class="card" style="--bar:var(--teal)">
+        <h3>Únete / comparte <span class="route">/social</span></h3>
+        <div class="role-line"><span class="tag t-public">Pública</span><span class="tag t-ssr">SSR</span></div>
+        <ul><li>Reclutamiento shareable: CTA registro + bloque “invita colegas” (native share, WhatsApp/X/FB, copiar enlace).</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =================== ROLES + MEDIA =================== -->
+<section class="group">
+  <h2><span class="num">8</span> Control de acceso · roles · medios (R2)</h2>
+  <div class="tables">
+    <div class="card" style="--bar:var(--accent);padding:6px 0 0">
+      <h3 style="padding:8px 15px 0">Estados y roles que gobiernan el acceso</h3>
+      <table>
+        <thead><tr><th>Dimensión</th><th>Valor</th><th>Efecto</th></tr></thead>
+        <tbody>
+          <tr><td rowspan="2"><b>user.role</b></td><td><code>user</code></td><td>Acceso estándar; puede ser pro o solo cuenta.</td></tr>
+          <tr><td><code>admin</code></td><td>Acceso a <code>/admin</code> + funciones admin (definido en BD, no en env).</td></tr>
+          <tr><td rowspan="5"><b>verifiedStatus</b></td><td><code>pending</code></td><td>En revisión (default). No público.</td></tr>
+          <tr><td><code>verified</code></td><td class="muted">Único estado público (sujeto a <code>providesService</code>).</td></tr>
+          <tr><td><code>rejected</code></td><td class="muted">Rechazado por admin. No público.</td></tr>
+          <tr><td><code>disabled</code></td><td class="muted">Suspendido temporalmente.</td></tr>
+          <tr><td><code>deleted</code></td><td class="muted">Soft-delete; puede re-registrar vía <code>/completar</code>.</td></tr>
+          <tr><td><b>providesService</b></td><td><code>false</code></td><td>“Solo contenido”: audios sí, fuera de directorio/perfil/contacto al azar.</td></tr>
+          <tr><td><b>availabilityMode</b></td><td><code>always|scheduled|inactive</code></td><td>Reemplaza al booleano <code>available</code> para la disponibilidad en vivo.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card" style="--bar:var(--accent);padding:6px 0 0">
+      <h3 style="padding:8px 15px 0">Servicio de medios (R2) — 4 rutas splat</h3>
+      <table>
+        <thead><tr><th>Ruta</th><th>Acceso</th><th>Cache</th></tr></thead>
+        <tbody>
+          <tr><td><code>/media/avatar/*</code></td><td><span class="tag t-public">Público</span></td><td class="muted">1 año, immutable</td></tr>
+          <tr><td><code>/media/audio/*</code></td><td><span class="tag t-public">Público</span></td><td class="muted">1 año, immutable · Accept-Ranges</td></tr>
+          <tr><td><code>/media/document/*</code></td><td><span class="tag t-auth">Dueño o admin</span></td><td class="muted">private 60s</td></tr>
+          <tr><td><code>/media/certificate/*</code></td><td><span class="tag t-admin">Solo admin</span></td><td class="muted">private 60s</td></tr>
+        </tbody>
+      </table>
+      <p class="note">Tiers: público → dueño/admin → admin. Los accesos no autorizados responden <b>404</b> (no 403) para no filtrar existencia de claves. Ruta de auth: <code>/api/auth/*</code> (handler de Better Auth).</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>Mapa generado como documentación viva · <code>docs/app-map.html</code></span>
+  <span>Fuente: <code>src/routes/</code> + <code>src/components/bottom-tabs.tsx</code> + <code>src/db/schema.ts</code> · 2026-07-27</span>
+</footer>
+
+</div>
+</body>
+</html>

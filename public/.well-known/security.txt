@@ -1,0 +1,11 @@
+# https://www.rfc-editor.org/rfc/rfc9116.html
+# ponytail: served at /.well-known/security.txt by the Cloudflare asset layer
+# (same path as robots.txt — no worker code needed; the router never sees it).
+# Contact routing is the established soporte@psicoayudaven.com address. No PGP
+# key, acknowledgments page, or standalone security policy exist yet — kept
+# honest (no fabricated Encryption/Policy/Acknowledgments URLs). When a PGP key
+# or a /seguridad policy page ships, add `Encryption:` / `Policy:` here.
+Contact: mailto:soporte@psicoayudaven.com
+Expires: 2027-07-27T00:00:00.000-04:00
+Preferred-Languages: es, en
+Canonical: https://psicoayudaven.com/.well-known/security.txt

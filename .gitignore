@@ -12,6 +12,9 @@ dist-ssr
 .vinxi
 __unconfig*
 todos.json
+dev.db
+dev.db-bak
+dev.db.bak
 .claude/
 .agents/
 .cursor/
@@ -19,6 +22,8 @@ todos.json
 
 # Local export — PII
 /professionals.csv
+# db:pull-prod scratch dir (raw prod SQL — never commit)
+.tmp/
 # Local Pi runtime state
 .atl/
 
