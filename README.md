@@ -152,6 +152,91 @@ El admin se define en la BD (`user.role`), no por variable de entorno:
 UPDATE user SET role = 'admin' WHERE email = 'tu@correo.com';
 ```
 
+## Scripts
+
+Referencia completa de `package.json`. Los que tocan la BD de **runtime**
+(`.wrangler/state/...`) se distinguen de los que solo tocan `dev.db`
+(herramienta de drizzle-kit).
+
+### Desarrollo y build
+
+| Script            | Comando                                                                     | Descripción                                                                       |
+| ----------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `dev`             | `node scripts/db-check.mjs && dotenv -e .env.local -- vite dev --port 3000` | Servidor de desarrollo en `:3000`. Antes arranca `db-check` (avisa si falta el    |
+|                   |                                                                             | esquema runtime) y carga `.env.local` vía `dotenv-cli`. **No activa el SW.**      |
+| `build`           | `vite build`                                                                | Build de producción (SSR + cliente) y prerenderiza `/_shell` (necesita miniflare; |
+|                   |                                                                             | CI usa `CLOUDFLARE_VITE_FORCE_LOCAL=true`).                                       |
+| `preview`         | `vite preview`                                                              | Sirve el build de producción localmente.                                          |
+| `generate-routes` | `tsr generate`                                                              | Regenera `routeTree.gen.ts` desde `src/routes/` (normalmente corre automático en  |
+|                   |                                                                             | dev/build; útil para forzarlo).                                                   |
+
+### Calidad de código
+
+| Script   | Comando                              | Descripción                                                        |
+| -------- | ------------------------------------ | ------------------------------------------------------------------ |
+| `lint`   | `eslint`                             | Linter.                                                            |
+| `format` | `prettier --write . && eslint --fix` | Formatea todo y aplica fixes de lint automáticos.                  |
+| `check`  | `prettier --check .`                 | Verifica formato sin escribir (CI / git hook).                     |
+| `test`   | `vitest run`                         | Suite de tests. (Actualmente no hay archivos de test; ver AGENTS.) |
+
+> No hay script de typecheck. Usa `npx tsc --noEmit`. Existe un error de
+> tipado preexistente en `drizzle.config.ts` ajeno al código de la app.
+
+### Despliegue
+
+| Script   | Comando                            | Descripción                                            |
+| -------- | ---------------------------------- | ------------------------------------------------------ |
+| `deploy` | `npm run build && wrangler deploy` | Sube código a Cloudflare. **No aplica migraciones D1** |
+|          |                                    | (ver paso 5 del despliegue más abajo).                 |
+
+### Base de datos — esquema y migraciones (drizzle-kit, BD `dev.db`)
+
+Estos operan sobre `dev.db` (`DATABASE_URL`), el objetivo de introspección de
+drizzle-kit, **no** la BD runtime que sirve `wrangler dev`.
+
+| Script        | Comando                | Descripción                                                          |
+| ------------- | ---------------------- | -------------------------------------------------------------------- |
+| `db:generate` | `drizzle-kit generate` | Crea `drizzle/000N_*.sql` a partir de cambios en `src/db/schema.ts`. |
+| `db:migrate`  | `drizzle-kit migrate`  | Aplica migraciones con el migrador de drizzle-kit (sobre `dev.db`).  |
+| `db:push`     | `drizzle-kit push`     | Empuja el esquema directamente, sin generar archivos de migración.   |
+| `db:pull`     | `drizzle-kit pull`     | Introspecta la BD y regenera el esquema (útil para sincronizar).     |
+| `db:studio`   | `drizzle-kit studio`   | Abre Drizzle Studio (GUI contra `dev.db`).                           |
+
+Para aplicar migraciones a la BD runtime de verdad, usa wrangler:
+
+```bash
+npx wrangler d1 migrations apply psico-support-db --local   # local runtime
+npx wrangler d1 migrations apply psico-support-db --remote  # producción
+```
+
+### Base de datos — runtime (wrangler)
+
+| Script               | Descripción                                                                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `db:status`          | Comprueba que la BD runtime (`scripts/db-check.mjs`) tenga esquema aplicado. Solo lectura. No arranca                                                                                       |
+|                      | wrangler. Lo corre `npm run dev` como preflight.                                                                                                                                            |
+| `db:seed`            | Puebla la BD runtime local con fixtures (`scripts/seed-local.ts`): un admin + profesionales en todos                                                                                        |
+|                      | los estados. Idempotente por email; `--reset` limpia todo primero; contraseña por defecto                                                                                                   |
+|                      | `password123`. Requiere migraciones aplicadas antes.                                                                                                                                        |
+| `db:pull-prod`       | Vuelca la BD D1 de **producción** en la runtime local, **con PII anonimizada**                                                                                                              |
+|                      | (`scripts/pull-prod-sanitized.mjs`): emails anonimizados (salvo admins), contraseñas/tokens reset,                                                                                          |
+|                      | WhatsApp falseados, PII clínico borrado. Útil cuando `.wrangler/` se borró y la BD runtime quedó en blanco. `--dry-run` imprime el reporte pero igualmente sobrescribe la BD runtime local. |
+|                      | El SQL crudo de prod se borra siempre al terminar (nunca persiste en disco).                                                                                                                |
+| `db:reset-passwords` | Pone una contraseña única en todas las cuentas `credential` locales                                                                                                                         |
+|                      | (`scripts/reset-local-passwords.ts`) para poder iniciar sesión como cualquier usuario sin saber su clave.                                                                                   |
+|                      | `--email` para uno solo, `--dry-run` para ver sin escribir. Hash scrypt compatible con Better Auth.                                                                                         |
+
+### Analítica y docs
+
+| Script                | Descripción                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| `analytics`           | Consulta Analytics Engine desde la terminal (`scripts/analytics.ts`). Requiere              |
+|                       | `CF_ACCOUNT_ID` + `CF_ANALYTICS_TOKEN` en `.env.local`. Ej.: `npm run analytics -- funnel`. |
+| `analytics:dashboard` | Dashboard HTML local en `:8788` (`scripts/analytics-dashboard.ts`) con las mismas           |
+|                       | consultas que el CLI. El token nunca llega al navegador (SQL corre server-side).            |
+| `docs`                | Sirve la carpeta `docs/` (incluido el diagrama `app-map.html`) en `:4173` y la abre en      |
+|                       | el navegador (`scripts/serve-docs.mjs`). Sin dependencias. `--port`/`--no-open`.            |
+
 ## Despliegue (Cloudflare)
 
 Los bindings de D1, R2, Analytics Engine y Email, y el dominio, están en
