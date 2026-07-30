@@ -220,7 +220,7 @@ npx wrangler d1 migrations apply psico-support-db --remote  # producción
 |                      | `password123`. Requiere migraciones aplicadas antes.                                                 |
 | `db:pull-prod`       | Vuelca la BD D1 de **producción** en la runtime local, **sanitizada de PII**                         |
 |                      | (`scripts/pull-prod-sanitized.mjs`): emails anonimizados (salvo admins), contraseñas/tokens reset,   |
-|                      | WhatsApp falseados, PII clínico borrado. Ideal tras un `git clean -fdx`. `--dry-run` no escribe.    |
+|                      | WhatsApp falseados, PII clínico borrado. Ideal tras un `git clean -fdx`. `--dry-run` imprime el reporte pero igualmente sobrescribe la BD runtime local.    |
 |                      | El SQL crudo de prod se borra siempre al terminar (nunca persiste en disco).                         |
 | `db:reset-passwords` | Pone una contraseña única en todas las cuentas `credential` locales                                  |
 |                      | (`scripts/reset-local-passwords.ts`) para poder loguearte como cualquier usuario sin saber su clave.  |
