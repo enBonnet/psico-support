@@ -162,7 +162,7 @@ Referencia completa de `package.json`. Los que tocan la BD de **runtime**
 
 | Script             | Comando                              | Descripción                                                                       |
 | ------------------ | ------------------------------------ | --------------------------------------------------------------------------------- |
-| `dev`              | `vite dev` (+ preflight)             | Servidor de desarrollo en `:3000`. Antes arranca `db-check` (avisa si falta el    |
+| `dev`              | `node scripts/db-check.mjs && dotenv -e .env.local -- vite dev --port 3000` | Servidor de desarrollo en `:3000`. Antes arranca `db-check` (avisa si falta el    |
 |                    |                                      | esquema runtime) y carga `.env.local` vía `dotenv-cli`. **No activa el SW.**       |
 | `build`            | `vite build`                         | Build de producción (SSR + cliente) y prerenderiza `/_shell` (necesita miniflare; |
 |                    |                                      | CI usa `CLOUDFLARE_VITE_FORCE_LOCAL=true`).                                       |
