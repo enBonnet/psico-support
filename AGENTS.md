@@ -53,12 +53,38 @@ bindings are declared in `wrangler.jsonc` and exist automatically in
 
 ### Database (D1)
 
-Local D1 lives in `dev.db` (gitignored). After editing `src/db/schema.ts`:
+There are **two** local SQLite databases with different purposes — do not confuse them:
+
+- **`dev.db`** (`DATABASE_URL=file:./dev.db` in `.env`) — the **drizzle-kit
+  tooling** DB. Used only by `db:generate` / `db:push` / `db:pull` / `db:studio`
+  as the introspection target for schema diffs. Drizzle creates it on demand; it
+  is gitignored and not the runtime DB.
+- **`.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite`** — the
+  **runtime** D1 that `wrangler dev` actually serves requests against (the
+  filename hash is derived from `database_id` in `wrangler.jsonc`, so it's
+  deterministic across runs). **This** is where query failures originate.
+
+After editing `src/db/schema.ts`:
 
 ```bash
 npm run db:generate                                         # writes drizzle/000N_*.sql
-npx wrangler d1 migrations apply psico-support-db --local   # local
+npx wrangler d1 migrations apply psico-support-db --local   # local runtime DB
+npm run db:status                                           # sanity-check the runtime schema
 ```
+
+**Symptom of a missing local runtime schema:** every query 500s with
+`Failed query: ... no such table`. This happens when `.wrangler/` is wiped
+(git clean, wrangler upgrade, manual delete) — `wrangler dev` then recreates a
+**blank** runtime D1 with no tables and no `d1_migrations`. Re-running
+`migrations apply --local` fixes it.
+
+**`migrations list --local` is NOT a reliable check** — it lists the files in
+`drizzle/`, and when the runtime DB is blank the `d1_migrations` table doesn't
+exist so the comparison is misleading. The reliable check is `npm run db:status`,
+which opens the real runtime `.sqlite` with `better-sqlite3` (WAL-consistent
+read) and confirms `d1_migrations` has ≥1 applied row **and** the `user` table
+exists. `npm run dev` runs this same check as a preflight and warns loudly when
+the schema is missing so the blank-DB failure mode is caught early.
 
 ### Versioning
 
