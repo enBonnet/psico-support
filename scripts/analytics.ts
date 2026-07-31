@@ -16,13 +16,8 @@
 //   npm run analytics -- sql "SELECT blob1, COUNT() FROM psico_events GROUP BY 1"
 // =============================================================================
 
-import {
-	QUERIES,
-	findQuery,
-	getAnalyticsEnv,
-	runSql,
-	type QueryContext,
-} from './analytics-lib'
+import { QUERIES, findQuery, getAnalyticsEnv, runSql } from './analytics-lib'
+import type { QueryContext } from './analytics-lib'
 
 type ParsedArgs = {
 	query: string

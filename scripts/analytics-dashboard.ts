@@ -23,14 +23,8 @@
 import http from 'node:http'
 import { URL } from 'node:url'
 
-import {
-	QUERIES,
-	findQuery,
-	getAnalyticsEnv,
-	runSql,
-	type QueryContext,
-	type QueryDef,
-} from './analytics-lib'
+import { QUERIES, findQuery, getAnalyticsEnv, runSql } from './analytics-lib'
+import type { QueryContext, QueryDef } from './analytics-lib'
 
 const PORT = Number(process.env.DASHBOARD_PORT) || 8788
 
