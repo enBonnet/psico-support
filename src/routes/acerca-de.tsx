@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import {
   BadgeCheck,
-  Github,
   Globe,
   Heart,
   HeartHandshake,
@@ -9,6 +8,7 @@ import {
   MessageCircle,
   ShieldCheck,
 } from 'lucide-react'
+import { SocialIcon } from '#/components/social-icons'
 import { seoHead } from '#/lib/seo'
 import { APP_VERSION } from '#/lib/version'
 
@@ -133,8 +133,8 @@ function AboutPage() {
 
         <section className="glass-card p-5">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-[var(--medi-text-primary)]">
-            <Github
-              aria-hidden="true"
+            <SocialIcon
+              name="github"
               className="size-5 text-[var(--medi-text-secondary)]"
             />
             Código abierto
@@ -150,7 +150,7 @@ function AboutPage() {
               rel="noopener noreferrer"
               className={pillClass}
             >
-              <Github aria-hidden="true" className="size-4" />
+              <SocialIcon name="github" aria-hidden="true" className="size-4" />
               Ver en GitHub
             </a>
             <a
