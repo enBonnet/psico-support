@@ -20,9 +20,10 @@ import {
 	QUERIES,
 	findQuery,
 	getAnalyticsEnv,
-	runSql,
-	type QueryContext,
+	runSql
+	
 } from './analytics-lib'
+import type {QueryContext} from './analytics-lib';
 
 type ParsedArgs = {
 	query: string

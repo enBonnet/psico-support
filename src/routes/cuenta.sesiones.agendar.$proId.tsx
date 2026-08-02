@@ -1,15 +1,43 @@
 import { createFileRoute, redirect, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useMemo, useState } from 'react'
+import { Clock } from 'lucide-react'
 import { notify } from '#/lib/notifications'
 import { track } from '#/lib/analytics-client'
 import { APPOINTMENTS_ENABLED } from '#/lib/features'
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
+import { Avatar } from '#/components/avatar'
 import { getCurrentUser, getPublicProfessional } from '#/server/professionals'
 import { getAvailableSlots, createAppointment } from '#/server/appointments'
 import type { BookableSlot } from '#/server/appointments'
 import { noindexHead } from '#/lib/seo'
+
+// ponytail: the durations a pro can offer, mirrored from the server schema
+// (APPOINTMENT_DURATION_OPTIONS in src/server/professionals.ts). Used to type
+// the booking Selection so createAppointment's validator accepts it without
+// a cast (the zod schema wants the literal union, not a generic number).
+type AppointmentDuration = 15 | 30 | 45 | 60
+
+// ponytail: O4 (healthcare-ui audit) — render the viewer's browser tz as a
+// confirmation label so a Venezuelan abroad (common in the diaspora this
+// platform serves) can verify the slot they're picking matches their wall-
+// clock. Intl.DateTimeFormat().resolvedOptions().timeZone returns the IANA
+// name (e.g. "America/Caracas", "Europe/Madrid"); falls back gracefully on
+// older runtimes. Computed once at module scope (the browser tz doesn't
+// change during a session).
+const VIEWER_TZ_LABEL = (() => {
+  try {
+    const tz = new Intl.DateTimeFormat('es-VE').resolvedOptions().timeZone
+    // ponytail: shorten the common case — "America/Caracas" → "Caracas".
+    // Keeps the label compact on mobile. Falls back to the full IANA name
+    // for less common zones.
+    const slash = tz.lastIndexOf('/')
+    return slash >= 0 ? tz.slice(slash + 1).replace(/_/g, ' ') : tz
+  } catch {
+    return ''
+  }
+})()
 
 export const Route = createFileRoute('/cuenta/sesiones/agendar/$proId')({
   beforeLoad: async ({ params }) => {
@@ -65,8 +93,9 @@ function groupByDay(slots: BookableSlot[]): DayGroup[] {
 
 // ponytail: a selection is the (startMs, durationMin) pair — two slots at the
 // same start but different durations are distinct offerings. null = nothing
-// selected yet.
-type Selection = { startMs: number; durationMin: number }
+// selected yet. durationMin is the literal union so createAppointment's zod
+// validator accepts it without a cast (the server schema wants 15|30|45|60).
+type Selection = { startMs: number; durationMin: AppointmentDuration }
 
 function AgendarPage() {
   const navigate = useNavigate()
@@ -181,13 +210,33 @@ function AgendarPage() {
         Agendar videollamada
       </h1>
       <div className="section-underline mt-2" />
+      {/* ponytail: C1 (healthcare-ui audit) — provider context on the booking
+          page. Previously showed only the pro's name + durations as plain
+          text. Koruux Cat. 3: "On the patient's side, there should be clarity
+          on the slot picked" + the provider should be clearly identified
+          (photo, modality). The avatar + a one-line modality/duration summary
+          gives the user confidence they're booking the right person before
+          they pick a time. The pro query already loads getPublicProfessional
+          (has avatarKey); this is a presentation-only change. */}
       {pro && (
-        <p className="mt-3 text-sm text-[var(--medi-text-secondary)]">
-          Con <strong className="text-[var(--medi-text-primary)]">{pro.name}</strong>
-          {offeredDurations.length > 0 && (
-            <> · sesiones de {offeredDurations.join(', ')} min</>
-          )}
-        </p>
+        <div className="glass-card-soft mt-3 flex items-center gap-3 rounded-[var(--glass-radius-sm)] p-3">
+          <Avatar
+            name={pro.name}
+            avatarKey={pro.avatarKey}
+            className="size-12 text-lg"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold text-[var(--medi-text-primary)]">
+              {pro.name}
+            </p>
+            <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
+              Videollamada
+              {offeredDurations.length > 0 && (
+                <> · sesiones de {offeredDurations.join(', ')} min</>
+              )}
+            </p>
+          </div>
+        </div>
       )}
 
       {isLoading ? (
@@ -228,6 +277,14 @@ function AgendarPage() {
           <p className="mt-1 text-sm text-[var(--medi-text-secondary)]">
             Vuelve a revisar en unos días o busca otro profesional.
           </p>
+          {/* ponytail: O8 (healthcare-ui audit) — the old copy offered no
+              action. A dead-end empty state is an anti-pattern; mirror the
+              directory's self-care steer and give the user a path forward. */}
+          <Button asChild className="mt-4">
+            <Link to="/ayuda/profesionales" search={{ modality: 'remote' }}>
+              Buscar otro profesional
+            </Link>
+          </Button>
         </div>
       ) : (
         <div className="mt-6 flex flex-col gap-5">
@@ -261,6 +318,19 @@ function AgendarPage() {
                 )
               })}
             </div>
+          )}
+
+          {/* ponytail: O4 (healthcare-ui audit) — timezone confirmation label.
+              Slots render in the viewer's browser tz (timeFmt omits timeZone),
+              but the viewer is never told which tz that is. A Venezuelan
+              abroad (diaspora) sees times in their device tz — correct, but
+              ambiguous. This small label confirms it so they can verify the
+              slot matches their wall-clock before confirming. */}
+          {VIEWER_TZ_LABEL && (
+            <p className="flex items-center gap-1.5 text-xs text-[var(--medi-text-secondary)]">
+              <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+              Hora de {VIEWER_TZ_LABEL}
+            </p>
           )}
 
           {groups.map((g) => (

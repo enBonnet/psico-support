@@ -1,7 +1,8 @@
-import { createFileRoute, redirect, Link } from '@tanstack/react-router'
+import { createFileRoute, redirect, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Video, CalendarOff } from 'lucide-react'
+import { Video, CalendarOff, CalendarPlus, CalendarClock } from 'lucide-react'
 import { notify } from '#/lib/notifications'
+import { track } from '#/lib/analytics-client'
 import { APPOINTMENTS_ENABLED } from '#/lib/features'
 import { Button } from '#/components/ui/button'
 import { Skeleton } from '#/components/ui/skeleton'
@@ -11,10 +12,43 @@ import {
   getMyAppointmentsClient,
   getAppointmentForJoin,
   cancelAppointment
-  
 } from '#/server/appointments'
-import type {AppointmentListItem} from '#/server/appointments';
+import type { AppointmentListItem } from '#/server/appointments'
 import { noindexHead } from '#/lib/seo'
+
+// ponytail: C1b (healthcare-ui audit) — client-side .ics generator for the
+// "Add to calendar" button on upcoming appointments. Koruux Cat. 3: "save the
+// appointment to a digital calendar." The confirmation email already attaches
+// a server-built .ics (buildIcsAttachment in src/server/email.ts), but the
+// user who lands on /cuenta/sesiones after booking has no in-app way to add it
+// to their calendar without digging through email. This generates a minimal,
+// standards-compliant VEVENT and returns a data: URL the browser downloads.
+// No meetingUrl (the list item intentionally omits it for security — the join
+// link is resolved separately via getAppointmentForJoin); the calendar event
+// points the user back to the app to join. UTC times with the Z suffix keep
+// it tz-safe without needing VTIMEZONE blocks.
+function buildIcsDataUrl(a: AppointmentListItem): string {
+  const fmtUtc = (ms: number) =>
+    new Date(ms).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//PsicoAyudaVen//Appointment//ES',
+    'BEGIN:VEVENT',
+    `UID:psico-apt-${a.id}@psicoayudaven.com`,
+    `DTSTAMP:${fmtUtc(Date.now())}Z`,
+    `DTSTART:${fmtUtc(a.startAt)}Z`,
+    `DTEND:${fmtUtc(a.endAt)}Z`,
+    `SUMMARY:Videollamada con ${a.professionalName}`,
+    'DESCRIPTION:Sesión de apoyo psicológico a través de PsicoAyudaVen. Únete desde la app unos minutos antes de la hora.',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n')
+  // ponytail: encodeURIComponent + data:text/calendar so the blob downloads
+  // as a .ics file on iOS/Android/desktop. The filename is set via the <a
+  // download> attribute in the component, not here.
+  return `data:text/calendar;charset=utf8,${encodeURIComponent(ics)}`
+}
 
 export const Route = createFileRoute('/cuenta/sesiones')({
   beforeLoad: async () => {
@@ -61,6 +95,7 @@ function isUpcoming(a: AppointmentListItem): boolean {
 
 function SesionesPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   // ponytail: beforeLoad already guarantees a logged-in user (redirects to
   // /signup otherwise), so the appointments query fires immediately without
   // an `enabled: !!me` gate — that gate caused an unnecessary extra round-trip
@@ -101,6 +136,36 @@ function SesionesPage() {
   const appts = data?.appointments ?? []
   const upcoming = appts.filter(isUpcoming)
   const past = appts.filter((a) => !isUpcoming(a)).reverse()
+
+  // ponytail: C1c (healthcare-ui audit) — simple reschedule as cancel-then-
+  // rebook. Koruux Cat. 3: "flexibility to reschedule or cancel appointments
+  // easily." A proper rescheduleAppointment server fn (atomic slot move) is
+  // the upgrade path; for now this cancels the current booking (reusing the
+  // existing cancelAppointment fn + its emails) and navigates to the booking
+  // route so the user picks a new slot. Honest UX: the user re-picks, the pro
+  // gets a cancellation email + a new booking email. No new server fn needed.
+  function reschedule(a: AppointmentListItem) {
+    if (
+      !confirm(
+        `¿Cambiar el horario de tu cita con ${a.professionalName}? Se cancelará la cita actual y te llevaremos a elegir un nuevo horario.`,
+      )
+    ) {
+      return
+    }
+    track({ event: 'cta_click', category: 'public', param1: 'reschedule_intent' })
+    // ponytail: cancel first; the cancel mutation's onSuccess invalidates the
+    // list. We navigate in a microtask after the cancel fires so the booking
+    // route loads fresh slots (the old booking's slot is freed server-side
+    // once cancelAppointment flips the row to 'cancelled').
+    cancel.mutate(a.id, {
+      onSuccess: () => {
+        navigate({
+          to: '/cuenta/sesiones/agendar/$proId',
+          params: { proId: String(a.professionalId) },
+        })
+      },
+    })
+  }
 
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
@@ -172,6 +237,37 @@ function SesionesPage() {
                         disabled={join.isPending}
                       >
                         Unirse
+                      </Button>
+                      {/* ponytail: C1b (healthcare-ui audit) — in-app "Add to
+                          calendar". Generates a .ics download via a data: URL
+                          (buildIcsDataUrl above). The confirmation email
+                          already attaches a server-built .ics, but this
+                          surfaces it in-app so a user who lands here after
+                          booking doesn't need to dig through email. */}
+                      <Button asChild size="sm" variant="outline">
+                        <a
+                          href={buildIcsDataUrl(a)}
+                          download={`psicoayuda-cita-${a.id}.ics`}
+                          onClick={() =>
+                            track({
+                              event: 'cta_click',
+                              category: 'public',
+                              param1: 'add_to_calendar',
+                            })
+                          }
+                        >
+                          <CalendarPlus className="size-4" /> Calendario
+                        </a>
+                      </Button>
+                      {/* ponytail: C1c (healthcare-ui audit) — simple reschedule
+                          (cancel-then-rebook). See reschedule() above. */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => reschedule(a)}
+                        disabled={cancel.isPending}
+                      >
+                        <CalendarClock className="size-4" /> Cambiar horario
                       </Button>
                       <Button
                         size="sm"

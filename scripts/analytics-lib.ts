@@ -218,5 +218,5 @@ export async function runSql(
 		throw new Error(`HTTP ${res.status}: ${text}`)
 	}
 
-	return (await res.json()) as SqlResult
+	return (await res.json())
 }
