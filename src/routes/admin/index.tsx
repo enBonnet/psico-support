@@ -35,27 +35,14 @@ import {
 } from '#/server/audio-stories'
 import type { PendingStoryRow, AudioCategory } from '#/server/audio-stories'
 import { noindexHead } from '#/lib/seo'
-
-// ponytail: derived list types so optimistic setQueriesData stays typed without
-// exporting DTOs from the server module.
-type AdminProList = Awaited<ReturnType<typeof listAllProfessionals>>
-type AdminPro = AdminProList['rows'][number]
+// ponytail: shared list type + badge styling, used by this list route and the
+// /admin/profesionales/$id detail route so the two stay in sync. See
+// src/components/admin-shared.ts.
+import { STATUS_META } from '#/components/admin-shared'
+import type { AdminPro, AdminProList } from '#/components/admin-shared'
 
 const PAGE_SIZE = 8
 type StatusFilter = 'pending' | 'verified' | 'disabled' | 'rejected' | undefined
-
-const STATUS_META: Record<
-  AdminPro['verifiedStatus'],
-  { label: string; badge: string }
-> = {
-  pending: { label: 'En revisión', badge: 'text-amber-700' },
-  verified: { label: 'Verificado', badge: 'text-green-700' },
-  disabled: { label: 'Suspendido', badge: 'text-red-700' },
-  rejected: { label: 'Rechazado', badge: 'text-red-700' },
-  // deleted rows are excluded by listAllProfessionals, but the DB enum type
-  // includes 'deleted' — keep the record total to satisfy indexing.
-  deleted: { label: 'Eliminado', badge: 'text-red-700' },
-}
 
 const PRO_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: undefined, label: 'Todos' },
@@ -705,7 +692,19 @@ function ProCard({
         </label>
       )}
 
-      <div className="mt-4 flex gap-2 disabled:opacity-60">
+      {/* ponytail: open the review/edit detail route for this pro. "Revisar"
+          for pending (the action admins take most), "Editar" once verified
+          (field tweaks). Lives above the status actions so it reads as the
+          primary affordance. */}
+      <Link
+        to="/admin/profesionales/$id"
+        params={{ id: String(pro.id) }}
+        className="mt-4 flex min-h-11 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-[var(--medi-primary)] px-3 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-[var(--medi-primary)]/90"
+      >
+        {pro.verifiedStatus === 'pending' ? 'Revisar y editar' : 'Editar perfil'}
+      </Link>
+
+      <div className="mt-2 flex gap-2 disabled:opacity-60">
         <div className="flex flex-1 gap-2 opacity-100">
           <ProActions pro={pro} onStatus={onStatus} />
         </div>
