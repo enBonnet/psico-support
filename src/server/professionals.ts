@@ -2211,11 +2211,19 @@ export const adminUpdateProfessional = createServerFn({ method: 'POST' })
     const db = getDb()
     // ponytail: resolve userId BEFORE the name sync so the user-table UPDATE
     // keys correctly. One extra SELECT (by id, PK) — cheap. We do not touch
-    // verifiedStatus or available here (see comment above).
+    // verifiedStatus or available here (see comment above). The ne('deleted')
+    // predicate mirrors getProfessionalForAdmin — the UI never renders a
+    // tombstoned pro, but this guards against a stale/raced client id writing
+    // profile columns (and syncing the auth user name) onto a deleted row.
     const owned = await db
       .select({ userId: professionals.userId })
       .from(professionals)
-      .where(eq(professionals.id, data.professionalId))
+      .where(
+        and(
+          eq(professionals.id, data.professionalId),
+          ne(professionals.verifiedStatus, 'deleted'),
+        ),
+      )
       .limit(1)
       .then((rs) => rs.at(0) ?? null)
     if (!owned) {

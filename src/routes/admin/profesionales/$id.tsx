@@ -51,14 +51,21 @@ export const Route = createFileRoute('/admin/profesionales/$id')({
 
 function AdminProDetailPage() {
   const id = Number(Route.useParams().id)
-  // ponytail: a non-positive id is meaningless — treat as 404 (mirrors the
-  // public profile route's guard). Number('abc') === NaN; both fall through.
-  if (!Number.isInteger(id) || id <= 0) throw notFound()
+  // ponytail: a non-positive/non-integer id is meaningless — treat as 404
+  // (mirrors the public profile route's guard). Number('abc') === NaN; both
+  // fall through. The throw happens AFTER the hook calls below — TanStack
+  // Router reuses this component instance when only params change, so throwing
+  // before useQuery would violate the Rules of Hooks on a param-only
+  // navigation (/admin/profesionales/5 -> /abc) and crash with "Rendered fewer
+  // hooks than expected" instead of the 404. Gate the query with `enabled`.
+  const validId = Number.isInteger(id) && id > 0
 
   const { data: pro, isLoading } = useQuery({
     queryKey: ['admin-professional', id],
     queryFn: () => getProfessionalForAdmin({ data: { id } }),
+    enabled: validId,
   })
+  if (!validId) throw notFound()
   // ponytail: getProfessionalForAdmin returns null on miss OR soft-delete
   // (matches the list filter). notFound() → Spanish 404 via
   // defaultNotFoundComponent. Guard against the undefined-loading state first
@@ -278,9 +285,32 @@ function AdminProfileEditSection({
   const save = useMutation({
     mutationFn: (vars: ProfileEditInput & { professionalId: number }) =>
       adminUpdateProfessional({ data: vars }),
-    onSuccess: () => {
-      // ponytail: invalidate both the detail row (form re-seeds with saved
-      // values) and the list (the card summary updates).
+    onSuccess: (_d, vars) => {
+      // ponytail: re-seed local state from the NORMALIZED payload. useState
+      // initializers run only on mount, so the refetched `pro` (after the
+      // invalidate below) does NOT flow back into these fields on its own.
+      // Without this, server-side trims/coercions leave the form "dirty": e.g.
+      // the admin types "  Ana  ", the server stores "Ana", the refetched
+      // pro.name is "Ana", but local state is still "  Ana  " → dirty stays
+      // true and "Guardar cambios" stays enabled after a successful save.
+      // Mirror buildPayload()'s normalization + proEditableFields' trim of
+      // certificationNumber (buildPayload doesn't trim it; the server does).
+      setName(vars.name)
+      setCertificationNumber(vars.certificationNumber.trim())
+      setCertifyingSchool(vars.certifyingSchool ?? '')
+      setPopulation(vars.population)
+      setFocusGroups(vars.focusGroups)
+      setPracticeAreas(vars.practiceAreas)
+      setSpecializedAreas(vars.specializedAreas)
+      setSpecializationMode(vars.specializationMode)
+      setModality(vars.modality)
+      setCountry(vars.country)
+      setEstado(vars.estado ?? '')
+      setCiudad(vars.ciudad ?? '')
+      setCredentialCountry(vars.credentialCountry ?? '')
+      setWhatsappCountry(vars.whatsappCountry ?? '')
+      setWhatsapp(vars.whatsapp)
+      // invalidate both the detail row + the list (card summary updates).
       qc.invalidateQueries({ queryKey: ['admin-professional', pro.id] })
       qc.invalidateQueries({ queryKey: ['admin-professionals'] })
       notify({ type: 'success', title: 'Perfil actualizado' })
@@ -694,7 +724,7 @@ function AdminProfileEditSection({
 function AdminStatusActions({
   pro,
 }: {
-  pro: { id: number; verifiedStatus: string }
+  pro: { id: number; name: string; verifiedStatus: string }
 }) {
   const qc = useQueryClient()
   const { data: adminUser } = useQuery({
@@ -736,7 +766,16 @@ function AdminStatusActions({
   })
 
   function onStatus(target: 'verified' | 'rejected' | 'disabled' | 'deleted') {
-    if (target === 'deleted' && !window.confirm('¿Eliminar este profesional?')) {
+    // ponytail: match the list route's confirmation — name the pro and state
+    // the consequences (directory + audit removal, can re-register). Deletion
+    // is the destructive action on this page; the detail view has pro.name
+    // so the admin gets the same information in both places.
+    if (
+      target === 'deleted' &&
+      !window.confirm(
+        `¿Eliminar a "${pro.name}"? Desaparecerá del directorio y de esta auditoría. Podrá volver a registrarse.`,
+      )
+    ) {
       return
     }
     setStatusMut.mutate({ status: target })
