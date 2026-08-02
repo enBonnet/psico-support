@@ -150,7 +150,7 @@ function AboutPage() {
               rel="noopener noreferrer"
               className={pillClass}
             >
-              <SocialIcon name="github" aria-hidden="true" className="size-4" />
+              <SocialIcon name="github" className="size-4" />
               Ver en GitHub
             </a>
             <a
