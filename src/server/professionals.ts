@@ -2092,6 +2092,148 @@ export const listAllProfessionals = createServerFn({ method: 'GET' })
     }
   })
 
+// ponytail: admin single-row read for the review/edit detail route. Mirrors
+// listAllProfessionals's select (same columns + the support-docs group query)
+// but WHERE id = data.id. Returns null on miss OR soft-deleted (matches the
+// list filter) so the route can throw notFound(). There is no other single-row
+// admin fetch — the list fn is the only read today, and re-pulling a whole page
+// to seed a detail form is wasteful. Tag columns parsed server-side to clean
+// arrays, same as the list.
+const adminProIdSchema = z.object({ id: z.number() })
+
+export const getProfessionalForAdmin = createServerFn({ method: 'GET' })
+  .validator(adminProIdSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    const row = await db
+      .select({
+        id: professionals.id,
+        name: professionals.name,
+        verifiedStatus: professionals.verifiedStatus,
+        available: professionals.available,
+        providesService: professionals.providesService,
+        certificationNumber: professionals.certificationNumber,
+        certifyingSchool: professionals.certifyingSchool,
+        populationRaw: professionals.population,
+        focusGroupsRaw: professionals.focusGroups,
+        practiceAreasRaw: professionals.practiceAreas,
+        specializedAreasRaw: professionals.specializedAreas,
+        specializationMode: professionals.specializationMode,
+        country: professionals.country,
+        estado: professionals.estado,
+        ciudad: professionals.ciudad,
+        credentialCountry: professionals.credentialCountry,
+        whatsappCountry: professionals.whatsappCountry,
+        modality: professionals.modality,
+        whatsapp: professionals.whatsapp,
+        certificateKey: professionals.certificateKey,
+        userEmail: userTable.email,
+        createdAt: professionals.createdAt,
+      })
+      .from(professionals)
+      .innerJoin(userTable, eq(userTable.id, professionals.userId))
+      .where(
+        and(
+          eq(professionals.id, data.id),
+          ne(professionals.verifiedStatus, 'deleted'),
+        ),
+      )
+      .limit(1)
+      .then((rs) => rs.at(0) ?? null)
+    if (!row) return null
+    // ponytail: same one-shot support-docs fetch as listAllProfessionals,
+    // scoped to this single pro.
+    const docRows = await db
+      .select({
+        docKey: professionalDocuments.docKey,
+        name: professionalDocuments.name,
+      })
+      .from(professionalDocuments)
+      .where(eq(professionalDocuments.professionalId, row.id))
+      .orderBy(desc(professionalDocuments.createdAt))
+    return {
+      id: row.id,
+      name: row.name,
+      verifiedStatus: row.verifiedStatus,
+      available: row.available,
+      providesService: row.providesService,
+      certificationNumber: row.certificationNumber,
+      certifyingSchool: row.certifyingSchool,
+      population: parsePopulation(row.populationRaw),
+      focusGroups: parseFocusGroups(row.focusGroupsRaw),
+      practiceAreas: parsePracticeAreas(row.practiceAreasRaw),
+      specializedAreas: parseSpecializedAreas(row.specializedAreasRaw),
+      specializationMode: parseSpecializationMode(row.specializationMode),
+      country: row.country,
+      estado: row.estado,
+      ciudad: row.ciudad,
+      credentialCountry: row.credentialCountry,
+      whatsappCountry: row.whatsappCountry,
+      modality: row.modality,
+      whatsapp: row.whatsapp,
+      certificateKey: row.certificateKey,
+      supportDocs: docRows.map((d) => ({
+        url: publicSupportDocUrl(d.docKey),
+        name: d.name,
+      })),
+      userEmail: row.userEmail,
+      createdAt: row.createdAt,
+    }
+  })
+
+// ponytail: admin field-edit. The first admin write path for a pro's profile
+// columns (today only status/service toggles exist). Reuses profileEditSchema
+// + proEditableFields() verbatim so the validation + column mapping can't
+// drift from the pro's own updateMyProfile. Two deliberate divergences from
+// updateMyProfile:
+//   1. NO auto-demotion to 'pending' on credential change. The admin IS the
+//      reviewer (this is the "approve with changes" path); demoting would be
+//      circular. Accept is a separate explicit step via reviewProfessional.
+//   2. Keyed by professionalId (admin path trusts the client id, gated by the
+//      admin check) instead of session.user.id. name is still mirrored into
+//      the auth user row so auth surfaces agree — same as the self-edit.
+export const adminEditSchema = profileEditSchema.extend({
+  professionalId: z.number(),
+})
+export type AdminEditInput = z.infer<typeof adminEditSchema>
+
+export const adminUpdateProfessional = createServerFn({ method: 'POST' })
+  .validator(adminEditSchema)
+  .handler(async ({ data }) => {
+    const session = await getAuth().api.getSession({ headers: getHeaders() })
+    if (!session?.user || !(await isAdminEmail(session.user.email))) {
+      throw new Error('Acción solo para administradores.')
+    }
+    const db = getDb()
+    // ponytail: resolve userId BEFORE the name sync so the user-table UPDATE
+    // keys correctly. One extra SELECT (by id, PK) — cheap. We do not touch
+    // verifiedStatus or available here (see comment above).
+    const owned = await db
+      .select({ userId: professionals.userId })
+      .from(professionals)
+      .where(eq(professionals.id, data.professionalId))
+      .limit(1)
+      .then((rs) => rs.at(0) ?? null)
+    if (!owned) {
+      // a non-existent (or just-deleted) id — surface a clear error rather
+      // than silently no-op'ing both UPDATEs.
+      throw new Error('El profesional no existe.')
+    }
+    await db
+      .update(professionals)
+      .set(proEditableFields(data))
+      .where(eq(professionals.id, data.professionalId))
+    await db
+      .update(userTable)
+      .set({ name: data.name })
+      .where(eq(userTable.id, owned.userId))
+    return { ok: true as const }
+  })
+
 const providesServiceSchema = z.object({
   professionalId: z.number(),
   providesService: z.boolean(),

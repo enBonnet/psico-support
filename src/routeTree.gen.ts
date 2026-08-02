@@ -55,6 +55,7 @@ import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
 import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
 import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminProfesionalesIdRouteImport } from './routes/admin/profesionales/$id'
 import { Route as CuentaSesionesAgendarProIdRouteImport } from './routes/cuenta.sesiones.agendar.$proId'
 
 const YaRoute = YaRouteImport.update({
@@ -290,6 +291,11 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminProfesionalesIdRoute = AdminProfesionalesIdRouteImport.update({
+  id: '/admin/profesionales/$id',
+  path: '/admin/profesionales/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CuentaSesionesAgendarProIdRoute =
   CuentaSesionesAgendarProIdRouteImport.update({
     id: '/agendar/$proId',
@@ -337,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/apoyo/': typeof ApoyoIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
   '/recursos/': typeof RecursosIndexRoute
+  '/admin/profesionales/$id': typeof AdminProfesionalesIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/media/audio/$': typeof MediaAudioSplatRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByTo {
   '/apoyo': typeof ApoyoIndexRoute
   '/ayuda': typeof AyudaIndexRoute
   '/recursos': typeof RecursosIndexRoute
+  '/admin/profesionales/$id': typeof AdminProfesionalesIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/media/audio/$': typeof MediaAudioSplatRoute
@@ -436,6 +444,7 @@ export interface FileRoutesById {
   '/apoyo/': typeof ApoyoIndexRoute
   '/ayuda/': typeof AyudaIndexRoute
   '/recursos/': typeof RecursosIndexRoute
+  '/admin/profesionales/$id': typeof AdminProfesionalesIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/ayuda/profesionales/$id': typeof AyudaProfesionalesIdRoute
   '/media/audio/$': typeof MediaAudioSplatRoute
@@ -487,6 +496,7 @@ export interface FileRouteTypes {
     | '/apoyo/'
     | '/ayuda/'
     | '/recursos/'
+    | '/admin/profesionales/$id'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/media/audio/$'
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | '/apoyo'
     | '/ayuda'
     | '/recursos'
+    | '/admin/profesionales/$id'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/media/audio/$'
@@ -585,6 +596,7 @@ export interface FileRouteTypes {
     | '/apoyo/'
     | '/ayuda/'
     | '/recursos/'
+    | '/admin/profesionales/$id'
     | '/api/auth/$'
     | '/ayuda/profesionales/$id'
     | '/media/audio/$'
@@ -634,6 +646,7 @@ export interface RootRouteChildren {
   ApoyoIndexRoute: typeof ApoyoIndexRoute
   AyudaIndexRoute: typeof AyudaIndexRoute
   RecursosIndexRoute: typeof RecursosIndexRoute
+  AdminProfesionalesIdRoute: typeof AdminProfesionalesIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   AyudaProfesionalesIdRoute: typeof AyudaProfesionalesIdRoute
   MediaAudioSplatRoute: typeof MediaAudioSplatRoute
@@ -967,6 +980,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/profesionales/$id': {
+      id: '/admin/profesionales/$id'
+      path: '/admin/profesionales/$id'
+      fullPath: '/admin/profesionales/$id'
+      preLoaderRoute: typeof AdminProfesionalesIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/cuenta/sesiones/agendar/$proId': {
       id: '/cuenta/sesiones/agendar/$proId'
       path: '/agendar/$proId'
@@ -1039,6 +1059,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApoyoIndexRoute: ApoyoIndexRoute,
   AyudaIndexRoute: AyudaIndexRoute,
   RecursosIndexRoute: RecursosIndexRoute,
+  AdminProfesionalesIdRoute: AdminProfesionalesIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   AyudaProfesionalesIdRoute: AyudaProfesionalesIdRoute,
   MediaAudioSplatRoute: MediaAudioSplatRoute,

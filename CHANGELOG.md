@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.30.0] - 2026-08-02
+
+### Added
+- **Edición de perfil profesional desde el panel de administración** ([src/routes/admin/profesionales/$id.tsx](src/routes/admin/profesionales/$id.tsx), [src/server/professionals.ts](src/server/professionals.ts), [src/routes/admin/index.tsx](src/routes/admin/index.tsx), [src/components/admin-shared.ts](src/components/admin-shared.ts)): nueva ruta de detalle `/admin/profesionales/$id` (CSR, admin-gated) donde el admin puede **editar todos los campos del perfil** de un profesional (nombre, credencial, los 4 ejes de enfoque + modo inclusive/exclusive, modalidad, ubicación, WhatsApp) y luego **aceptarlo con cambios** — el flujo "approve with changes" que antes no existía. Hoy el admin solo veía una tarjeta de solo lectura y un botón de aprobar/rechazar; no había forma de corregir un dato antes de verificar. Tres piezas: (1) `getProfessionalForAdmin` (server fn, single-row read que espeja `listAllProfessionals`), (2) `adminUpdateProfessional` (server fn, primer write de campos de perfil para admin — reutiliza `profileEditSchema` + `proEditableFields()` verbatim para que la validación/mapeo no derive del self-edit del pro), (3) la ruta que compone el formulario (copiado de `profesional/perfil.tsx`) + bloque de verificación + acciones de estado. Divergencia deliberada del self-edit: **no hay auto-demotion a 'pending'** cuando el admin cambia la credencial (el admin es quien revisa — demotear sería circular). Botón de conveniencia "Guardar y aprobar" para pendientes/rechazados (save → verify, secuencial). La tarjeta de la lista gana un enlace "Revisar y editar" / "Editar perfil". `STATUS_META` + el tipo `AdminPro` se extrajeron a `src/components/admin-shared.ts` (compartido entre la lista y el detalle). No requiere migración — solo reutiliza columnas existentes.
+- **Script `db:promote-admin`** ([scripts/promote-local-admin.ts](scripts/promote-local-admin.ts), [package.json](package.json)): script de dev local para promover un usuario a `role='admin'` en la D1 runtime local (no `dev.db`, no remota). Reutiliza el patrón de `seed-local.ts`/`reset-local-passwords.ts` (busca el `.sqlite` bajo `.wrangler/state/...`, lo abre con `better-sqlite3`). Idempotente, `--dry-run`, `--email`. Promote-only (sin demote), consistente con el `promoteToAdmin` server fn.
+
 ## [1.29.1] - 2026-07-27
 
 ### Fixed

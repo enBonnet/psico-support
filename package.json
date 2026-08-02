@@ -1,6 +1,6 @@
 {
   "name": "psico-support",
-  "version": "1.29.1",
+  "version": "1.30.0",
   "private": true,
   "type": "module",
   "imports": {
@@ -25,6 +25,7 @@
     "db:pull-prod": "node scripts/pull-prod-sanitized.mjs",
     "db:reset-passwords": "tsx scripts/reset-local-passwords.ts",
     "db:seed": "tsx scripts/seed-local.ts",
+    "db:promote-admin": "tsx scripts/promote-local-admin.ts",
     "analytics": "tsx scripts/analytics.ts",
     "analytics:dashboard": "tsx scripts/analytics-dashboard.ts",
     "docs": "node scripts/serve-docs.mjs"
