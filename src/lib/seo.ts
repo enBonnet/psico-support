@@ -4,13 +4,15 @@
 export const SITE_URL = 'https://psicoayudaven.com'
 export const SITE_NAME = 'PsicoAyudaVen'
 export const SITE_BRAND = 'Psico Ayuda Venezuela'
-// ponytail: tagline names the contingency, not just "you're not alone" — the
-// platform exists specifically for people affected by the earthquakes in
-// Venezuela. Kept generic ("contingencia") so the title survives the
-// emergency evolving past the terremotos; the home/acerca copy names the quakes
-// explicitly. Separator is · (matches the brand-title rhythm) and is reused
-// by seoHead for per-page titles so the whole site reads as one family.
-export const SITE_TAGLINE = 'Red de apoyo gratuito ante la contingencia'
+// ponytail: tagline names the mission concisely. The full title
+// (SITE_DEFAULT_TITLE) must stay ≤ 60 chars / ~600px for Google's SERP
+// preview — "Psico Ayuda Venezuela · Apoyo psicológico gratuito" = 50 chars,
+// safely within the limit. The previous tagline ("Red de apoyo gratuito ante
+// la contingencia") pushed the title to 66 chars and got truncated. The
+// description carries the fuller context (contingencia, WhatsApp, etc.).
+// Separator is · (matches the brand-title rhythm) and is reused by seoHead
+// for per-page titles so the whole site reads as one family.
+export const SITE_TAGLINE = 'Apoyo psicológico gratuito'
 export const SITE_TITLE_SEPARATOR = ' · '
 export const SITE_DEFAULT_TITLE = `${SITE_BRAND}${SITE_TITLE_SEPARATOR}${SITE_TAGLINE}`
 const DEFAULT_IMAGE = `${SITE_URL}/logo512.png`
@@ -61,10 +63,16 @@ export function seoHead({
     { property: 'og:url', content: url },
     { property: 'og:image', content: image },
     { property: 'og:locale', content: 'es_VE' },
-    { property: 'twitter:card', content: 'summary_large_image' },
-    { property: 'twitter:title', content: shareTitle },
-    { property: 'twitter:description', content: description },
-    { property: 'twitter:image', content: image },
+    // ponytail: Twitter card tags use name= (not property= like OG). Twitter's
+    // crawler only reads <meta name="twitter:*">; <meta property="twitter:*">
+    // (which React renders when you pass `property`) is silently ignored —
+    // so the cards rendered blank in X/Twitter share previews. Also added
+    // twitter:url, which was missing entirely. Mirrors the og:url value.
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: shareTitle },
+    { name: 'twitter:description', content: description },
+    { name: 'twitter:image', content: image },
+    { name: 'twitter:url', content: url },
   ]
   const links = [{ rel: 'canonical', href: url }]
   return { meta, links }

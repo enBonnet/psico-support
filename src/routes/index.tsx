@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { HeartPulse, LifeBuoy, Stethoscope, UserCheck } from 'lucide-react'
 import { track, trackProContactHelpNow } from '#/lib/analytics-client'
+import { CrisisBanner } from '#/components/crisis-banner'
 import { notify } from '#/lib/notifications'
 import { seoHead, organizationJsonLd, websiteJsonLd } from '#/lib/seo'
 import { InstallCard } from '#/lib/install-prompt'
@@ -27,8 +28,14 @@ export const Route = createFileRoute('/')({
       // for callers that read this route's head config directly.
       title:
         'Psico Ayuda Venezuela · Red de apoyo gratuito ante la contingencia',
+      // ponytail: meta description must fit within Google's mobile SERP
+      // preview (~3 lines, ~120 chars). The previous versions (189 chars,
+      // then 138 chars) still exceeded the mobile 3-line limit. This version
+      // is ~103 chars — safely within mobile, and keeps the key search-intent
+      // terms (apoyo psicológico, gratuito, Venezuela, psicólogos verificados,
+      // WhatsApp, confidencial).
       description:
-        'Red de apoyo psicológico gratuito para personas afectadas por los terremotos en Venezuela. Te conectamos con psicólogos verificados, por WhatsApp o de forma presencial. Servicio confidencial.',
+        'Apoyo psicológico gratuito en Venezuela. Psicólogos verificados por WhatsApp. Servicio confidencial.',
       path: '/',
     }),
   component: Landing,
@@ -151,6 +158,14 @@ function Landing() {
           </p>
         )}
       </header>
+
+      {/* ponytail: C2 (healthcare-ui audit) — crisis escape hatch on the
+          highest-traffic page. A user in acute suicidal crisis landing on "/"
+          needs an immediate "¿Es una emergencia?" path before any CTA. The
+          banner pins modality=remote so a person in distress never hits an
+          empty in-person list. Sits directly below the hero (above the CTAs)
+          so it's visible on first paint without scrolling on most phones. */}
+      <CrisisBanner />
 
       {/* ponytail: explicit "not a bot" reassurance. Users increasingly assume
           WhatsApp support lines are AI; this states the opposite up front — real

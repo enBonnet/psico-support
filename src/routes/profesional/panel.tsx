@@ -8,8 +8,10 @@ import {
   CheckCircle2,
   ChevronRight,
   ClipboardList,
+  Clock,
   MessageCircle,
   Mic,
+  ShieldAlert,
   Trash2,
   UserCog,
   Video,
@@ -31,7 +33,17 @@ import {
 } from '#/server/professionals'
 import { countMyOpenFollowUps } from '#/server/follow-ups'
 import { listMyStories } from '#/server/audio-stories'
+import { getMyAppointmentsPro } from '#/server/appointments'
 import { noindexHead } from '#/lib/seo'
+
+// ponytail: C3 (healthcare-ui audit) — format an upcoming appointment's start
+// in the viewer's tz (browser default). The pro is likely in Venezuela but
+// could be abroad; the appointment is stored as UTC ms. Reuses the same es-VE
+// locale + browser-tz pattern as cuenta.sesiones.tsx.
+const panelTimeFmt = new Intl.DateTimeFormat('es-VE', {
+  weekday: 'short', day: 'numeric', month: 'short',
+  hour: '2-digit', minute: '2-digit', hour12: true,
+})
 
 // ponytail: direct support line to the admin. Constant, not env — mirrors the
 // SITE_URL convention in src/lib/seo.ts. wa.me wants digits only (no +).
@@ -101,6 +113,24 @@ function PanelPage() {
   // Disponibilidad card and show a collaborator note instead. They still
   // contribute audios, gated on `verified`.
   const providesService = me?.providesService ?? true
+
+  // ponytail: C3 (healthcare-ui audit) — the pro's upcoming video sessions for
+  // the "needs attention" summary card. getMyAppointmentsPro already exists
+  // (src/server/appointments.ts) and returns AppointmentListItem[]; we filter
+  // for upcoming booked sessions on the client. Only fetched for verified,
+  // service-providing pros when appointments are enabled (the feature gate).
+  // Lazy-completion (past → 'completed') runs server-side on the list fetch.
+  const { data: proAppts } = useQuery({
+    queryKey: ['my-appointments-pro'],
+    queryFn: () => getMyAppointmentsPro(),
+    enabled: !!me && verified && providesService && APPOINTMENTS_ENABLED,
+  })
+  // ponytail: upcoming = booked + endAt in the future. Limit to the next 2 so
+  // the summary stays compact (the full list lives at /profesional/sesiones).
+  const upcomingSessions = (proAppts?.appointments ?? [])
+    .filter((a) => a.status === 'booked' && a.endAt > Date.now())
+    .slice(0, 2)
+  const showSummary = upcomingSessions.length > 0 || openFollowUps > 0
 
   const del = useMutation({
     mutationFn: () => deleteMyProfessional(),
@@ -223,6 +253,10 @@ function PanelPage() {
             </div>
           ) : me.verifiedStatus === 'disabled' ? (
             <div className="glass-card-soft mt-4 flex items-start gap-2 rounded-[var(--glass-radius-sm)] bg-red-50/60 px-4 py-3 text-sm text-red-800">
+              <ShieldAlert
+                className="size-5 shrink-0"
+                aria-hidden="true"
+              />
               <span>
                 Tu cuenta está temporalmente suspendida mientras revisamos tu
                 información. Escríbenos a soporte para más detalle.
@@ -230,6 +264,10 @@ function PanelPage() {
             </div>
           ) : (
             <div className="glass-card-soft mt-4 flex items-start gap-2 rounded-[var(--glass-radius-sm)] bg-amber-50/60 px-4 py-3 text-sm text-amber-800">
+              <Clock
+                className="size-5 shrink-0"
+                aria-hidden="true"
+              />
               <span>
                 Tu credencial está{' '}
                 <span className="font-semibold">en revisión</span>
@@ -240,6 +278,66 @@ function PanelPage() {
                   'Podrás configurar tu disponibilidad cuando un administrador apruebe tu registro.'}
               </span>
             </div>
+          )}
+
+          {/* ── Resumen / Atención (C3 healthcare-ui audit) ── */}
+          {/* ponytail: Koruux Cat. 7 — "Depict a clear overview of how things
+              are running. Highlight scenarios where an intervention may be
+              required." The panel was a flat menu of links; a provider opening
+              it had no summary of what needs action today. This card surfaces
+              upcoming video sessions + open follow-ups as actionable items,
+              linking to the relevant sub-pages. Empty-state-safe: hidden
+              entirely when there's nothing pending (no "0 tasks" box). */}
+          {showSummary && (
+            <section className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] p-4">
+              <h2 className="text-sm font-semibold text-[var(--medi-text-primary)]">
+                Atención
+              </h2>
+              <ul className="mt-2 flex flex-col gap-2">
+                {upcomingSessions.map((a) => (
+                  <li key={a.id}>
+                    <Link
+                      to="/profesional/sesiones"
+                      className="flex items-center gap-2 rounded-[var(--glass-radius-sm)] p-2 transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+                    >
+                      <Video
+                        className="size-4 shrink-0 text-[var(--medi-secondary)]"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-[var(--medi-text-primary)]">
+                          {a.clientName}
+                        </span>
+                        <span className="block text-xs text-[var(--medi-text-secondary)]">
+                          {panelTimeFmt.format(new Date(a.startAt))} · {a.durationMin} min
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+                {openFollowUps > 0 && (
+                  <li>
+                    <Link
+                      to="/profesional/seguimiento"
+                      className="flex items-center gap-2 rounded-[var(--glass-radius-sm)] p-2 transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+                    >
+                      <ClipboardList
+                        className="size-4 shrink-0 text-[var(--medi-secondary)]"
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium text-[var(--medi-text-primary)]">
+                          Seguimientos abiertos
+                        </span>
+                        <span className="block text-xs text-[var(--medi-text-secondary)]">
+                          {openFollowUps} {openFollowUps === 1 ? 'registro por' : 'registros por'} completar
+                        </span>
+                      </span>
+                    </Link>
+                  </li>
+                )}
+              </ul>
+            </section>
           )}
 
           {/* ── Accesos ── */}

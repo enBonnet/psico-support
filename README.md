@@ -21,9 +21,14 @@ y gestionar su disponibilidad.
 - **Perfil profesional** (`/ayuda/profesionales/$id`): página pública por
   profesional con SEO (Open Graph, Twitter Cards, JSON-LD `schema.org/Person`),
   avatar, redes sociales y botón **Compartir** (Web Share API → portapapeles).
+- **Ayuda específica** (`/ayuda/especifica`): triage de áreas sensibles (duelo,
+  trauma, suicidio, etc.) que lleva al directorio pre-filtrado por cada eje.
+  Los profesionales con modo **exclusivo** solo aparecen cuando un buscador
+  filtra por una de sus áreas — nunca en el listado general.
 - **Voces que acompañan** (`/apoyo`): clips cortos en voz de psicólogos
-  verificados, en un visor auto-avance estilo historias de Instagram — para
-  quien llega en crisis y solo necesita escuchar algo.
+  verificados, agrupados por **categorías** (para niños, cuentos, respira
+  conmigo, crisis ahora, etc.) en un visor auto-avance estilo historias de
+  Instagram — para quien llega en crisis y solo necesita escuchar algo.
 - **Herramientas de autocuidado** (`/recursos`): ejercicios interactivos
   (respiración cuadrada, técnica 5-4-3-2-1), un autochequeo basado en los
   protocolos validados ASQ + K6, y psicoeducación (Primeros Auxilios
@@ -44,8 +49,9 @@ y gestionar su disponibilidad.
   (Siempre disponible / Por horario / No disponible). La disponibilidad **se
   deriva en tiempo real** del horario en cada render — sin cron ni lag.
 - **Voces que acompañan** (`/profesional/audios`): grabadora nativa en el
-  navegador (`MediaRecorder`) con fallback de subida de archivo. Hasta 2 audios
-  por profesional, revisados por el admin antes de publicarse.
+  navegador (`MediaRecorder`) con fallback de subida de archivo. Un clip por
+  categoría (sin tope global), cada uno con **título + descripción opcional**,
+  revisados por el admin antes de publicarse.
 - **Seguimiento clínico** (`/profesional/seguimiento`): registro privado de
   las personas atendidas (teléfono, motivo, triaje de riesgo tipo C-SSRS,
   acción PFA, estado, próximo contacto, notas). **Privado por profesional** —
@@ -56,8 +62,12 @@ y gestionar su disponibilidad.
 - **Panel de administración** (`/admin`): cola de verificación unificada con
   búsqueda, filtros por estado y paginación. Aprobar / rechazar / suspender /
   reactivar / eliminar, contacto directo por WhatsApp, vista del certificado y
-  documentos de respaldo. Sección de revisión de audios. Gestión de usuarios.
-  Acceso basado en la BD (columna `user.role`), no por variable de entorno.
+  documentos de respaldo. **Editar el perfil de un profesional antes de
+  aceptarlo** (`/admin/profesionales/$id` — "approve with changes"). Revisión
+  de audios + **CRUD de categorías de audios**. Gestión de usuarios (promover
+  admins). **Analítica** en `/admin/analitica` (KPIs, embudos, retención,
+  inventario operacional D1). Acceso basado en la BD (columna `user.role`),
+  no por variable de entorno.
 
 ### Transversales
 
@@ -146,7 +156,14 @@ npx wrangler d1 migrations apply psico-support-db --local   # aplica en local
 
 ### Dar permisos de administrador
 
-El admin se define en la BD (`user.role`), no por variable de entorno:
+El admin se define en la BD (`user.role`), no por variable de entorno. Para
+promover en la BD runtime local hay un script dedicado:
+
+```bash
+npm run db:promote-admin -- --email tu@correo.com   # --dry-run para ver sin escribir
+```
+
+O directamente con SQL contra la runtime:
 
 ```sql
 UPDATE user SET role = 'admin' WHERE email = 'tu@correo.com';
@@ -225,6 +242,8 @@ npx wrangler d1 migrations apply psico-support-db --remote  # producción
 | `db:reset-passwords` | Pone una contraseña única en todas las cuentas `credential` locales                                                                                                                         |
 |                      | (`scripts/reset-local-passwords.ts`) para poder iniciar sesión como cualquier usuario sin saber su clave.                                                                                   |
 |                      | `--email` para uno solo, `--dry-run` para ver sin escribir. Hash scrypt compatible con Better Auth.                                                                                         |
+| `db:promote-admin`   | Promueve un usuario a `role='admin'` en la runtime local (`scripts/promote-local-admin.ts`). Promote-only (sin demote),                                                                     |
+|                      | idempotente. `--email` para uno solo, `--dry-run` para ver sin escribir. Reutiliza el patrón de los otros scripts de runtime local.                                                         |
 
 ### Analítica y docs
 
@@ -275,35 +294,52 @@ npx wrangler d1 migrations list psico-support-db --remote   # debe quedar vacío
 ```
 src/
   routes/
-    ayuda/               # ruta de paciente + directorio + perfil profesional
+    index.tsx            # landing (triage: ayuda ahora / específica / autocuidado)
+    ayuda/               # ruta de paciente + triage de ayuda específica
+      index.tsx          #   elección de modalidad (presencial vs a distancia)
+      especifica.tsx     #   triage de áreas sensibles → directorio pre-filtrado
       profesionales/
         index.tsx        # directorio (filtro/búsqueda/paginación) — CSR
         $id.tsx          # perfil público por profesional (SEO + compartir) — SSR
+    ahora.tsx            # "auto-conectar a WhatsApp" (share link / QR) — distinto
+                          #   de las vanity que 307-redirigen al directorio
     profesional/         # registro (2 pasos), login, panel + sub-rutas enfocadas
-                          # (perfil, presentación, disponibilidad, audios, seguimiento)
-    admin/               # verificación + revisión de audios + gestión de usuarios
+                          # (perfil, presentación, disponibilidad, audios, sesiones,
+                          #  seguimiento) — todo CSR
+    admin/               # verificación + edición de perfiles + revisión de audios +
+                          #   CRUD de categorías + gestión de usuarios — CSR
+      profesionales/$id  #   editar perfil antes de aceptar ("approve with changes")
+      analitica.tsx      #   KPIs / embudos / retención / inventario D1
     recursos/            # herramientas de autocuidado (respirar, enraizamiento,
                           # autochequeo, psicoeducación SSR)
-    apoyo/               # "Voces que acompañan" (bandeja de audios)
+    apoyo/               # "Voces que acompañan" (bandeja por categorías)
     cuenta.tsx           # hub de cuenta según rol
+    cuenta.sesiones*     # videollamadas programadas (cliente) — gated por feature flag
     recuperar.tsx        # recuperación de contraseña
     {psicologos,ayudame,ya}.tsx   # vanity → directorio remoto (307 server-side)
+    {acerca-de,equipo,terminos,privacidad,voluntariado,como-funciona,social}.tsx
+                          #   contenido estático / SSR
     media/$              # rutas que sirven R2 (avatar, audio, certificado, documento)
     api/auth/$           # handler de Better Auth
   server/                # server functions
-    professionals.ts     #   profesionales (lista, alta, disponibilidad, admin)
-    audio-stories.ts     #   "Voces que acompañan"
+    professionals.ts     #   profesionales (lista, alta, disponibilidad, admin, auth)
+    appointments.ts      #   videollamadas programadas (gated por flag)
+    audio-stories.ts     #   "Voces que acompañan" + categorías
     follow-ups.ts        #   seguimiento clínico (privado por profesional)
     analytics.ts         #   catálogo de eventos + writeEvent() + track() auth-free
+    analytics-read.ts    #   lectura del dataset (SQL API) para /admin/analitica
+    email.ts             #   correo transaccional (recuperar, confirmación de cita)
     locations.ts         #   mapa de estados y ciudades de Venezuela
   lib/
     sentry.ts            # getSentryDsn() + getSentryInitOptions() (compartido)
     analytics-client.ts  # track() tipado, fire-and-forget, seguro para SSR
+    features.ts          # feature flags de cliente (p. ej. APPOINTMENTS_ENABLED)
     seo.ts               # helpers SEO (OG/Twitter/canonical + JSON-LD)
     notifications.tsx    # notificaciones fire-and-forget estilo iOS
     install-prompt.tsx   # detección de instalación PWA
-  components/            # bottom-tabs (BottomTabs + DesktopNav), ui/*, tag-select,
-                          # phone-input, avatar, …
+  components/            # bottom-tabs (BottomTabs + DesktopNav), ui/* (button, card,
+                          # badge, input, switch, skeleton), tag-select, phone-input,
+                          # avatar, audio-story-viewer, professional-form, admin-shared…
   server.ts              # entrada del Worker (httpsRedirect + Sentry.withSentry)
   instrument.client.ts   # Sentry.init (cliente)
   db/                    # esquema Drizzle + cliente D1
