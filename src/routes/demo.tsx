@@ -406,9 +406,9 @@ function PrintManual() {
 
       <h3>Audios para Voces que acompañan</h3>
       <p>
-        Mensajes cortos (idealmente 1:30, máximo 3 min y 3 MB; hasta 2 audios
-        por profesional; formatos WebM/MP4/MP3/OGG). Cada audio pasa por
-        revisión antes de publicarse.
+        Mensajes cortos (idealmente 1:30, máximo 3 min y 3 MB; un audio por
+        categoría (sin límite de cantidad); formatos WebM/MP4/MP3/OGG). Cada
+        audio pasa por revisión antes de publicarse.
       </p>
 
       <h3>Seguimiento clínico</h3>

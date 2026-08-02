@@ -87,15 +87,11 @@ components (`Button`, `Card`, `Input`, etc.) render in-theme automatically:
 ## Background
 
 The page background is a soft blue wash rather than a flat color — three
-radial gradients over a `#eff7fe` base, plus a subtle fixed grid overlay
-(`body::before` / `body::after`). This carries Medicall's airy, clinical feel
-while staying lightweight.
-
-## Dark mode
-
-A navy/blue dark variant is defined under `.dark` — same token names, inverted
-luminance, keeping the blue identity. Activate by adding the `dark` class to
-`<html>`.
+radial gradients over a `#eff7fe` base (`body`), plus a fixed blob field
+(`body::before`) of soft white/blue radial highlights. This carries Medicall's
+airy, clinical feel while staying lightweight. (A faint hairline grid overlay
+that used to live in `body::after` was removed — it read as a generated-UI
+signature under the glass cards without adding product structure.)
 
 ## Liquid Glass
 
@@ -112,8 +108,11 @@ surface to a solid tint — readable, just not refractive.
 
 ### Glass tokens
 
-All tokens live in `src/styles.css` under `:root` and `.dark`. New code should
-prefer these over the legacy `--surface*` aliases.
+All tokens live in `src/styles.css` under `:root`. New code should prefer these
+over the legacy `--surface*` aliases. (The app renders **light-only** — there is
+no dark variant. A `.dark` block was once aspirational dead code and was removed;
+wiring a real dark theme is a separate pass requiring `--medi-*` dark variants,
+a re-audit of every hardcoded `rgba()` in shadows/gradients, and chart variants.)
 
 | Token                    | Light value              | Role                                                      |
 | ------------------------ | ------------------------ | --------------------------------------------------------- |
@@ -132,10 +131,6 @@ prefer these over the legacy `--surface*` aliases.
 | `--glass-radius-pill`    | `999px`                  | Badges, chips, switch track, toggle                       |
 | `--glass-shadow`         | (composite)              | Inset specular + two-layer drop shadow                    |
 | `--glass-shadow-pressed` | (composite)              | Tighter shadow for soft/recessed surfaces                 |
-
-Dark mode mirrors these with a navy tint (`rgba(20,32,64,*)`) and cool
-specular highlights (`rgba(180,205,255,*)`), slightly higher blur (24px) and
-lower saturation (160%) — the same construction, inverted luminance.
 
 ### Specular edge (the rim light)
 
@@ -217,7 +212,7 @@ control without a gap.
 1. **One material per layer.** Don't nest `.glass-card` inside `.glass-card`
    — use `.glass-card-soft` for the inner surface so the depth reads.
 2. **Glass wants blur behind it.** The page background's radial gradients +
-   grid overlay exist to give `backdrop-filter` something to refract. On
+   blob field exist to give `backdrop-filter` something to refract. On
    near-flat backgrounds the effect is invisible — keep the body bg gradient.
 3. **Text contrast first.** The tints are tuned so `--medi-text-primary`
    (`#252525`) passes WCAG AA on `.glass-card` even without blur. If you

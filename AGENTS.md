@@ -184,10 +184,13 @@ Global `spa: { enabled: true }` rewrites **every** route to CSR and would break
 the profile route's SSR (which feeds OG/JSON-LD for share previews). Instead
 this app uses **per-route `ssr: false`** (the `ssr` route option):
 
-- **CSR (`ssr: false`)**: `signup`, `cuenta`, `profesional/{login,registro,
-  completar,panel}`, `admin/`, `ayuda/profesionales/` (directory).
-- **SSR (default)**: `ayuda/profesionales/$id` (profile — SEO/link previews).
-  Its `head()` reads `loaderData`; the loader must run server-side.
+- **CSR (`ssr: false`)**: `signup`, `cuenta`, `cuenta.sesiones*` (booking — gated),
+  `ahora` (auto-connect share link), `profesional/{login,registro,completar,
+  panel,sesiones}`, `admin/` (incl. `admin/profesionales/$id` and `admin/analitica`),
+  `ayuda/profesionales/` (directory).
+- **SSR (default)**: `ayuda/profesionales/$id` (profile — SEO/link previews) and
+  `ayuda/especifica` (specific-help triage). Their `head()` reads `loaderData`;
+  the loader must run server-side.
 
 **Do NOT** enable `spa.enabled` to "make it a SPA" — it is only used as a
 build-time shell generator (gotcha #7) and the profile route must stay SSR.
@@ -319,38 +322,48 @@ src/
     __root.tsx           # shell: <DesktopNav> + children + <BottomTabs> + <NotificationStack> + SW register (PROD)
     index.tsx            # landing triage
     cuenta.tsx           # role-aware account hub (login, panel, admin, sign-out) — CSR
+    cuenta.sesiones*.tsx # scheduled video-call booking (client side) — CSR, gated by APPOINTMENTS_ENABLED
     signup.tsx           # basic-account signup — CSR
     recuperar.tsx        # password reset flow (request + new password + error states)
     ayuda/
       index.tsx          # modality selection (in-person vs remote)
+      especifica.tsx    # specific-help triage (sensitive areas) → directory pre-filtered — SSR
       profesionales/
         index.tsx        # directory: filter/search/paginate, 2-col grid — CSR
         $id.tsx          # per-pro profile (SEO + share) — SSR (keeps OG/JSON-LD)
+    ahora.tsx            # share-link "auto-connect to WhatsApp" (renders + auto-connects, NOT a redirect)
     profesional/         # all CSR
       login.tsx, registro.tsx, completar.tsx
       panel.tsx          # card-based hub of profile actions
-      perfil.tsx, presentacion.tsx, disponibilidad.tsx, audios.tsx   # focused sub-routes
+      perfil.tsx, presentacion.tsx, disponibilidad.tsx, audios.tsx, sesiones.tsx   # focused sub-routes
       seguimiento.tsx    # private clinical follow-ups (owner-scoped)
-    admin/index.tsx      # pro review + user management — CSR
+    admin/               # all CSR
+      index.tsx          # pro review (with edit link) + audio review + audio-category CRUD + user management
+      profesionales/$id.tsx  # edit a pro's profile before accepting ("approve with changes")
+      analitica.tsx      # KPIs / funnels / retention / D1 operational inventory (no in-app link)
     recursos/            # self-care tools (respirar, enraizamiento, autochequeo, psicoeducación SSR)
-    apoyo/index.tsx      # "Voces que acompañan" — audio-stories tray
-    {acerca-de,equipo,terminos,app,como-funciona,social}.tsx   # static / SSR content
+    apoyo/index.tsx      # "Voces que acompañan" — audio-stories tray grouped by category
+    {acerca-de,equipo,terminos,privacidad,voluntariado,app,como-funciona,social}.tsx   # static / SSR content
     {psicologos,ayudame,ya}.tsx  # vanity redirects (server-side, 307) → remote directory
     media/$              # R2-serving routes (avatar, audio, certificate, document — public or owner/admin)
     api/auth/$.ts        # Better Auth handler (server route)
   server/
-    professionals.ts     # list, get, register, availability, admin, auth helpers
-    audio-stories.ts     # "Voces que acompañan" clips (record, list, admin review)
+    professionals.ts     # list, get, register, availability, admin (incl. adminUpdateProfessional), auth helpers
+    appointments.ts      # scheduled video-call booking — gated by APPOINTMENTS_ENABLED secret + flag
+    audio-stories.ts     # "Voces que acompañan" clips + audio_categories CRUD (record, list, admin review)
     follow-ups.ts        # private clinical follow-ups (owner-scoped, no public/admin fn)
     analytics.ts         # TRACKED_EVENTS catalog + writeEvent() + auth-free track() server fn
+    analytics-read.ts    # read-back of the Analytics Engine dataset (SQL API) for /admin/analitica
+    email.ts             # transactional mail (password reset, appointment confirm/cancel + .ics)
     locations.ts         # Venezuela estado/ciudad maps
   components/
     bottom-tabs.tsx      # BottomTabs (mobile, md:hidden) + DesktopNav (desktop, hidden md:flex)
     route-pending.tsx    # router defaultPendingComponent — covers CSR beforeLoad/loader gaps
     not-found.tsx        # router defaultNotFoundComponent — Spanish 404
     error.tsx            # router defaultErrorComponent — Spanish 500 + Sentry captureException
-    avatar.tsx, phone-input.tsx, tag-select.tsx, social-icons.tsx, audio-story-viewer.tsx, …
-    ui/                  # button, card, badge, input, switch, label, skeleton
+    avatar.tsx, phone-input.tsx, tag-select.tsx, social-icons.tsx, audio-story-viewer.tsx,
+    professional-form.tsx, admin-shared.ts, pro-cta.tsx, crisis-banner.tsx, audio-recorder.tsx, …
+    ui/                  # button, card, badge, input, switch, skeleton (no label — removed dead Radix <Label>)
   router.tsx             # createRouter + default{Pending,NotFound,Error}Component + ssr-query + Sentry router tracing
   server.ts              # Worker entry: httpsRedirect + Sentry.withSentry (cloudflare SDK)
   start.ts               # createStart + Sentry request/function middleware
@@ -361,9 +374,11 @@ src/
     auth-client.ts       # Better Auth client
     sentry.ts            # getSentryDsn() + shared getSentryInitOptions() (client + dev server)
     analytics-client.ts  # typed track() + getAnonId() + trackProContact{,Random} — SSR-safe, fire-and-forget
+    features.ts          # client feature flags (build-time VITE_ vars, e.g. APPOINTMENTS_ENABLED)
     notifications.tsx    # iOS-style fire-and-forget notify() + <NotificationStack/>
     seo.ts               # seoHead() + profileJsonLd() helpers; SITE_URL constant
     install-prompt.tsx   # useInstallPrompt() + <InstallCard/> (PWA install detection)
+    whatsapp.ts          # centralized WhatsApp deep-link + message builder
     hooks/use-debounced.ts
     version.ts           # APP_VERSION (re-export of build-time __APP_VERSION__)
   db/                    # Drizzle schema + D1 client (setCloudflareEnv per-request)

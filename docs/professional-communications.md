@@ -21,12 +21,15 @@ stack. Always close with an invitation to reply with doubts/suggestions.
 **Channel:** TBD (WhatsApp broadcast to verified professionals, pending
 confirmation).
 **Status:** 🟡 **DRAFT — do not send until reviewed.** This feature is
-implemented but **not yet deployed, and gated behind a feature
-flag that defaults to OFF**. Sending the announcement before flipping the
-flag + deploying would tell pros about a button that doesn't appear yet.
-(The version metadata in `package.json` is `1.25.0`; the CHANGELOG still
-lists this under `[Unreleased]` until the release is cut — align them
-before sending.)
+implemented and shipped in code (changelog `[1.26.0]`, currently at app
+version `1.30.0`), but **still gated behind a feature flag that defaults to
+OFF** in production (`VITE_APPOINTMENTS_ENABLED` is not set in the build env;
+the server secret `APPOINTMENTS_ENABLED` exists but the client gate hides the
+CTA). Sending the announcement before flipping the client flag + redeploying
+would tell pros about a button that doesn't appear yet. The "Duraciones de
+videollamada" control on the Disponibilidad page *is* visible regardless of the
+flag (so pros can configure ahead of rollout) — the booking flow itself is what's
+hidden.
 
 **Context:** new scheduled-video-call booking path. Up to now the only
 remote option was instant WhatsApp ("Necesito ayuda ahora"). This adds a
@@ -75,7 +78,7 @@ appear.
 **Follow-up notes:**
 - The server flag (`APPOINTMENTS_ENABLED` secret) and the client flag
   (`VITE_APPOINTMENTS_ENABLED`) are two separate knobs — set both together.
-  See the CHANGELOG `[Unreleased]` entry for why they can't be one.
+  See the CHANGELOG `[1.26.0]` entry for why they can't be one.
 - This message does NOT mention the support group promised on 2026-07-03;
   that commitment is still open and tracked separately.
 

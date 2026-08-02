@@ -4,8 +4,8 @@
 
 ---
 
-**Versión del manual:** 1.1
-**Versión de la aplicación:** 1.24.0
+**Versión del manual:** 1.2
+**Versión de la aplicación:** 1.30.0
 **Sitio:** [https://psicoayudaven.com](https://psicoayudaven.com)
 **Soporte:** soporte@psicoayudaven.com
 
@@ -102,6 +102,9 @@ Y la plataforma te lleva a la lista de profesionales para que elijas tú misma/o
 
 También puedes usar los botones secundarios de la página de inicio:
 
+- **"Necesito ayuda específica"** — si buscas apoyo en un tema concreto (duelo,
+  trauma, suicidio, etc.). Te lleva a una página donde eliges el área y de ahí
+  al directorio ya filtrado por profesionales de ese enfoque.
 - **"O ver todos los profesionales"** — abre el directorio completo.
 - **"Herramientas de autocuidado"** — ejercicios gratuitos para tu bienestar.
 - **"Soy psicólogo, quiero ayudar"** — si quieres registrarte como profesional.
@@ -181,7 +184,9 @@ Si el profesional no está disponible, verás **"No disponible ahora"** en lugar
 
 Para entrar: sección **Ayuda → "Voces que acompañan"**, o directamente en `/apoyo`.
 
-Verás el encabezado **"No estás solo"** y un botón **"Solo necesito escuchar algo"**.
+Verás el encabezado **"No estás solo"**. Los audios están **agrupados por categorías** (para niños, cuentos, respira conmigo, para dormir mejor, un poquito de ánimo, estoy en crisis ahora, cuando la soledad pesa, etc.). Arriba hay **chips** para saltar a cada categoría, y cada sección muestra su título y descripción junto a los psicólogos que tienen audios en ella.
+
+Debajo hay un botón **"Solo necesito escuchar algo"**.
 
 Al pulsarlo, los audios se reproducen **uno tras otro**, en secuencia. También puedes:
 
@@ -368,6 +373,11 @@ El registro tiene **dos pasos** y se hace en `/profesional/registro`.
 
 **Especialización:**
 
+- **Atención general** (interruptor, **activado por defecto**): significa que
+  acompañas a cualquier persona, sin filtros de edad, grupo o área. Apareces en
+  el directorio general y en el botón de "ayuda ahora". Con el interruptor
+  **activado**, los cuatro selectores siguientes quedan ocultos. **Desactívalo**
+  solo si quieres definir enfoques específicos.
 - **¿Con quién trabajas?** (obligatorio, elige al menos uno): Niños, Adolescentes, Adultos, Adultos mayores.
 - **¿Con qué poblaciones específicas trabajas?** (opcional): Comunidad LGBTQ+, Migrantes y refugiados, Pueblos originarios, Comunidades rurales, Personas privadas de libertad, Adolescentes en riesgo social.
 - **¿En qué áreas intervienes?** (opcional): Violencia (género/intrafamiliar), Adicciones, Intervención en crisis, Ansiedad y depresión.
@@ -505,6 +515,15 @@ Puedes añadir varios bloques por día. Si dejas un día vacío, verás **"Sin h
 
 No apareces en el directorio hasta que vuelvas a activarte. Útil cuando estás de descanso o no puedes atender.
 
+### Duraciones de videollamada
+
+Debajo del horario verás **"Duraciones de videollamada"**: elige qué sesiones
+ofreces (15 / 30 / 45 / 60 min). Al menos una debe quedar seleccionada (si
+intentas quitar la última, no se quita). Esta configuración se guarda junto con
+el horario y se usa para las **videollamadas programadas** (agendamiento). Esa
+funcionalidad se activa por separado; mientras tanto puedes dejar tus duraciones
+configuradas para cuando esté disponible.
+
 No olvides pulsar **"Guardar disponibilidad"** al terminar.
 
 ## 19. Grabar audios para "Voces que acompañan"
@@ -517,17 +536,24 @@ Desde el panel entra a **"Mis audios de apoyo"**. Aquí grabas mensajes cortos d
 
 - **Duración:** idealmente 1:30 min, máximo **3 minutos** (se detiene solo).
 - **Tamaño:** máximo **3 MB**.
-- **Cantidad:** hasta **2 audios** aprobados o en revisión por profesional.
+- **Cantidad:** **sin límite** — graba los audios que quieras (uno por categoría).
 - **Formatos:** WebM, MP4, MP3 u OGG.
+
+> Cada audio debe asignarse a **una categoría** (obligatoria): para niños,
+> cuentos, respira conmigo, para dormir mejor, un poquito de ánimo, estoy en
+> crisis ahora, cuando la soledad pesa, etc. Las categorías las gestiona el
+> administrador; si necesitas una que no está, pídela.
 
 ### Cómo grabar
 
-1. (Opcional) Escribe un **título** (máximo 120 caracteres), por ejemplo: *"Para cuando la soledad pesa"*.
-2. Pulsa **"Grabar"** para usar el micrófono, o **"Subir archivo"** para subir un audio ya grabado.
-3. Mientras grabas verás el tiempo: `{transcurrido} / 3:00`.
-4. Pulsa **"Detener"** cuando termines.
-5. Escucha la **vista previa**. Si te gusta, déjala; si no, pulsa **"Grabar de nuevo"** o **"Quitar"**.
-6. Pulsa **"Enviar para revisión"**.
+1. **Elige la categoría** (obligatoria) en el desplegable "Categoría".
+2. (Opcional) Escribe un **título** (máximo 120 caracteres), por ejemplo: *"Para cuando la soledad pesa"*.
+3. (Opcional) Escribe una **descripción** corta (máximo 200 caracteres) — se muestra como subtítulo bajo el título cuando alguien escucha el audio.
+4. Pulsa **"Grabar"** para usar el micrófono, o **"Subir archivo"** para subir un audio ya grabado.
+5. Mientras grabas verás el tiempo: `{transcurrido} / 3:00`.
+6. Pulsa **"Detener"** cuando termines.
+7. Escucha la **vista previa**. Si te gusta, déjala; si no, pulsa **"Grabar de nuevo"** o **"Quitar"**.
+8. Pulsa **"Enviar para revisión"**. El botón se habilita solo cuando hay un audio grabado **y** una categoría elegida.
 
 Verás: **"Audio enviado — Quedó en revisión. Aparecerá aquí cuando se apruebe."**
 
@@ -645,10 +671,11 @@ El rol de administrador **se asigna desde la base de datos** (no por variables d
 
 - Título: **"Administración"**.
 - Contador: **"{n} profesionales verificados"**.
-- Tres secciones, una debajo de la otra:
-  1. **Profesionales** — cola de revisión de credenciales.
-  2. **Audios de apoyo — revisión** — moderación de audios.
-  3. **Usuarios** — promoción de administradores.
+- Cuatro secciones, una debajo de la otra:
+  1. **Categorías de audios** — creación y edición de las categorías de *Voces que acompañan*.
+  2. **Profesionales** — cola de revisión de credenciales (con edición de perfil).
+  3. **Audios de apoyo — revisión** — moderación de audios.
+  4. **Usuarios** — promoción de administradores.
 
 > No hay pestañas. Es una sola página que se desplaza hacia abajo.
 
@@ -678,7 +705,15 @@ Cada profesional aparece como una tarjeta con:
 - Si subió certificado: enlace **"Ver certificado adjunto →"**.
 - Si subió documentos: enlaces **"📎 {nombre}"**.
 - Un interruptor **"Presta servicio"** (solo en verificados y suspendidos).
+- Un enlace **"Revisar y editar"** (si está pendiente) o **"Editar perfil"** (en los demás estados) que abre la página de edición del perfil.
 - Botones de acción (cambian según el estado).
+
+> **Editar el perfil antes de aceptar** (`/admin/profesionales/$id`): el enlace
+> abre una página donde puedes corregir **cualquier campo del perfil** (nombre,
+> credencial, enfoque de atención + modo inclusivo/exclusivo, modalidad,
+> ubicación, WhatsApp) y luego **"Guardar y aprobar"** (pendientes/rechazados)
+> o **"Guardar"** (verificados/suspendidos). Es el flujo "aceptar con cambios":
+> útil cuando un dato llegó mal y quieres corregirlo antes de verificar.
 
 ### Acciones según el estado
 
@@ -729,6 +764,7 @@ La sección **"Audios de apoyo — revisión"** muestra todos los audios pendien
 Cada tarjeta muestra:
 
 - Nombre del profesional que lo grabó.
+- **Categoría** que eligió (junto al nombre).
 - Título (entre comillas, si lo tiene).
 - Duración en formato `m:ss`.
 - Un **reproductor de audio** para escucharlo.
@@ -740,6 +776,24 @@ Avisos:
 - Rechazar: **"Audio rechazado — Quedó fuera de la lista pública."**
 
 > No hay flujo de "pedir cambios". Solo apruebas o rechazas. Si el profesional quiere, puede grabar uno nuevo.
+
+### Categorías de audios (CRUD)
+
+La sección **"Categorías de audios"** (arriba de todo en `/admin`) te deja crear y
+gestionar las categorías que agrupan los audios en *Voces que acompañan* (para
+niños, cuentos, respira conmigo, etc.):
+
+- **Crear:** escribe **título** + **descripción** corta. El *slug* (id estable
+  para analytics/URLs) se autogenera y no se puede cambiar después.
+- **Editar inline:** cambia título, descripción u orden.
+- **Activar/Desactivar:** interruptor. Las desactivadas no se ofrecen al grabar
+  ni aparecen en `/apoyo`, pero los audios ya publicados siguen accesibles.
+- **Eliminar:** pide confirmación. Se rechaza si la categoría está en uso
+  (audios aprobados o pendientes que la usan) — primero hay que moverlos.
+
+> Las categorías sembradas por defecto amplían el alcance más allá del
+> acompañamiento de crisis. Añade las que necesites; el `slug` es inmutable
+  después de crear.
 
 ## 27. Gestionar usuarios
 
@@ -821,7 +875,7 @@ Pulsa **"Actualizar"** en esta sección para refrescar los datos.
 En su tarjeta, pulsa **"Eliminar"** y confirma. El perfil desaparece del directorio, pero la persona puede volver a registrarse.
 
 **¿Puedo editar los datos de un profesional?**
-No. Solo puedes cambiar su estado (aprobar, rechazar, suspender, reactivar, eliminar) y el interruptor "Presta servicio". Para corregir datos, el profesional debe hacerlo desde su panel.
+Sí. Desde la tarjeta de cualquier profesional pulsa **"Revisar y editar"** (si está pendiente) o **"Editar perfil"** (si ya está verificado/suspendido/rechazado). Se abre una página donde puedes corregir **todos los campos del perfil** (nombre, credencial, los 4 ejes de enfoque + modo inclusivo/exclusivo, modalidad, ubicación, WhatsApp) y luego **"Guardar y aprobar"** / **"Guardar y reactivar"** para aceptarlo con los cambios. A diferencia del self-edit del profesional, cambiar la credencial **no** lo devuelve a "en revisión" (tú eres quien revisa).
 
 **¿Cómo entro a la analítica?**
 Escribe `/admin/analitica` directamente en el navegador. No hay botón en el panel.
@@ -852,8 +906,10 @@ No. El contador superior solo muestra verificados. Tienes que entrar a `/admin` 
 | Foto de perfil | máximo **2 MB** | JPG, PNG, WEBP |
 | Audio de apoyo (duración) | máximo **3 min** (ideal 1:30) | WebM, MP4, MP3, OGG |
 | Audio de apoyo (tamaño) | máximo **3 MB** | WebM, MP4, MP3, OGG |
-| Audios por profesional | **2** (aprobados o en revisión) | — |
+| Audios por profesional | **sin límite** (uno por categoría) | — |
+| Categoría del audio | **obligatoria**, una por audio | — |
 | Título del audio | máximo 120 caracteres | — |
+| Descripción del audio | máximo 200 caracteres | — |
 | Enlace de recuperación | válido **30 minutos**, un solo uso | — |
 
 ## B. Glosario
@@ -880,4 +936,4 @@ No. El contador superior solo muestra verificados. Tienes que entrar a `/admin` 
 
 ---
 
-*Este manual refleja la versión 1.24.0 de la aplicación. Si encuentras algo distinto en la pantalla, es posible que la app se haya actualizado. Consulta la versión más reciente en el repositorio del proyecto.*
+*Este manual refleja la versión 1.30.0 de la aplicación. Si encuentras algo distinto en la pantalla, es posible que la app se haya actualizado. Consulta la versión más reciente en el repositorio del proyecto.*
