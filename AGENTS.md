@@ -322,7 +322,7 @@ src/
     __root.tsx           # shell: <DesktopNav> + children + <BottomTabs> + <NotificationStack> + SW register (PROD)
     index.tsx            # landing triage
     cuenta.tsx           # role-aware account hub (login, panel, admin, sign-out) — CSR
-    cuenta.sesiones*.tsx # scheduled video-call booking (client side) — CSR, gated by APPOINTMENTS_ENABLED
+    cuenta.sesiones*.tsx # scheduled video-call booking (client side) — CSR, gated by VITE_APPOINTMENTS_ENABLED (client) + APPOINTMENTS_ENABLED secret (server); both must be on
     signup.tsx           # basic-account signup — CSR
     recuperar.tsx        # password reset flow (request + new password + error states)
     ayuda/

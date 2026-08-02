@@ -5,7 +5,7 @@
 ---
 
 **Versión del manual:** 1.2
-**Versión de la aplicación:** 1.30.0
+**Versión de la aplicación:** 1.31.0
 **Sitio:** [https://psicoayudaven.com](https://psicoayudaven.com)
 **Soporte:** soporte@psicoayudaven.com
 
@@ -936,4 +936,4 @@ No. El contador superior solo muestra verificados. Tienes que entrar a `/admin` 
 
 ---
 
-*Este manual refleja la versión 1.30.0 de la aplicación. Si encuentras algo distinto en la pantalla, es posible que la app se haya actualizado. Consulta la versión más reciente en el repositorio del proyecto.*
+*Este manual refleja la versión 1.31.0 de la aplicación. Si encuentras algo distinto en la pantalla, es posible que la app se haya actualizado. Consulta la versión más reciente en el repositorio del proyecto.*

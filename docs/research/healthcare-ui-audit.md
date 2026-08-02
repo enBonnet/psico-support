@@ -10,7 +10,9 @@ Audit of the psico-support UI against the **Healthcare UI Patterns** skill (grou
 
 ## TL;DR
 
-The app is **already very strong** on healthcare UX fundamentals — privacy-by-default, crisis-first design, sensitive Spanish tone, accessibility, and mobile-first. Several patterns match or exceed the Koruux best practices. The main gaps are **operational polish** (no saved filters/favorites, limited search history, no reschedule flow, no reminder context for providers) rather than foundational flaws. The audit surfaces 3 critical, 5 strong, and 8 opportunity items.
+The app is **already strong** on healthcare UX fundamentals — privacy-by-default, crisis-first design, sensitive Spanish tone, accessibility, and mobile-first. Several patterns match or exceed the Koruux best practices.
+
+**Update (1.31.0):** The 3 critical findings (C1 booking lifecycle, C2 crisis banner, C3 panel summary) and 4 opportunities (O4, O7, O8, O4-TS) have been **resolved in code** in this release. The sections below are preserved as the original audit for reference; see the [CHANGELOG `[1.31.0]` entry](../../CHANGELOG.md) for the shipped fixes. Residual gaps noted below: **C1** still lacks a dedicated reschedule server fn (the cancel-then-rebook path works but sends two emails), and there are no in-app reminders (only the confirmation email + `.ics`). The **Tier 3 opportunities** (O1, O2, O3, O5, O6) remain roadmap items.
 
 | Category | Screen | Koruux match | Verdict |
 | --- | --- | --- | --- |
