@@ -136,46 +136,28 @@ export const QUERIES: QueryDef[] = [
     title: 'Conversión del embudo',
     description:
       'Conversión paso-a-paso: landing → CTA → directorio → perfil → contacto (con %)',
-    columns: ['step', 'event', 'total', 'pct_of_prev', 'pct_of_first'],
+    // ponytail: Analytics Engine SQL forbids UNION/JOIN/CASE/window functions
+    // (see SQL reference — "queries can only operate on a single table"). The
+    // old query built an ordered "steps" dimension via UNION ALL + LEFT JOINed
+    // the event totals + computed pct via LAG/FIRST_VALUE — none of that is
+    // supported. This now returns a plain per-event total for the 6 funnel
+    // events; the FunnelSection consumer (analitica.tsx) imposes the canonical
+    // step order + FunnelChart computes pct_of_prev/pct_of_first client-side
+    // (it already had that fallback). Zero SQL-side ordering/pct.
+    columns: ['event', 'total'],
     render: 'funnel',
     group: 'Adquisición',
     sql: ({ days }) => `
-      WITH ev AS (
-        SELECT blob1 AS event,
-               SUM(_sample_interval * double1) AS total
-        FROM ${DATASET}
-        WHERE ${sinceDays(days)}
-        GROUP BY blob1
-      ),
-      ordered AS (
-        SELECT '1. Landing'        AS step, 'landing_view'    AS event FROM (SELECT 1)
-        UNION ALL SELECT '2. CTA',              'cta_click'
-        UNION ALL SELECT '3. Directorio',       'directory_view'
-        UNION ALL SELECT '4. Filtro/búsqueda',  'directory_filter'
-        UNION ALL SELECT '5. Perfil',           'profile_view'
-        UNION ALL SELECT '6. Contacto WhatsApp','pro_contact'
-      )
       SELECT
-        o.step,
-        o.event,
-        COALESCE(ev.total, 0) AS total,
-        CASE
-          WHEN LAG(COALESCE(ev.total, 0)) OVER (ORDER BY o.step) = 0 THEN NULL
-          ELSE ROUND(
-            COALESCE(ev.total, 0) * 100.0 /
-            NULLIF(LAG(COALESCE(ev.total, 0)) OVER (ORDER BY o.step), 0),
-          1)
-        END AS pct_of_prev,
-        CASE
-          WHEN FIRST_VALUE(COALESCE(ev.total, 0)) OVER (ORDER BY o.step) = 0 THEN NULL
-          ELSE ROUND(
-            COALESCE(ev.total, 0) * 100.0 /
-            NULLIF(FIRST_VALUE(COALESCE(ev.total, 0)) OVER (ORDER BY o.step), 0),
-          1)
-        END AS pct_of_first
-      FROM ordered o
-      LEFT JOIN ev ON ev.event = o.event
-      ORDER BY o.step
+        blob1 AS event,
+        SUM(_sample_interval * double1) AS total
+      FROM ${DATASET}
+      WHERE blob1 IN (
+        'landing_view', 'cta_click', 'directory_view',
+        'directory_filter', 'profile_view', 'pro_contact'
+      )
+        AND ${sinceDays(days)}
+      GROUP BY event
     `,
   },
   {
@@ -205,16 +187,19 @@ export const QUERIES: QueryDef[] = [
     title: 'Funnel "Necesito ayuda ahora"',
     description:
       'Landing → cta_click(help_now) → pro_contact_help_now (éxito) | help_now_fallback (sin disponibles)',
+    // ponytail: Analytics Engine SQL has no CASE — use nested if(cond, a, b).
+    // The WHERE already restricts to the 3 cases, so every row hits a branch.
     columns: ['step', 'event', 'total'],
     render: 'funnel',
     group: 'Adquisición',
     sql: ({ days }) => `
       SELECT
-        CASE
-          WHEN blob1 = 'cta_click' AND blob4 = 'help_now'          THEN '1. CTA ayuda ahora'
-          WHEN blob1 = 'cta_click' AND blob4 = 'help_now_fallback' THEN '2. Sin disponibles'
-          WHEN blob1 = 'pro_contact_help_now'                      THEN '3. WhatsApp abierto'
-        END AS step,
+        if(blob1 = 'cta_click' AND blob4 = 'help_now',
+             '1. CTA ayuda ahora',
+           if(blob1 = 'cta_click' AND blob4 = 'help_now_fallback',
+             '2. Sin disponibles',
+           if(blob1 = 'pro_contact_help_now',
+             '3. WhatsApp abierto', ''))) AS step,
         blob1 AS event,
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
@@ -224,7 +209,6 @@ export const QUERIES: QueryDef[] = [
       )
       AND ${sinceDays(days)}
       GROUP BY step, event
-      HAVING step IS NOT NULL
       ORDER BY step
     `,
   },
@@ -233,15 +217,15 @@ export const QUERIES: QueryDef[] = [
     title: 'Funnel /ahora',
     description:
       '/ahora view → pro_contact_ahora (éxito). Drop-off = view − contact',
+    // ponytail: CASE → nested if(). WHERE restricts to the 2 events so no
+    // empty-string step leaks through.
     columns: ['step', 'event', 'total'],
     render: 'funnel',
     group: 'Adquisición',
     sql: ({ days }) => `
       SELECT
-        CASE blob1
-          WHEN 'ahora_view'         THEN '1. /ahora cargó'
-          WHEN 'pro_contact_ahora'  THEN '2. WhatsApp abierto'
-        END AS step,
+        if(blob1 = 'ahora_view', '1. /ahora cargó',
+           if(blob1 = 'pro_contact_ahora', '2. WhatsApp abierto', '')) AS step,
         blob1 AS event,
         SUM(_sample_interval * double1) AS total
       FROM ${DATASET}
@@ -257,31 +241,31 @@ export const QUERIES: QueryDef[] = [
     id: 'pro-signup-funnel',
     title: 'Embudo de registro profesional',
     description: 'Vista registro → acepta términos → submit → signup',
+    // ponytail: the old query built an ordered "steps" dimension via UNION ALL
+    // + LEFT JOIN (unsupported — no UNION/JOIN in Analytics Engine SQL). Each
+    // of the 5 events maps to exactly one step via nested if(), so ordering
+    // survives without the dimension table. WHERE restricts to these events,
+    // so no empty-string step leaks.
     columns: ['step', 'event', 'total'],
     render: 'funnel',
     group: 'Adquisición',
     sql: ({ days }) => `
-      WITH ev AS (
-        SELECT blob1 AS event,
-               SUM(_sample_interval * double1) AS total
-        FROM ${DATASET}
-        WHERE blob1 IN (
-          'pro_registro_view', 'pro_registro_step_continue',
-          'pro_terms_accept', 'pro_register_submit', 'auth_signup'
-        )
-          AND ${sinceDays(days)}
-        GROUP BY blob1
-      ),
-      ordered AS (
-        SELECT '1. Vista registro'   AS step, 'pro_registro_view'      AS event FROM (SELECT 1)
-        UNION ALL SELECT '2. Continúa paso', 'pro_registro_step_continue'
-        UNION ALL SELECT '3. Acepta términos','pro_terms_accept'
-        UNION ALL SELECT '4. Submit',         'pro_register_submit'
-        UNION ALL SELECT '5. Cuenta creada',  'auth_signup'
+      SELECT
+        if(blob1 = 'pro_registro_view', '1. Vista registro',
+         if(blob1 = 'pro_registro_step_continue', '2. Continúa paso',
+          if(blob1 = 'pro_terms_accept', '3. Acepta términos',
+           if(blob1 = 'pro_register_submit', '4. Submit',
+            if(blob1 = 'auth_signup', '5. Cuenta creada', ''))))) AS step,
+        blob1 AS event,
+        SUM(_sample_interval * double1) AS total
+      FROM ${DATASET}
+      WHERE blob1 IN (
+        'pro_registro_view', 'pro_registro_step_continue',
+        'pro_terms_accept', 'pro_register_submit', 'auth_signup'
       )
-      SELECT o.step, o.event, COALESCE(ev.total, 0) AS total
-      FROM ordered o LEFT JOIN ev ON ev.event = o.event
-      ORDER BY o.step
+        AND ${sinceDays(days)}
+      GROUP BY step, event
+      ORDER BY step
     `,
   },
 
@@ -430,27 +414,62 @@ export const QUERIES: QueryDef[] = [
   },
 
   // ── Retention: unique actors ─────────────────────────────────────────────
+  // ponytail: Analytics Engine SQL has no conditional distinct-count
+  // (countIf/sumIf/avgIf exist; uniqIf/countDistinctIf do not), and `if(cond,
+  // string, NULL)` fails the same-type rule. So instead of one UNIONed/conditional
+  // query, DAU/WAU/MAU are 3 separate trivial COUNT(DISTINCT) queries against
+  // fixed 1/7/30-day windows (independent of the dashboard's `days` preset —
+  // DAU/WAU/MAU are always those windows by definition). The consumer fires all
+  // 3 in parallel.
+  //
+  // Sampling caveat: COUNT(DISTINCT) does NOT apply _sample_interval, so under
+  // sampling (which Analytics Engine only activates above ~1M writes/min) these
+  // would undercount — they count the distinct actors present in the sampled
+  // subset, not the true cardinality. At this app's volume (low thousands of
+  // events total, tens/day) sampling is NOT active, so these are exact. If
+  // volume ever crosses the sampling threshold, switch each query to
+  // `SELECT index1 FROM ... WHERE ... GROUP BY index1` and count the returned
+  // groups client-side (the documented exact-count-via-group-by escape hatch).
   {
-    id: 'unique-actors',
-    title: 'Usuarios únicos (DAU/WAU/MAU)',
-    description: 'Conteo DISTINCT de actorId en ventanas de 1/7/30 días',
-    columns: ['window', 'unique_actors'],
+    id: 'unique-actors-1d',
+    title: 'Usuarios únicos (DAU)',
+    description: 'Conteo DISTINCT de actorId en 1 día',
+    columns: ['unique_actors'],
     render: 'table',
     group: 'Retención',
-    sql: ({ days: _days }) => `
-      SELECT window, COUNT(DISTINCT index1) AS unique_actors FROM (
-        SELECT index1, '1d' AS window FROM ${DATASET}
-          WHERE timestamp > NOW() - INTERVAL '1' DAY
-          AND index1 != '' AND index1 != 'anonymous'
-        UNION ALL
-        SELECT index1, '7d' FROM ${DATASET}
-          WHERE timestamp > NOW() - INTERVAL '7' DAY
-          AND index1 != '' AND index1 != 'anonymous'
-        UNION ALL
-        SELECT index1, '30d' FROM ${DATASET}
-          WHERE timestamp > NOW() - INTERVAL '30' DAY
-          AND index1 != '' AND index1 != 'anonymous'
-      ) GROUP BY window ORDER BY window
+    sql: () => `
+      SELECT COUNT(DISTINCT index1) AS unique_actors
+      FROM ${DATASET}
+      WHERE timestamp > now() - INTERVAL '1' DAY
+        AND index1 != '' AND index1 != 'anonymous'
+    `,
+  },
+  {
+    id: 'unique-actors-7d',
+    title: 'Usuarios únicos (WAU)',
+    description: 'Conteo DISTINCT de actorId en 7 días',
+    columns: ['unique_actors'],
+    render: 'table',
+    group: 'Retención',
+    sql: () => `
+      SELECT COUNT(DISTINCT index1) AS unique_actors
+      FROM ${DATASET}
+      WHERE timestamp > now() - INTERVAL '7' DAY
+        AND index1 != '' AND index1 != 'anonymous'
+    `,
+  },
+  {
+    id: 'unique-actors-30d',
+    title: 'Usuarios únicos (MAU)',
+    description: 'Conteo DISTINCT de actorId en 30 días',
+    columns: ['unique_actors'],
+    render: 'table',
+    group: 'Retención',
+    sql: () => `
+      SELECT COUNT(DISTINCT index1) AS unique_actors
+      FROM ${DATASET}
+      WHERE timestamp > now() - INTERVAL '30' DAY
+        AND index1 != '' AND index1 != 'anonymous'
     `,
   },
 
@@ -459,12 +478,14 @@ export const QUERIES: QueryDef[] = [
     id: 'trends',
     title: 'Tendencia diaria (un evento)',
     description: 'Clicks por día para un evento (pro_contact por defecto)',
+    // ponytail: Analytics Engine SQL has no DATE()/HOUR() — use
+    // formatDateTime(timestamp, '%Y-%m-%d') for a sortable YYYY-MM-DD day key.
     columns: ['day', 'count'],
     render: 'line',
     group: 'Engagement',
     sql: ({ days, event }) => `
       SELECT
-        DATE(timestamp) AS day,
+        formatDateTime(timestamp, '%Y-%m-%d') AS day,
         SUM(_sample_interval * double1) AS count
       FROM ${DATASET}
       WHERE blob1 = ${sqlLiteral(event ?? 'pro_contact')}
@@ -477,16 +498,17 @@ export const QUERIES: QueryDef[] = [
     id: 'trends-overlay',
     title: 'Tendencia diaria (2 eventos)',
     description: 'Comparación día a día de dos eventos sobre el mismo eje',
+    // ponytail: no CASE → conditional sum via SUM(if(cond, x, 0)); no DATE →
+    // formatDateTime. Scans only the 2 events (WHERE IN), so each if() branch
+    // picks its own series.
     columns: ['day', 'a_count', 'b_count'],
     render: 'line',
     group: 'Engagement',
     sql: ({ days, event, eventB }) => `
       SELECT
-        DATE(timestamp) AS day,
-        SUM(CASE WHEN blob1 = ${sqlLiteral(event ?? 'pro_contact')}
-                 THEN _sample_interval * double1 ELSE 0 END) AS a_count,
-        SUM(CASE WHEN blob1 = ${sqlLiteral(eventB ?? 'profile_view')}
-                 THEN _sample_interval * double1 ELSE 0 END) AS b_count
+        formatDateTime(timestamp, '%Y-%m-%d') AS day,
+        SUM(if(blob1 = ${sqlLiteral(event ?? 'pro_contact')}, _sample_interval * double1, 0)) AS a_count,
+        SUM(if(blob1 = ${sqlLiteral(eventB ?? 'profile_view')}, _sample_interval * double1, 0)) AS b_count
       FROM ${DATASET}
       WHERE blob1 IN (${sqlLiteral(event ?? 'pro_contact')}, ${sqlLiteral(eventB ?? 'profile_view')})
         AND ${sinceDays(days)}
@@ -498,12 +520,13 @@ export const QUERIES: QueryDef[] = [
     id: 'hourly-heatmap',
     title: 'Mapa de calor por hora',
     description: 'Distribución horaria de un evento (UTC) — cuándo hay demanda',
+    // ponytail: no HOUR() — use toHour(timestamp) (returns 0–23).
     columns: ['hour', 'count'],
     render: 'bars',
     group: 'Engagement',
     sql: ({ days, event }) => `
       SELECT
-        HOUR(timestamp) AS hour,
+        toHour(timestamp) AS hour,
         SUM(_sample_interval * double1) AS count
       FROM ${DATASET}
       WHERE blob1 = ${sqlLiteral(event ?? 'pro_contact')}
@@ -612,6 +635,13 @@ export const QUERIES: QueryDef[] = [
   },
 
   // ── Admin activity (admin) ───────────────────────────────────────────────
+  // ponytail: intentionally EXCLUDES admin_section_view. That event is a
+  // navigation ping (fires on every sub-nav switch) and would swamp the real
+  // admin ACTIONS this chart measures (review / toggle-service / audio-review
+  // / promote). admin_section_view exists for raw SQL-API section-popularity
+  // analysis, not for this actions bar chart — surfacing it here would make
+  // the metric useless. (CodeRabbit suggested adding it; declined for this
+  // reason.)
   {
     id: 'admin-activity',
     title: 'Actividad de administración',

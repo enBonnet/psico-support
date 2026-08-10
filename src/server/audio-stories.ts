@@ -672,11 +672,18 @@ export const reviewStory = createServerFn({ method: 'POST' })
       throw new Error('Acción solo para administradores.')
     }
     const db = getDb()
-    await db
+    // ponytail: scope the update to rows still pending so two admins (or a
+    // double-click) can't race — the second request is a no-op and the client
+    // is told there was a conflict so it can refetch instead of restoring the
+    // stale snapshot. meta.changes is D1's rows-affected count.
+    const res = await db
       .update(audioStories)
       .set({ status: data.status })
-      .where(eq(audioStories.id, data.storyId))
-    return { ok: true as const }
+      .where(
+        and(eq(audioStories.id, data.storyId), eq(audioStories.status, 'pending')),
+      )
+    const changed = Number((res.meta as { changes?: unknown } | null)?.changes ?? 0)
+    return { ok: true as const, conflict: changed === 0 }
   },
 )
 

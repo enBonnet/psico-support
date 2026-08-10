@@ -1,4 +1,4 @@
-import { createFileRoute, redirect, Link, notFound } from '@tanstack/react-router'
+import { createFileRoute, Link, notFound } from '@tanstack/react-router'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import { MessageCircle } from 'lucide-react'
@@ -10,7 +10,6 @@ import {
   getProfessionalForAdmin,
   adminUpdateProfessional,
   reviewProfessional,
-  amIAdmin,
   getCurrentUser,
   publicCertificateUrl,
   POPULATION_OPTIONS,
@@ -26,26 +25,11 @@ import { FieldShell, SectionHeader, inputCls } from '#/components/professional-f
 import { TagSelect } from '#/components/tag-select'
 import { PhoneInput } from '#/components/phone-input'
 import { Switch } from '#/components/ui/switch'
-import { noindexHead } from '#/lib/seo'
 import { STATUS_META } from '#/components/admin-shared'
 
 export const Route = createFileRoute('/admin/profesionales/$id')({
-  beforeLoad: async () => {
-    // ponytail: same guard as /admin — server fn (reads request headers via
-    // AsyncLocalStorage) instead of authClient.getSession(), which does a
-    // cookieless fetch during SSR and always returned null.
-    const user = await getCurrentUser()
-    if (!user) {
-      throw redirect({ to: '/profesional/login' })
-    }
-    const admin = await amIAdmin()
-    if (!admin) {
-      throw redirect({ to: '/profesional/panel' })
-    }
-  },
-  // ponytail: CSR-only — admin-gated, no crawler value. Mirrors /admin.
-  ssr: false,
-  head: noindexHead,
+  // ponytail: guard + ssr + chrome all live in the parent layout route
+  // (src/routes/admin.tsx). This child only declares its component.
   component: AdminProDetailPage,
 })
 
@@ -73,13 +57,17 @@ function AdminProDetailPage() {
   if (!isLoading && !pro) throw notFound()
 
   return (
-    <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
+    <>
+      {/* ponytail: contextual "back to list" link. The Profesionales tab in
+          the parent layout's sub-nav also covers this, but a back link is a
+          familiar affordance on a deep edit page. No <main> wrapper — the
+          parent layout owns it. */}
       <Link
-        to="/admin"
+        to="/admin/profesionales"
         className="inline-flex items-center gap-1 self-start py-2 text-base font-medium text-[var(--medi-secondary)]"
-        aria-label="Volver a administración"
+        aria-label="Volver a la lista de profesionales"
       >
-        ‹ Administración
+        ‹ Profesionales
       </Link>
 
       {isLoading || !pro ? (
@@ -91,7 +79,7 @@ function AdminProDetailPage() {
       ) : (
         <ProDetail pro={pro} />
       )}
-    </main>
+    </>
   )
 }
 

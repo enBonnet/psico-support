@@ -24,6 +24,7 @@ import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
 import { Route as AyudameRouteImport } from './routes/ayudame'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as AhoraRouteImport } from './routes/ahora'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
@@ -49,6 +50,10 @@ import { Route as CuentaSesionesRouteImport } from './routes/cuenta.sesiones'
 import { Route as AyudaEspecificaRouteImport } from './routes/ayuda/especifica'
 import { Route as AdminAnaliticaRouteImport } from './routes/admin/analitica'
 import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
+import { Route as AdminUsuariosIndexRouteImport } from './routes/admin/usuarios/index'
+import { Route as AdminProfesionalesIndexRouteImport } from './routes/admin/profesionales/index'
+import { Route as AdminCategoriasIndexRouteImport } from './routes/admin/categorias/index'
+import { Route as AdminAudiosIndexRouteImport } from './routes/admin/audios/index'
 import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
 import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
 import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
@@ -133,6 +138,11 @@ const AhoraRoute = AhoraRouteImport.update({
   path: '/ahora',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AcercaDeRoute = AcercaDeRouteImport.update({
   id: '/acerca-de',
   path: '/acerca-de',
@@ -159,9 +169,9 @@ const ApoyoIndexRoute = ApoyoIndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
-  id: '/admin/',
-  path: '/admin/',
-  getParentRoute: () => rootRouteImport,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const RecursosRespirarRoute = RecursosRespirarRouteImport.update({
   id: '/recursos/respirar',
@@ -252,14 +262,34 @@ const AyudaEspecificaRoute = AyudaEspecificaRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminAnaliticaRoute = AdminAnaliticaRouteImport.update({
-  id: '/admin/analitica',
-  path: '/admin/analitica',
-  getParentRoute: () => rootRouteImport,
+  id: '/analitica',
+  path: '/analitica',
+  getParentRoute: () => AdminRoute,
 } as any)
 const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
   id: '/ayuda/profesionales/',
   path: '/ayuda/profesionales/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AdminUsuariosIndexRoute = AdminUsuariosIndexRouteImport.update({
+  id: '/usuarios/',
+  path: '/usuarios/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminProfesionalesIndexRoute = AdminProfesionalesIndexRouteImport.update({
+  id: '/profesionales/',
+  path: '/profesionales/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriasIndexRoute = AdminCategoriasIndexRouteImport.update({
+  id: '/categorias/',
+  path: '/categorias/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAudiosIndexRoute = AdminAudiosIndexRouteImport.update({
+  id: '/audios/',
+  path: '/audios/',
+  getParentRoute: () => AdminRoute,
 } as any)
 const MediaDocumentSplatRoute = MediaDocumentSplatRouteImport.update({
   id: '/media/document/$',
@@ -292,9 +322,9 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminProfesionalesIdRoute = AdminProfesionalesIdRouteImport.update({
-  id: '/admin/profesionales/$id',
-  path: '/admin/profesionales/$id',
-  getParentRoute: () => rootRouteImport,
+  id: '/profesionales/$id',
+  path: '/profesionales/$id',
+  getParentRoute: () => AdminRoute,
 } as any)
 const CuentaSesionesAgendarProIdRoute =
   CuentaSesionesAgendarProIdRouteImport.update({
@@ -306,6 +336,7 @@ const CuentaSesionesAgendarProIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/admin': typeof AdminRouteWithChildren
   '/ahora': typeof AhoraRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
@@ -350,6 +381,10 @@ export interface FileRoutesByFullPath {
   '/media/avatar/$': typeof MediaAvatarSplatRoute
   '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/media/document/$': typeof MediaDocumentSplatRoute
+  '/admin/audios/': typeof AdminAudiosIndexRoute
+  '/admin/categorias/': typeof AdminCategoriasIndexRoute
+  '/admin/profesionales/': typeof AdminProfesionalesIndexRoute
+  '/admin/usuarios/': typeof AdminUsuariosIndexRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
   '/cuenta/sesiones/agendar/$proId': typeof CuentaSesionesAgendarProIdRoute
 }
@@ -400,6 +435,10 @@ export interface FileRoutesByTo {
   '/media/avatar/$': typeof MediaAvatarSplatRoute
   '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/media/document/$': typeof MediaDocumentSplatRoute
+  '/admin/audios': typeof AdminAudiosIndexRoute
+  '/admin/categorias': typeof AdminCategoriasIndexRoute
+  '/admin/profesionales': typeof AdminProfesionalesIndexRoute
+  '/admin/usuarios': typeof AdminUsuariosIndexRoute
   '/ayuda/profesionales': typeof AyudaProfesionalesIndexRoute
   '/cuenta/sesiones/agendar/$proId': typeof CuentaSesionesAgendarProIdRoute
 }
@@ -407,6 +446,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/acerca-de': typeof AcercaDeRoute
+  '/admin': typeof AdminRouteWithChildren
   '/ahora': typeof AhoraRoute
   '/app': typeof AppRoute
   '/ayudame': typeof AyudameRoute
@@ -451,6 +491,10 @@ export interface FileRoutesById {
   '/media/avatar/$': typeof MediaAvatarSplatRoute
   '/media/certificate/$': typeof MediaCertificateSplatRoute
   '/media/document/$': typeof MediaDocumentSplatRoute
+  '/admin/audios/': typeof AdminAudiosIndexRoute
+  '/admin/categorias/': typeof AdminCategoriasIndexRoute
+  '/admin/profesionales/': typeof AdminProfesionalesIndexRoute
+  '/admin/usuarios/': typeof AdminUsuariosIndexRoute
   '/ayuda/profesionales/': typeof AyudaProfesionalesIndexRoute
   '/cuenta/sesiones/agendar/$proId': typeof CuentaSesionesAgendarProIdRoute
 }
@@ -459,6 +503,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/acerca-de'
+    | '/admin'
     | '/ahora'
     | '/app'
     | '/ayudame'
@@ -503,6 +548,10 @@ export interface FileRouteTypes {
     | '/media/avatar/$'
     | '/media/certificate/$'
     | '/media/document/$'
+    | '/admin/audios/'
+    | '/admin/categorias/'
+    | '/admin/profesionales/'
+    | '/admin/usuarios/'
     | '/ayuda/profesionales/'
     | '/cuenta/sesiones/agendar/$proId'
   fileRoutesByTo: FileRoutesByTo
@@ -553,12 +602,17 @@ export interface FileRouteTypes {
     | '/media/avatar/$'
     | '/media/certificate/$'
     | '/media/document/$'
+    | '/admin/audios'
+    | '/admin/categorias'
+    | '/admin/profesionales'
+    | '/admin/usuarios'
     | '/ayuda/profesionales'
     | '/cuenta/sesiones/agendar/$proId'
   id:
     | '__root__'
     | '/'
     | '/acerca-de'
+    | '/admin'
     | '/ahora'
     | '/app'
     | '/ayudame'
@@ -603,6 +657,10 @@ export interface FileRouteTypes {
     | '/media/avatar/$'
     | '/media/certificate/$'
     | '/media/document/$'
+    | '/admin/audios/'
+    | '/admin/categorias/'
+    | '/admin/profesionales/'
+    | '/admin/usuarios/'
     | '/ayuda/profesionales/'
     | '/cuenta/sesiones/agendar/$proId'
   fileRoutesById: FileRoutesById
@@ -610,6 +668,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcercaDeRoute: typeof AcercaDeRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AhoraRoute: typeof AhoraRoute
   AppRoute: typeof AppRoute
   AyudameRoute: typeof AyudameRoute
@@ -625,7 +684,6 @@ export interface RootRouteChildren {
   TerminosRoute: typeof TerminosRoute
   VoluntariadoRoute: typeof VoluntariadoRoute
   YaRoute: typeof YaRoute
-  AdminAnaliticaRoute: typeof AdminAnaliticaRoute
   AyudaEspecificaRoute: typeof AyudaEspecificaRoute
   ProfesionalAudiosRoute: typeof ProfesionalAudiosRoute
   ProfesionalCompletarRoute: typeof ProfesionalCompletarRoute
@@ -642,11 +700,9 @@ export interface RootRouteChildren {
   RecursosPrimerosAuxiliosRoute: typeof RecursosPrimerosAuxiliosRoute
   RecursosReaccionesNormalesRoute: typeof RecursosReaccionesNormalesRoute
   RecursosRespirarRoute: typeof RecursosRespirarRoute
-  AdminIndexRoute: typeof AdminIndexRoute
   ApoyoIndexRoute: typeof ApoyoIndexRoute
   AyudaIndexRoute: typeof AyudaIndexRoute
   RecursosIndexRoute: typeof RecursosIndexRoute
-  AdminProfesionalesIdRoute: typeof AdminProfesionalesIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   AyudaProfesionalesIdRoute: typeof AyudaProfesionalesIdRoute
   MediaAudioSplatRoute: typeof MediaAudioSplatRoute
@@ -763,6 +819,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AhoraRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/acerca-de': {
       id: '/acerca-de'
       path: '/acerca-de'
@@ -800,10 +863,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/': {
       id: '/admin/'
-      path: '/admin'
+      path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/recursos/respirar': {
       id: '/recursos/respirar'
@@ -926,10 +989,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/analitica': {
       id: '/admin/analitica'
-      path: '/admin/analitica'
+      path: '/analitica'
       fullPath: '/admin/analitica'
       preLoaderRoute: typeof AdminAnaliticaRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/ayuda/profesionales/': {
       id: '/ayuda/profesionales/'
@@ -937,6 +1000,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/ayuda/profesionales/'
       preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/admin/usuarios/': {
+      id: '/admin/usuarios/'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios/'
+      preLoaderRoute: typeof AdminUsuariosIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/profesionales/': {
+      id: '/admin/profesionales/'
+      path: '/profesionales'
+      fullPath: '/admin/profesionales/'
+      preLoaderRoute: typeof AdminProfesionalesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/categorias/': {
+      id: '/admin/categorias/'
+      path: '/categorias'
+      fullPath: '/admin/categorias/'
+      preLoaderRoute: typeof AdminCategoriasIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/audios/': {
+      id: '/admin/audios/'
+      path: '/audios'
+      fullPath: '/admin/audios/'
+      preLoaderRoute: typeof AdminAudiosIndexRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/media/document/$': {
       id: '/media/document/$'
@@ -982,10 +1073,10 @@ declare module '@tanstack/react-router' {
     }
     '/admin/profesionales/$id': {
       id: '/admin/profesionales/$id'
-      path: '/admin/profesionales/$id'
+      path: '/profesionales/$id'
       fullPath: '/admin/profesionales/$id'
       preLoaderRoute: typeof AdminProfesionalesIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AdminRoute
     }
     '/cuenta/sesiones/agendar/$proId': {
       id: '/cuenta/sesiones/agendar/$proId'
@@ -996,6 +1087,28 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAnaliticaRoute: typeof AdminAnaliticaRoute
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminProfesionalesIdRoute: typeof AdminProfesionalesIdRoute
+  AdminAudiosIndexRoute: typeof AdminAudiosIndexRoute
+  AdminCategoriasIndexRoute: typeof AdminCategoriasIndexRoute
+  AdminProfesionalesIndexRoute: typeof AdminProfesionalesIndexRoute
+  AdminUsuariosIndexRoute: typeof AdminUsuariosIndexRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnaliticaRoute: AdminAnaliticaRoute,
+  AdminIndexRoute: AdminIndexRoute,
+  AdminProfesionalesIdRoute: AdminProfesionalesIdRoute,
+  AdminAudiosIndexRoute: AdminAudiosIndexRoute,
+  AdminCategoriasIndexRoute: AdminCategoriasIndexRoute,
+  AdminProfesionalesIndexRoute: AdminProfesionalesIndexRoute,
+  AdminUsuariosIndexRoute: AdminUsuariosIndexRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface CuentaSesionesRouteChildren {
   CuentaSesionesAgendarProIdRoute: typeof CuentaSesionesAgendarProIdRoute
@@ -1023,6 +1136,7 @@ const CuentaRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcercaDeRoute: AcercaDeRoute,
+  AdminRoute: AdminRouteWithChildren,
   AhoraRoute: AhoraRoute,
   AppRoute: AppRoute,
   AyudameRoute: AyudameRoute,
@@ -1038,7 +1152,6 @@ const rootRouteChildren: RootRouteChildren = {
   TerminosRoute: TerminosRoute,
   VoluntariadoRoute: VoluntariadoRoute,
   YaRoute: YaRoute,
-  AdminAnaliticaRoute: AdminAnaliticaRoute,
   AyudaEspecificaRoute: AyudaEspecificaRoute,
   ProfesionalAudiosRoute: ProfesionalAudiosRoute,
   ProfesionalCompletarRoute: ProfesionalCompletarRoute,
@@ -1055,11 +1168,9 @@ const rootRouteChildren: RootRouteChildren = {
   RecursosPrimerosAuxiliosRoute: RecursosPrimerosAuxiliosRoute,
   RecursosReaccionesNormalesRoute: RecursosReaccionesNormalesRoute,
   RecursosRespirarRoute: RecursosRespirarRoute,
-  AdminIndexRoute: AdminIndexRoute,
   ApoyoIndexRoute: ApoyoIndexRoute,
   AyudaIndexRoute: AyudaIndexRoute,
   RecursosIndexRoute: RecursosIndexRoute,
-  AdminProfesionalesIdRoute: AdminProfesionalesIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   AyudaProfesionalesIdRoute: AyudaProfesionalesIdRoute,
   MediaAudioSplatRoute: MediaAudioSplatRoute,
