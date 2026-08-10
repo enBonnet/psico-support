@@ -870,6 +870,55 @@ a {
   }
 }
 
+/* ── Admin sub-nav (in /admin layout route) ──────────────────────────────
+   Sticky horizontal scrollable tab bar for the 6 admin sections. Mobile-
+   first: on a phone the tabs don't all fit, so the bar scrolls horizontally
+   with scroll-snap and a hidden scrollbar. Sticks to the top so it stays
+   reachable while scrolling a long list.
+
+   display is intentionally NOT set here — the component toggles `flex` via
+   the utility class (tw v4 unlayered-beats-layered gotcha, same discipline as
+   .bottom-tabs / .top-nav). z-index:30 sits below .top-nav (40) and the
+   bottom-tabs (40) so the global chrome always wins. On mobile (no .top-nav)
+   it sticks at top:0; on lg it sticks below the sticky .top-nav pill
+   (top:0.75rem + its ~3rem height ≈ bottom ~3.75rem), so 4.5rem clears it
+   with breathing room. */
+.admin-subnav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;
+}
+.admin-subnav::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+@media (min-width: 1024px) {
+  .admin-subnav {
+    top: 4.5rem;
+  }
+}
+
+/* ponytail: each tab is a non-shrinking scroll-snap target. Active state via
+   [data-active] uses the medical blue accent (mirrors .bottom-tab's active
+   treatment). No display set here either — component owns flex. */
+.admin-subnav-tab {
+  scroll-snap-align: start;
+  color: var(--medi-text-secondary);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.admin-subnav-tab[data-active='true'] {
+  color: var(--medi-primary);
+  background: color-mix(in oklab, var(--medi-primary) 12%, transparent);
+}
+.admin-subnav-tab:focus-visible {
+  outline: 2px solid var(--medi-secondary);
+  outline-offset: 2px;
+}
+
 /* ponytail: mobile-only floating "Al azar" button on the directory page.
    Sits above the bottom tab bar (z-30 < tabs z-40) so the thumb reaches it
    without mis-tapping a tab. Anchored bottom-right with safe-area clearance;

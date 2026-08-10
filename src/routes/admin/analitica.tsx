@@ -1,9 +1,8 @@
-import { createFileRoute, Link, redirect } from '@tanstack/react-router'
+import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { ArrowLeft, RefreshCw } from 'lucide-react'
+import { RefreshCw } from 'lucide-react'
 
-import { amIAdmin, getCurrentUser } from '#/server/professionals'
 import { runAnalyticsQuery } from '#/server/analytics-read'
 import type { AnalyticsQueryResult } from '#/server/analytics-read'
 import { getMetricsSummary } from '#/server/metrics'
@@ -23,7 +22,6 @@ import { notify } from '#/lib/notifications'
 import { TRACKED_EVENTS  } from '#/server/analytics'
 import type {TrackedEvent} from '#/server/analytics';
 import type { QueryId } from '#/server/analytics-queries';
-import { noindexHead } from '#/lib/seo'
 
 // =============================================================================
 // /admin/analitica — in-app analytics dashboard
@@ -33,9 +31,10 @@ import { noindexHead } from '#/lib/seo'
 // src/server/analytics-read.ts) and D1 ops metrics (src/server/metrics.ts) so
 // the admin sees a unified ops + product view in one screen.
 //
-// CSR (ssr: false) — same selective-SSR pattern as the rest of /admin (no SEO
-// value, requires a session). The beforeLoad guard mirrors /admin: amIAdmin
-// or bounce to login/panel.
+// CSR + admin guard live in the parent layout route (src/routes/admin.tsx);
+// this child only renders content. The PresetSelector + dataset label stay
+// here as a section header (the parent sub-nav already handles "back to admin"
+// via the Analítica tab).
 //
 // Every Analytics-Engine query the route uses has its own useQuery so they
 // fan out in parallel and each card shows its own loading/error state without
@@ -44,16 +43,6 @@ import { noindexHead } from '#/lib/seo'
 // =============================================================================
 
 export const Route = createFileRoute('/admin/analitica')({
-  beforeLoad: async () => {
-    // ponytail: same pattern as /admin — server fns read the request via
-    // AsyncLocalStorage, so cookies flow on the real browser fetch under CSR.
-    const user = await getCurrentUser()
-    if (!user) throw redirect({ to: '/profesional/login' })
-    const admin = await amIAdmin()
-    if (!admin) throw redirect({ to: '/profesional/panel' })
-  },
-  ssr: false,
-  head: noindexHead,
   component: AnalyticsPage,
 })
 
@@ -68,29 +57,18 @@ function AnalyticsPage() {
   const [days, setDays] = useState(7)
 
   return (
-    <main className="page-wrap page-wrap--wide flex min-h-[100dvh] flex-col py-6">
+    <>
+      {/* ponytail: section header — PresetSelector stays analitica-specific.
+          No <main> wrapper, back button, or section-underline: the parent
+          layout (src/routes/admin.tsx) owns the chrome, and its sub-nav's
+          "Analítica" tab covers navigation. */}
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Link
-            to="/admin"
-            aria-label="Volver a administración"
-            className="glass-card-soft flex size-9 items-center justify-center rounded-[var(--glass-radius-sm)] text-[var(--medi-primary)] transition-all hover:translate-y-[-1px]"
-          >
-            <ArrowLeft className="size-4" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-[var(--medi-text-primary)]">
-              Analítica
-            </h1>
-            <p className="text-xs text-[var(--medi-text-secondary)]">
-              Cloudflare Analytics Engine (dataset{' '}
-              <code className="font-mono">psico_events</code>) + D1 ops
-            </p>
-          </div>
-        </div>
+        <p className="text-xs text-[var(--medi-text-secondary)]">
+          Cloudflare Analytics Engine (dataset{' '}
+          <code className="font-mono">psico_events</code>) + D1 ops
+        </p>
         <PresetSelector days={days} onDaysChange={setDays} />
       </header>
-      <div className="section-underline mt-2" />
 
       <NotConfiguredBanner days={days} />
 
@@ -100,7 +78,7 @@ function AnalyticsPage() {
       <CatalogSection days={days} />
       <RetentionSection days={days} />
       <D1Section />
-    </main>
+    </>
   )
 }
 
@@ -290,6 +268,33 @@ function QueryError({ message }: { message?: string }) {
 
 // ── Funnel section ──────────────────────────────────────────────────────────
 
+// ponytail: canonical step order for the help-seeker funnel. Analytics Engine
+// SQL can't UNION/JOIN a dimension table (funnel-steps query returns plain
+// event totals now), so the ordering + zero-fill lives here. FunnelChart then
+// computes pct_of_prev/pct_of_first from the totals itself.
+const HELP_SEEKER_STEPS: { event: string; step: string }[] = [
+  { event: 'landing_view', step: '1. Landing' },
+  { event: 'cta_click', step: '2. CTA' },
+  { event: 'directory_view', step: '3. Directorio' },
+  { event: 'directory_filter', step: '4. Filtro/búsqueda' },
+  { event: 'profile_view', step: '5. Perfil' },
+  { event: 'pro_contact', step: '6. Contacto WhatsApp' },
+]
+
+function buildHelpSeekerSteps(
+  rows: AnalyticsQueryResult['rows'],
+): { step: string; event: string; total: number }[] {
+  const totals = new Map<string, number>()
+  for (const r of rows) {
+    totals.set(String(r.event ?? ''), Number(r.total ?? 0))
+  }
+  return HELP_SEEKER_STEPS.map((s) => ({
+    step: s.step,
+    event: s.event,
+    total: totals.get(s.event) ?? 0,
+  }))
+}
+
 function FunnelSection({ days }: { days: number }) {
   const funnel = useAnalyticsQuery('funnel-steps', days)
   const helpNow = useAnalyticsQuery('help-now-funnel', days)
@@ -325,13 +330,7 @@ function FunnelSection({ days }: { days: number }) {
             <QueryError message={String(funnel.error.message)} />
           ) : (
             <FunnelChart
-              steps={(funnel.data?.rows ?? []).map((r) => ({
-                step: String(r.step ?? ''),
-                event: String(r.event ?? ''),
-                total: Number(r.total ?? 0),
-                pct_of_prev: Number(r.pct_of_prev),
-                pct_of_first: Number(r.pct_of_first),
-              }))}
+              steps={buildHelpSeekerSteps(funnel.data?.rows ?? [])}
             />
           )}
         </ChartCard>
@@ -768,10 +767,18 @@ function CatalogSection({ days }: { days: number }) {
 // ── Retention section ───────────────────────────────────────────────────────
 
 function RetentionSection({ days }: { days: number }) {
-  const unique = useAnalyticsQuery('unique-actors', days)
+  // ponytail: 3 parallel COUNT(DISTINCT) queries (DAU/WAU/MAU). Analytics
+  // Engine SQL has no conditional distinct-count and forbids UNION, so this
+  // can't be one query — see src/server/analytics-queries.ts.
+  const dau = useAnalyticsQuery('unique-actors-1d', days)
+  const wau = useAnalyticsQuery('unique-actors-7d', days)
+  const mau = useAnalyticsQuery('unique-actors-30d', days)
   const hourly = useAnalyticsQuery('hourly-heatmap', days, {
     event: 'pro_contact',
   })
+
+  const uniqueLoading = dau.isLoading || wau.isLoading || mau.isLoading
+  const uniqueError = dau.error || wau.error || mau.error
 
   return (
     <section className="mt-6">
@@ -783,12 +790,16 @@ function RetentionSection({ days }: { days: number }) {
           title="Usuarios únicos"
           description="Conteo DISTINCT de actorId en ventanas de 1/7/30 días"
         >
-          {unique.isLoading ? (
+          {uniqueLoading ? (
             <Skeleton className="h-32 w-full" />
-          ) : unique.isError ? (
-            <QueryError message={String(unique.error.message)} />
+          ) : uniqueError ? (
+            <QueryError message={String(uniqueError.message)} />
           ) : (
-            <UniqueActorsTable rows={unique.data?.rows ?? []} />
+            <UniqueActorsTable
+              dau={Number(dau.data?.rows[0]?.unique_actors ?? 0)}
+              wau={Number(wau.data?.rows[0]?.unique_actors ?? 0)}
+              mau={Number(mau.data?.rows[0]?.unique_actors ?? 0)}
+            />
           )}
         </ChartCard>
 
@@ -809,37 +820,45 @@ function RetentionSection({ days }: { days: number }) {
   )
 }
 
-function UniqueActorsTable({ rows }: { rows: Record<string, unknown>[] }) {
-  if (!rows.length) {
+function UniqueActorsTable({
+  dau,
+  wau,
+  mau,
+}: {
+  dau: number
+  wau: number
+  mau: number
+}) {
+  // ponytail: DAU/WAU/MAU come from 3 separate queries (no conditional
+  // distinct-count in Analytics Engine SQL). Render the fixed 3-tile display.
+  const tiles: { key: string; label: string; value: number }[] = [
+    { key: '1d', label: 'Diarios (DAU)', value: dau },
+    { key: '7d', label: 'Semanales (WAU)', value: wau },
+    { key: '30d', label: 'Mensuales (MAU)', value: mau },
+  ]
+  const hasData = tiles.some((t) => t.value > 0)
+  if (!hasData) {
     return (
       <div className="text-sm text-[var(--medi-text-secondary)]">
         (sin datos)
       </div>
     )
   }
-  const labels: Record<string, string> = {
-    '1d': 'Diarios (DAU)',
-    '7d': 'Semanales (WAU)',
-    '30d': 'Mensuales (MAU)',
-  }
   return (
     <div className="grid grid-cols-3 gap-3">
-      {rows.map((r) => {
-        const w = String(r.window ?? '')
-        return (
-          <div
-            key={w}
-            className="glass-card-soft flex flex-col gap-1 rounded-[var(--glass-radius-sm)] p-3"
-          >
-            <div className="text-[10px] uppercase tracking-wide text-[var(--medi-text-secondary)]">
-              {labels[w] ?? w}
-            </div>
-            <div className="text-2xl font-bold tabular-nums text-[var(--medi-primary)]">
-              {Number(r.unique_actors ?? 0).toLocaleString('es-VE')}
-            </div>
+      {tiles.map((t) => (
+        <div
+          key={t.key}
+          className="glass-card-soft flex flex-col gap-1 rounded-[var(--glass-radius-sm)] p-3"
+        >
+          <div className="text-[10px] uppercase tracking-wide text-[var(--medi-text-secondary)]">
+            {t.label}
           </div>
-        )
-      })}
+          <div className="text-2xl font-bold tabular-nums text-[var(--medi-primary)]">
+            {t.value.toLocaleString('es-VE')}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

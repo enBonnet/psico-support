@@ -156,6 +156,14 @@ export const TRACKED_EVENTS = [
   'admin_pro_toggle_service',
   'admin_audio_review',
   'admin_user_promote',
+  // admin_section_view: fired client-side from the /admin layout route
+  // (src/routes/admin.tsx) whenever the admin navigates between sections.
+  // param1 = the section path (e.g. '/admin/profesionales'), route = pathname.
+  // Gives real visibility into which sections admins actually use vs. which
+  // gather dust. Fire-and-forget (gotcha #10). The whole /admin branch is
+  // admin-gated by the layout's beforeLoad, so the actorId is always a real
+  // userId here.
+  'admin_section_view',
   // --- Virality / PWA (public) ---
   'install_prompt_trigger',
   'install_prompt_dismiss',

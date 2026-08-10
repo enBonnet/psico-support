@@ -186,7 +186,8 @@ this app uses **per-route `ssr: false`** (the `ssr` route option):
 
 - **CSR (`ssr: false`)**: `signup`, `cuenta`, `cuenta.sesiones*` (booking — gated),
   `ahora` (auto-connect share link), `profesional/{login,registro,completar,
-  panel,sesiones}`, `admin/` (incl. `admin/profesionales/$id` and `admin/analitica`),
+  panel,sesiones}`, `admin/` (the whole branch — `ssr: false` + the admin guard
+  live on the **layout route `admin.tsx`**, which every `admin/*` child inherits),
   `ayuda/profesionales/` (directory).
 - **SSR (default)**: `ayuda/profesionales/$id` (profile — SEO/link previews) and
   `ayuda/especifica` (specific-help triage). Their `head()` reads `loaderData`;
@@ -197,6 +198,8 @@ build-time shell generator (gotcha #7) and the profile route must stay SSR.
 A child can only be *more* restrictive than its parent (selective SSR rule);
 luckily the profile and directory are **siblings** (both parented to root,
 no shared layout route), so the directory being CSR cannot force the profile.
+The `/admin` branch relies on this rule in reverse: the layout route's
+`ssr: false` cascades down to every child (a child can't opt back into SSR).
 
 Note: a CSR route still returns 200 HTML (the app shell) from the worker on
 first load — `ssr: false` only controls whether the route's loaders run
@@ -337,10 +340,15 @@ src/
       panel.tsx          # card-based hub of profile actions
       perfil.tsx, presentacion.tsx, disponibilidad.tsx, audios.tsx, sesiones.tsx   # focused sub-routes
       seguimiento.tsx    # private clinical follow-ups (owner-scoped)
-    admin/               # all CSR
-      index.tsx          # pro review (with edit link) + audio review + audio-category CRUD + user management
-      profesionales/$id.tsx  # edit a pro's profile before accepting ("approve with changes")
-      analitica.tsx      # KPIs / funnels / retention / D1 operational inventory (no in-app link)
+    admin/               # all CSR — parent layout route (admin.tsx) owns the guard + chrome + sub-nav
+      index.tsx          # dashboard overview: "needs attention" callout + KPI strip + section cards
+      profesionales/
+        index.tsx        # credential audit (search + filters + paginated cards, 2-col on lg)
+        $id.tsx          # edit a pro's profile before accepting ("approve with changes")
+      audios/index.tsx   # pending-clip review queue (Voces que acompañan)
+      categorias/index.tsx  # audio_categories CRUD (create/edit/toggle/delete)
+      usuarios/index.tsx # promote-to-admin
+      analitica.tsx      # KPIs / funnels / retention / D1 operational inventory (linked from the sub-nav)
     recursos/            # self-care tools (respirar, enraizamiento, autochequeo, psicoeducación SSR)
     apoyo/index.tsx      # "Voces que acompañan" — audio-stories tray grouped by category
     {acerca-de,equipo,terminos,privacidad,voluntariado,app,como-funciona,social}.tsx   # static / SSR content

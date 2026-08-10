@@ -121,7 +121,7 @@ export const getMetricsSummary = createServerFn({ method: 'GET' }).handler(
         ),
         withD1Retry(() =>
           db
-            .select({ country: professionals.country, total: count() })
+            .select({ country: professionals.country, total: count().as('total') })
             .from(professionals)
             .where(eq(professionals.verifiedStatus, 'verified'))
             .groupBy(professionals.country)

@@ -1,1321 +1,271 @@
-import { createFileRoute, redirect, Link } from '@tanstack/react-router'
+import { createFileRoute, Link } from '@tanstack/react-router'
+import { useQuery } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
+import type { LucideIcon } from 'lucide-react'
 import {
-  useQuery,
-  useMutation,
-  useQueryClient,
-  keepPreviousData,
-} from '@tanstack/react-query'
-import { useState } from 'react'
-import { useDebounced } from '#/lib/hooks/use-debounced'
-import { Search, MessageCircle } from 'lucide-react'
-import { authClient } from '#/lib/auth-client'
-import { notify } from '#/lib/notifications'
-import { track } from '#/lib/analytics-client'
-import { Skeleton } from '#/components/ui/skeleton'
-import { Switch } from '#/components/ui/switch'
+  Briefcase,
+  Headphones,
+  Tags,
+  Users,
+  BarChart3,
+  ChevronRight,
+  CheckCircle2,
+  Clock,
+} from 'lucide-react'
 import {
-  reviewProfessional,
-  amIAdmin,
-  getCurrentUser,
-  listUsers,
-  promoteToAdmin,
   countVerifiedProfessionals,
   listAllProfessionals,
-  adminSetProvidesService,
-  publicCertificateUrl,
+  listUsers,
 } from '#/server/professionals'
-import {
-  listPendingStories,
-  reviewStory,
-  listAudioCategories,
-  createAudioCategory,
-  updateAudioCategory,
-  toggleAudioCategory,
-  deleteAudioCategory,
-} from '#/server/audio-stories'
-import type { PendingStoryRow, AudioCategory } from '#/server/audio-stories'
-import { noindexHead } from '#/lib/seo'
-// ponytail: shared list type + badge styling, used by this list route and the
-// /admin/profesionales/$id detail route so the two stay in sync. See
-// src/components/admin-shared.ts.
-import { STATUS_META } from '#/components/admin-shared'
-import type { AdminPro, AdminProList } from '#/components/admin-shared'
+import { listPendingStories } from '#/server/audio-stories'
 
-const PAGE_SIZE = 8
-type StatusFilter = 'pending' | 'verified' | 'disabled' | 'rejected' | undefined
-
-const PRO_FILTERS: { key: StatusFilter; label: string }[] = [
-  { key: undefined, label: 'Todos' },
-  { key: 'pending', label: 'Pendientes' },
-  { key: 'verified', label: 'Verificados' },
-  { key: 'disabled', label: 'Suspendidos' },
-  { key: 'rejected', label: 'Rechazados' },
-]
+// =============================================================================
+// /admin — dashboard overview
+// =============================================================================
+// Lightweight landing for the admin branch. Surfaces "needs attention" counts
+// (pending pros + pending audios) as a callout, a KPI strip, and tappable
+// cards into each section. The section pages (/admin/profesionales, etc.) hold
+// the actual work; this is the at-a-glance "what should I act on" view —
+// mirrors the pro panel's "Atención" summary card (healthcare-ui Cat. 7).
+//
+// The chrome (header, sign-out, sticky sub-nav, <main> wrapper) lives in the
+// parent layout route src/routes/admin.tsx.
+// =============================================================================
 
 export const Route = createFileRoute('/admin/')({
-  beforeLoad: async () => {
-    // ponytail: use a server fn (reads request headers via AsyncLocalStorage)
-    // instead of authClient.getSession() — the client call does a cookieless
-    // fetch during SSR, which always returned null and bounced to login.
-    // Under CSR both calls are client→worker RPC; cookies flow on the real
-    // browser request.
-    const user = await getCurrentUser()
-    if (!user) {
-      throw redirect({ to: '/profesional/login' })
-    }
-    const admin = await amIAdmin()
-    if (!admin) {
-      throw redirect({ to: '/profesional/panel' })
-    }
-  },
-  // ponytail: CSR-only — auth+admin-gated dashboard, no crawler value.
-  ssr: false,
-  head: noindexHead,
-  component: AdminPage,
+  // ponytail: guard + ssr + chrome all live in the parent layout route
+  // (src/routes/admin.tsx). This child only declares its component.
+  component: AdminDashboard,
 })
 
-function AdminPage() {
+function AdminDashboard() {
+  // ponytail: parallel cheap counts for the KPI strip + "needs attention"
+  // callout. Each is one round-trip; they fan out together.
   const { data: verifiedCount } = useQuery({
     queryKey: ['verified-count'],
     queryFn: () => countVerifiedProfessionals(),
   })
-  const { data: adminUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getCurrentUser(),
-  })
-
-  return (
-    <main className="page-wrap flex min-h-[100dvh] flex-col py-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[var(--medi-text-primary)]">
-          Administración
-        </h1>
-        <button
-          onClick={async () => {
-            if (adminUser?.id) {
-              track({
-                event: 'auth_signout',
-                category: 'auth',
-                actorId: adminUser.id,
-              })
-            }
-            await authClient.signOut()
-            window.location.href = '/'
-          }}
-          className="text-sm font-medium text-[var(--medi-secondary)]"
-        >
-          Salir
-        </button>
-      </div>
-      <div className="section-underline mt-2" />
-
-      <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
-        <span className="text-lg font-bold text-[var(--medi-primary)]">
-          {verifiedCount ?? '—'}
-        </span>{' '}
-        profesionales verificados
-      </p>
-
-      <ProfessionalsAuditSection />
-      <AudioStoriesSection />
-      <AudioCategoriesSection />
-      <UsersSection />
-    </main>
-  )
-}
-
-// ── shared search + pagination bits ─────────────────────────────────────────
-
-// ponytail: useDebounced now lives in src/lib/hooks/use-debounced.ts (shared
-// with the professionals directory route). See it for the rationale.
-
-function SectionSearch({
-  value,
-  onChange,
-  placeholder,
-}: {
-  value: string
-  onChange: (v: string) => void
-  placeholder: string
-}) {
-  return (
-    <div className="relative">
-      <Search
-        aria-hidden="true"
-        className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[var(--medi-text-secondary)]"
-      />
-      <input
-        type="search"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        // ponytail: glass-input h-12 + text-base matches inputCls so this search
-        // box renders at the same height as the other form inputs on the page
-        // (category create/edit, etc.). pl-9 leaves room for the leading icon.
-        className="glass-input h-12 w-full pl-9 pr-3 text-base"
-      />
-    </div>
-  )
-}
-
-// ponytail: prev/next pager. Hidden when there's a single page (no nav needed).
-// page is 1-based; pages derived from total/pageSize.
-function Pager({
-  page,
-  total,
-  pageSize,
-  onPageChange,
-}: {
-  page: number
-  total: number
-  pageSize: number
-  onPageChange: (p: number) => void
-}) {
-  const pages = Math.max(1, Math.ceil(total / pageSize))
-  if (pages <= 1) return null
-  const pagerBtn =
-    'flex size-9 items-center justify-center rounded-[var(--glass-radius-sm)] glass-card-soft text-[var(--medi-primary)] transition-all hover:translate-y-[-1px] disabled:opacity-40 disabled:hover:translate-y-0'
-  return (
-    <div className="mt-3 flex items-center justify-center gap-3 text-sm text-[var(--medi-text-secondary)]">
-      <button
-        type="button"
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-        aria-label="Página anterior"
-        className={pagerBtn}
-      >
-        ‹
-      </button>
-      <span>
-        Página {page} de {pages}
-      </span>
-      <button
-        type="button"
-        disabled={page >= pages}
-        onClick={() => onPageChange(page + 1)}
-        aria-label="Página siguiente"
-        className={pagerBtn}
-      >
-        ›
-      </button>
-    </div>
-  )
-}
-
-// ── Profesionales: credential audit ─────────────────────────────────────────
-
-function ProfessionalsAuditSection() {
-  const qc = useQueryClient()
-  const { data: adminUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getCurrentUser(),
-  })
-  const actorId = adminUser?.id
-  const [q, setQ] = useState('')
-  const [status, setStatus] = useState<StatusFilter>(undefined)
-  const [page, setPage] = useState(1)
-  const debouncedQ = useDebounced(q)
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-professionals', debouncedQ, status, page],
+  const { data: pendingProsRes } = useQuery({
+    queryKey: ['admin-professionals', '', 'pending', 1],
     queryFn: () =>
       listAllProfessionals({
-        data: { q: debouncedQ || undefined, status, page, pageSize: PAGE_SIZE },
+        data: { q: undefined, status: 'pending', page: 1, pageSize: 1 },
       }),
-    placeholderData: keepPreviousData,
   })
-  const rows = data?.rows ?? []
-  const total = data?.total ?? 0
-
-  // ponytail: optimistic status mutation. D1 is eventually consistent across
-  // requests, so the post-mutation refetch can briefly re-serve the old row —
-  // flip it in the cache now (across every admin-professionals page via a
-  // partial-key setQueriesData), then invalidate to reconcile. Delete removes
-  // the row; other transitions update verifiedStatus (+ available for dormant).
-  const setStatusMut = useMutation({
-    mutationFn: (vars: {
-      id: number
-      status: 'verified' | 'rejected' | 'disabled' | 'deleted'
-    }) =>
-      reviewProfessional({
-        data: { professionalId: vars.id, status: vars.status },
-      }),
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: ['admin-professionals'] })
-      qc.setQueriesData<AdminProList>(
-        { queryKey: ['admin-professionals'] },
-        (old) => {
-          if (!old) return old
-          if (vars.status === 'deleted') {
-            return {
-              ...old,
-              rows: old.rows.filter((p) => p.id !== vars.id),
-              total: Math.max(0, old.total - 1),
-            }
-          }
-          return {
-            ...old,
-            rows: old.rows.map((p) =>
-              p.id === vars.id
-                ? {
-                    ...p,
-                    verifiedStatus: vars.status,
-                    ...(vars.status === 'disabled'
-                      ? { available: false }
-                      : {}),
-                  }
-                : p,
-            ),
-          }
-        },
-      )
-    },
-    onError: () =>
-      notify({
-        type: 'error',
-        title: 'No se pudo actualizar el estado',
-        body: 'Inténtalo de nuevo.',
-      }),
-    onSuccess: (_d, vars) => {
-      if (actorId) {
-        track({
-          event: 'admin_pro_review',
-          category: 'admin',
-          actorId,
-          param1: vars.status,
-          param2: String(vars.id),
-        })
-      }
-      qc.invalidateQueries({ queryKey: ['admin-professionals'] })
-      qc.invalidateQueries({ queryKey: ['verified-count'] })
-      const M = {
-        verified: { type: 'success', title: 'Profesional aprobado' },
-        rejected: { type: 'warning', title: 'Profesional rechazado' },
-        disabled: { type: 'warning', title: 'Profesional suspendido' },
-        deleted: { type: 'warning', title: 'Profesional eliminado' },
-      } as const
-      notify(M[vars.status])
-    },
-  })
-
-  const setServiceMut = useMutation({
-    mutationFn: (vars: { id: number; providesService: boolean }) =>
-      adminSetProvidesService({
-        data: { professionalId: vars.id, providesService: vars.providesService },
-      }),
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: ['admin-professionals'] })
-      qc.setQueriesData<AdminProList>(
-        { queryKey: ['admin-professionals'] },
-        (old) => {
-          if (!old) return old
-          return {
-            ...old,
-            rows: old.rows.map((p) =>
-              p.id === vars.id
-                ? {
-                    ...p,
-                    providesService: vars.providesService,
-                    ...(vars.providesService ? {} : { available: false }),
-                  }
-                : p,
-            ),
-          }
-        },
-      )
-    },
-    onError: () =>
-      notify({
-        type: 'error',
-        title: 'No se pudo actualizar',
-        body: 'Inténtalo de nuevo.',
-      }),
-    onSuccess: (_d, vars) => {
-      if (actorId) {
-        track({
-          event: 'admin_pro_toggle_service',
-          category: 'admin',
-          actorId,
-          param1: String(vars.id),
-          param2: String(vars.providesService),
-        })
-      }
-      qc.invalidateQueries({ queryKey: ['admin-professionals'] })
-      qc.invalidateQueries({ queryKey: ['verified-count'] })
-      notify({
-        type: vars.providesService ? 'success' : 'warning',
-        title: vars.providesService
-          ? 'Presta servicio (en el directorio)'
-          : 'Solo contenido (fuera del directorio)',
-      })
-    },
-  })
-
-  function handleStatus(pro: AdminPro, target: 'verified' | 'rejected' | 'disabled' | 'deleted') {
-    if (
-      target === 'deleted' &&
-      !window.confirm(
-        `¿Eliminar a "${pro.name}"? Desaparecerá del directorio y de esta auditoría. Podrá volver a registrarse.`,
-      )
-    ) {
-      return
-    }
-    setStatusMut.mutate({ id: pro.id, status: target })
-  }
-
-  return (
-    <section className="mt-8">
-      <h2 className="border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-        Profesionales
-      </h2>
-
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="sm:flex-1">
-          <SectionSearch
-            value={q}
-            onChange={(v) => {
-              setQ(v)
-              setPage(1)
-            }}
-            placeholder="Buscar por nombre, correo o nº de colegiación"
-          />
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {PRO_FILTERS.map((f) => (
-            <button
-              key={f.label}
-              type="button"
-              onClick={() => {
-                setStatus(f.key)
-                setPage(1)
-              }}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:translate-y-[-1px] ${
-                status === f.key
-                  ? 'bg-[var(--medi-primary)] !text-white'
-                  : 'glass-card-soft text-[var(--medi-primary)]'
-              }`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {isLoading ? (
-        <ul className="mt-4 flex flex-col gap-3" aria-busy="true">
-          {[0, 1, 2].map((i) => (
-            <li key={i} className="glass-card p-4">
-              <Skeleton className="h-5 w-44" />
-              <Skeleton className="mt-2 h-4 w-60" />
-              <Skeleton className="mt-4 h-24 w-full" />
-            </li>
-          ))}
-        </ul>
-      ) : rows.length === 0 ? (
-        <p className="glass-card-soft mt-4 p-5 text-center text-sm text-[var(--medi-text-secondary)]">
-          No hay profesionales para mostrar.
-        </p>
-      ) : (
-        <ul className="mt-4 flex flex-col gap-3">
-          {rows.map((p) => (
-            <ProCard
-              key={p.id}
-              pro={p}
-              statusPending={setStatusMut.isPending}
-              servicePending={setServiceMut.isPending}
-              onStatus={(target) => handleStatus(p, target)}
-              onToggleService={(id, providesService) =>
-                setServiceMut.mutate({ id, providesService })
-              }
-            />
-          ))}
-        </ul>
-      )}
-
-      <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
-    </section>
-  )
-}
-
-const ACTION_BTN =
-  'min-h-11 flex-1 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-semibold transition-all hover:translate-y-[-1px] disabled:opacity-60'
-
-function ProActions({
-  pro,
-  onStatus,
-}: {
-  pro: AdminPro
-  onStatus: (target: 'verified' | 'rejected' | 'disabled' | 'deleted') => void
-}) {
-  switch (pro.verifiedStatus) {
-    case 'pending':
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => onStatus('verified')}
-            className={`${ACTION_BTN} bg-green-600 !text-white hover:bg-green-700`}
-          >
-            Aprobar
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatus('rejected')}
-            className={`${ACTION_BTN} glass-card-soft border-2 border-red-600 text-red-600 hover:bg-red-50/60`}
-          >
-            Rechazar
-          </button>
-        </>
-      )
-    case 'verified':
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => onStatus('disabled')}
-            className={`${ACTION_BTN} glass-card-soft border border-amber-500 text-amber-700 hover:bg-amber-50/60`}
-          >
-            Suspender
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatus('deleted')}
-            className={`${ACTION_BTN} glass-card-soft border border-red-300 text-red-700 hover:bg-red-50/60`}
-          >
-            Eliminar
-          </button>
-        </>
-      )
-    case 'disabled':
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => onStatus('verified')}
-            className={`${ACTION_BTN} bg-green-600 !text-white hover:bg-green-700`}
-          >
-            Reactivar
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatus('deleted')}
-            className={`${ACTION_BTN} glass-card-soft border border-red-300 text-red-700 hover:bg-red-50/60`}
-          >
-            Eliminar
-          </button>
-        </>
-      )
-    case 'rejected':
-      return (
-        <>
-          <button
-            type="button"
-            onClick={() => onStatus('verified')}
-            className={`${ACTION_BTN} bg-green-600 !text-white hover:bg-green-700`}
-          >
-            Aprobar
-          </button>
-          <button
-            type="button"
-            onClick={() => onStatus('deleted')}
-            className={`${ACTION_BTN} glass-card-soft border border-red-300 text-red-700 hover:bg-red-50/60`}
-          >
-            Eliminar
-          </button>
-        </>
-      )
-  }
-}
-
-function ProCard({
-  pro,
-  statusPending,
-  servicePending,
-  onStatus,
-  onToggleService,
-}: {
-  pro: AdminPro
-  statusPending: boolean
-  servicePending: boolean
-  onStatus: (target: 'verified' | 'rejected' | 'disabled' | 'deleted') => void
-  onToggleService: (id: number, providesService: boolean) => void
-}) {
-  const meta = STATUS_META[pro.verifiedStatus]
-  const canToggleService =
-    pro.verifiedStatus === 'verified' || pro.verifiedStatus === 'disabled'
-  // ponytail: wa.me wants digits only (no +, no spaces) — same normalization as
-  // the public directory card. Pre-fills a message so the pro knows the
-  // contact came through psicoayudaven.
-  const waDigits = pro.whatsapp.replace(/\D/g, '')
-  const waHref = `https://wa.me/${waDigits}?text=${encodeURIComponent(
-    'Hola, te escribimos desde PsicoAyudaVen.',
-  )}`
-  return (
-    <li className="glass-card p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-[var(--medi-text-primary)]">
-            {pro.name}
-          </p>
-          <p className="truncate text-sm text-[var(--medi-text-secondary)]">
-            {pro.userEmail}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
-          <span className={`text-xs font-semibold ${meta.badge}`}>
-            {meta.label}
-          </span>
-          {!pro.providesService && (
-            <span className="rounded-full bg-[var(--medi-primary)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--medi-primary)]">
-              Solo contenido
-            </span>
-          )}
-        </div>
-      </div>
-
-      <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-        <dt className="col-span-2 mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-          Ubicación
-        </dt>
-        <dt className="text-[var(--medi-text-secondary)]">País</dt>
-        <dd>
-          {pro.country === 'Venezuela'
-            ? `Venezuela — ${[pro.estado, pro.ciudad].filter(Boolean).join(', ')}`
-            : pro.country}
-        </dd>
-
-        <dt className="col-span-2 mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-          Credencial
-        </dt>
-        <dt className="text-[var(--medi-text-secondary)]">Nº colegiación</dt>
-        <dd className="font-semibold text-[var(--medi-text-primary)]">
-          {pro.certificationNumber}
-        </dd>
-        <dt className="text-[var(--medi-text-secondary)]">País cred.</dt>
-        <dd>{pro.credentialCountry ?? '—'}</dd>
-        {pro.certifyingSchool && (
-          <>
-            <dt className="text-[var(--medi-text-secondary)]">Colegio</dt>
-            <dd>{pro.certifyingSchool}</dd>
-          </>
-        )}
-        {pro.population.length > 0 && (
-          <>
-            <dt className="text-[var(--medi-text-secondary)]">Atiende a</dt>
-            <dd>{pro.population.join(', ')}</dd>
-          </>
-        )}
-        {pro.focusGroups.length > 0 && (
-          <>
-            <dt className="text-[var(--medi-text-secondary)]">
-              Población esp.
-            </dt>
-            <dd>{pro.focusGroups.join(', ')}</dd>
-          </>
-        )}
-        {pro.practiceAreas.length > 0 && (
-          <>
-            <dt className="text-[var(--medi-text-secondary)]">
-              Área de interv.
-            </dt>
-            <dd>{pro.practiceAreas.join(', ')}</dd>
-          </>
-        )}
-
-        <dt className="col-span-2 mt-1 text-xs font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-          Contacto
-        </dt>
-        <dt className="text-[var(--medi-text-secondary)]">Modalidad</dt>
-        <dd>
-          {pro.modality === 'in_person'
-            ? 'Presencial'
-            : pro.modality === 'remote'
-              ? 'A distancia'
-              : 'Ambas'}
-        </dd>
-        <dt className="text-[var(--medi-text-secondary)]">WhatsApp</dt>
-        <dd>
-          {pro.whatsapp}
-          {pro.whatsappCountry ? ` (${pro.whatsappCountry})` : ''}
-        </dd>
-      </dl>
-
-      <a
-        href={waHref}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-3 flex min-h-10 items-center justify-center gap-2 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
-      >
-        <MessageCircle aria-hidden="true" className="size-4" />
-        Contactar por WhatsApp
-      </a>
-
-      {pro.certificateKey && (
-        <a
-          href={publicCertificateUrl(pro.certificateKey)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-3 inline-block text-sm font-semibold text-[var(--medi-secondary)] hover:underline"
-        >
-          Ver certificado adjunto →
-        </a>
-      )}
-
-      {pro.supportDocs.length > 0 && (
-        <div className="mt-2 flex flex-col gap-1">
-          {pro.supportDocs.map((d, i) => (
-            <a
-              key={`${d.url}-${i}`}
-              href={d.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-medium text-[var(--medi-secondary)] hover:underline"
-            >
-              📎 {d.name ?? 'Documento adicional'}
-            </a>
-          ))}
-        </div>
-      )}
-
-      {canToggleService && (
-        <label className="mt-3 flex items-center gap-2 text-sm text-[var(--medi-text-secondary)]">
-          <Switch
-            checked={pro.providesService}
-            onCheckedChange={(c) => onToggleService(pro.id, c)}
-            disabled={servicePending}
-            size="sm"
-          />
-          Presta servicio{' '}
-          <span className="text-xs">
-            (si no, aporta solo audios a Voces que acompañan)
-          </span>
-        </label>
-      )}
-
-      {/* ponytail: open the review/edit detail route for this pro. "Revisar"
-          for pending (the action admins take most), "Editar" once verified
-          (field tweaks). Lives above the status actions so it reads as the
-          primary affordance. */}
-      <Link
-        to="/admin/profesionales/$id"
-        params={{ id: String(pro.id) }}
-        className="mt-4 flex min-h-11 w-full items-center justify-center rounded-[var(--glass-radius-sm)] bg-[var(--medi-primary)] px-3 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-[var(--medi-primary)]/90"
-      >
-        {pro.verifiedStatus === 'pending' ? 'Revisar y editar' : 'Editar perfil'}
-      </Link>
-
-      <div className="mt-2 flex gap-2 disabled:opacity-60">
-        <div className="flex flex-1 gap-2 opacity-100">
-          <ProActions pro={pro} onStatus={onStatus} />
-        </div>
-      </div>
-      {statusPending && (
-        <p className="mt-2 text-center text-xs text-[var(--medi-text-secondary)]">
-          Actualizando…
-        </p>
-      )}
-    </li>
-  )
-}
-
-// ── Audios de apoyo (Voces que acompañan) ───────────────────────────────────
-
-function AudioStoriesSection() {
-  const qc = useQueryClient()
-  const { data: adminUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getCurrentUser(),
-  })
-  const actorId = adminUser?.id
-  const { data: pendingStories = [], isLoading: storiesLoading } = useQuery({
+  const pendingPros = pendingProsRes?.total ?? 0
+  const { data: pendingStories = [] } = useQuery({
     queryKey: ['pending-stories'],
     queryFn: () => listPendingStories(),
   })
-
-  const decideStory = useMutation({
-    mutationFn: (vars: { storyId: number; status: 'approved' | 'rejected' }) =>
-      reviewStory({ data: vars }),
-    onMutate: async (vars) => {
-      await qc.cancelQueries({ queryKey: ['pending-stories'] })
-      const prev = qc.getQueryData<PendingStoryRow[]>(['pending-stories'])
-      qc.setQueryData<PendingStoryRow[]>(['pending-stories'], (old) =>
-        old?.filter((s) => s.id !== vars.storyId),
-      )
-      return { prev }
-    },
-    onError: (_e, _vars, ctx) => {
-      if (ctx?.prev) {
-        qc.setQueryData<PendingStoryRow[]>(['pending-stories'], ctx.prev)
-      }
-      notify({
-        type: 'error',
-        title: 'No se pudo actualizar el audio',
-        body: 'Inténtalo de nuevo.',
-      })
-    },
-    onSuccess: (_d, vars) => {
-      if (actorId) {
-        track({
-          event: 'admin_audio_review',
-          category: 'admin',
-          actorId,
-          param1: vars.status,
-          param2: String(vars.storyId),
-        })
-      }
-      qc.invalidateQueries({ queryKey: ['pending-stories'] })
-      qc.invalidateQueries({ queryKey: ['story-tray'] })
-      notify({
-        type: vars.status === 'approved' ? 'success' : 'warning',
-        title:
-          vars.status === 'approved' ? 'Audio aprobado' : 'Audio rechazado',
-        body:
-          vars.status === 'approved'
-            ? 'Ya aparece en Voces que acompañan.'
-            : 'Quedó fuera de la lista pública.',
-      })
-    },
-  })
-
-  return (
-    <section className="mt-10">
-      <h2 className="border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-        Audios de apoyo — revisión
-      </h2>
-      {storiesLoading ? (
-        <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
-          Cargando…
-        </p>
-      ) : pendingStories.length === 0 ? (
-        <p className="glass-card-soft mt-2 p-4 text-center text-sm text-[var(--medi-text-secondary)]">
-          No hay audios por revisar.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-3">
-          {pendingStories.map((s) => (
-            <li key={s.id} className="glass-card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <p className="truncate text-sm font-semibold text-[var(--medi-text-primary)]">
-                  {s.proName}
-                </p>
-                {s.category && (
-                  <span className="glass-pill shrink-0 px-2 py-0.5 text-xs font-medium text-[var(--medi-secondary)]">
-                    {s.category.title}
-                  </span>
-                )}
-              </div>
-              {s.title && (
-                <p className="mt-0.5 text-sm text-[var(--medi-text-secondary)]">
-                  “{s.title}”
-                </p>
-              )}
-              <p className="mt-0.5 text-xs text-[var(--medi-text-secondary)]">
-                {Math.floor(s.durationSec / 60)}:
-                {(s.durationSec % 60).toString().padStart(2, '0')}
-              </p>
-              <audio
-                controls
-                src={s.url}
-                preload="none"
-                className="mt-2 w-full"
-                aria-label={`Audio de ${s.proName} para revisión`}
-              />
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    decideStory.mutate({ storyId: s.id, status: 'approved' })
-                  }
-                  className="min-h-11 flex-1 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700"
-                >
-                  Aprobar
-                </button>
-                <button
-                  type="button"
-                  onClick={() =>
-                    decideStory.mutate({ storyId: s.id, status: 'rejected' })
-                  }
-                  className="glass-card-soft min-h-11 flex-1 rounded-[var(--glass-radius-sm)] border-2 border-red-600 px-4 py-2 text-sm font-semibold text-red-600 transition-all hover:translate-y-[-1px] hover:bg-red-50/60"
-                >
-                  Rechazar
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-// ── Categorías de audios (CRUD) ─────────────────────────────────────────────
-
-// ponytail: admin CRUD for the audio_categories lookup table. Mirrors the
-// optimistic-update + invalidate pattern from AudioStoriesSection. slug is
-// immutable (stable analytics id); title/description/sortOrder editable
-// inline; active toggles via <Switch>; delete is guarded server-side against
-// in-use categories (the mutation surfaces the friendly error via notify).
-// Invalidates ['audio-categories'] (this list + the pro recorder picker) and
-// ['story-tray'] (the public page embeds category copy on each clip).
-function AudioCategoriesSection() {
-  const qc = useQueryClient()
-  const { data: adminUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getCurrentUser(),
-  })
-  const actorId = adminUser?.id
-  const { data: categories = [], isLoading } = useQuery({
-    // ponytail: encode includeInactive in the key so this admin list
-    // (inactive-included) doesn't collide with the pro recorder picker's
-    // active-only list under the same bare key. invalidateQueries matches by
-    // prefix, so ['audio-categories'] invalidations still hit both.
-    queryKey: ['audio-categories', { includeInactive: true }],
-    queryFn: () => listAudioCategories({ data: { includeInactive: true } }),
-  })
-
-  // new-category form state
-  const [nTitle, setNTitle] = useState('')
-  const [nDesc, setNDesc] = useState('')
-
-  const createCat = useMutation({
-    mutationFn: (vars: { title: string; description: string }) =>
-      createAudioCategory({ data: vars }),
-    onSuccess: () => {
-      notify({ type: 'success', title: 'Categoría creada' })
-      setNTitle('')
-      setNDesc('')
-      qc.invalidateQueries({ queryKey: ['audio-categories'] })
-      qc.invalidateQueries({ queryKey: ['story-tray'] })
-    },
-    onError: (err: Error) =>
-      notify({
-        type: 'error',
-        title: 'No se pudo crear la categoría',
-        body: err.message,
-      }),
-  })
-
-  const updateCat = useMutation({
-    mutationFn: (vars: {
-      id: number
-      title?: string
-      description?: string
-      sortOrder?: number
-    }) => updateAudioCategory({ data: vars }),
-    onSuccess: () => {
-      notify({ type: 'success', title: 'Categoría actualizada' })
-      qc.invalidateQueries({ queryKey: ['audio-categories'] })
-      qc.invalidateQueries({ queryKey: ['story-tray'] })
-    },
-    onError: (err: Error) =>
-      notify({
-        type: 'error',
-        title: 'No se pudo actualizar',
-        body: err.message,
-      }),
-  })
-
-  const toggleCat = useMutation({
-    mutationFn: (vars: { id: number; active: boolean }) =>
-      toggleAudioCategory({ data: vars }),
-    onMutate: async (vars) => {
-      // ponytail: exact-match the admin key (the one with includeInactive) —
-      // the pro picker's active-only key is unaffected and refetches normally.
-      const adminKey = ['audio-categories', { includeInactive: true }] as const
-      await qc.cancelQueries({ queryKey: adminKey })
-      const prev = qc.getQueryData<AudioCategory[]>(adminKey)
-      qc.setQueryData<AudioCategory[]>(adminKey, (old) =>
-        old?.map((c) => (c.id === vars.id ? { ...c, active: vars.active } : c)),
-      )
-      return { prev }
-    },
-    onError: (_e, _vars, ctx) => {
-      if (ctx?.prev)
-        qc.setQueryData<AudioCategory[]>(
-          ['audio-categories', { includeInactive: true }],
-          ctx.prev,
-        )
-      notify({
-        type: 'error',
-        title: 'No se pudo cambiar el estado',
-        body: 'Inténtalo de nuevo.',
-      })
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['audio-categories'] })
-      qc.invalidateQueries({ queryKey: ['story-tray'] })
-    },
-  })
-
-  const deleteCat = useMutation({
-    mutationFn: (id: number) => deleteAudioCategory({ data: { id } }),
-    onSuccess: () => {
-      // ponytail: no analytics here — admin_audio_review is specifically for
-      // pending-clip approve/reject (param1=status, param2=storyId). Firing it
-      // for a category delete would pollute that metric with paramless rows.
-      // A dedicated admin_audio_category_delete event would need adding to
-      // TRACKED_EVENTS (append-only contract); left out of this PR as it's not
-      // a decision to make silently.
-      notify({ type: 'success', title: 'Categoría eliminada' })
-      qc.invalidateQueries({ queryKey: ['audio-categories'] })
-      qc.invalidateQueries({ queryKey: ['story-tray'] })
-    },
-    onError: (err: Error) =>
-      notify({
-        type: 'error',
-        title: 'No se pudo eliminar',
-        body: err.message,
-      }),
-  })
-
-  function submitNew(e: React.FormEvent) {
-    e.preventDefault()
-    if (!nTitle.trim() || !nDesc.trim()) return
-    createCat.mutate({ title: nTitle.trim(), description: nDesc.trim() })
-  }
-
-  return (
-    <section className="mt-10">
-      <h2 className="border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-        Categorías de audios
-      </h2>
-      <p className="mt-2 text-xs text-[var(--medi-text-secondary)]">
-        Agrupan los audios en <Link to="/apoyo" className="font-semibold text-[var(--medi-secondary)]">Voces que acompañan</Link>.
-        Desactiva una categoría para ocultarla sin perder los audios; elimínala
-        solo si ningún audio la usa.
-      </p>
-
-      {/* New category form */}
-      <form
-        onSubmit={submitNew}
-        className="glass-card-soft mt-3 flex flex-col gap-2 rounded-[var(--glass-radius-sm)] p-3"
-      >
-        <input
-          className="glass-input h-12 w-full px-3 text-base"
-          value={nTitle}
-          onChange={(e) => setNTitle(e.target.value)}
-          placeholder="Título — ej. “Meditación guiada”"
-          maxLength={80}
-          aria-label="Título de la nueva categoría"
-        />
-        <input
-          className="glass-input h-12 w-full px-3 text-base"
-          value={nDesc}
-          onChange={(e) => setNDesc(e.target.value)}
-          placeholder="Descripción corta (se muestra bajo el título)"
-          maxLength={200}
-          aria-label="Descripción de la nueva categoría"
-        />
-        <button
-          type="submit"
-          disabled={!nTitle.trim() || !nDesc.trim() || createCat.isPending}
-          className="glass-primary min-h-11 self-start rounded-[var(--glass-radius-sm)] px-4 py-2 text-sm font-semibold !text-white disabled:opacity-50"
-        >
-          {createCat.isPending ? 'Creando…' : 'Nueva categoría'}
-        </button>
-      </form>
-
-      {/* Category list */}
-      {isLoading ? (
-        <p className="mt-3 text-sm text-[var(--medi-text-secondary)]">
-          Cargando…
-        </p>
-      ) : categories.length === 0 ? (
-        <p className="glass-card-soft mt-3 p-4 text-center text-sm text-[var(--medi-text-secondary)]">
-          Aún no hay categorías. Crea la primera arriba.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {categories.map((c) => (
-            <CategoryRow
-              key={c.id}
-              category={c}
-              onToggle={(active) => toggleCat.mutate({ id: c.id, active })}
-              onDelete={() => {
-                if (
-                  window.confirm(
-                    `¿Eliminar la categoría “${c.title}”? Solo es posible si ningún audio la usa.`,
-                  )
-                ) {
-                  deleteCat.mutate(c.id)
-                }
-              }}
-              onSave={(patch) => updateCat.mutate({ id: c.id, ...patch })}
-              saving={updateCat.isPending}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
-  )
-}
-
-// ponytail: one row = read-only summary + inline edit mode (toggle button
-// flips a local state; the form posts a partial patch). active toggles live
-// (optimistic via the parent mutation); edit/delete go through confirm.
-function CategoryRow({
-  category,
-  onToggle,
-  onDelete,
-  onSave,
-  saving,
-}: {
-  category: AudioCategory
-  onToggle: (active: boolean) => void
-  onDelete: () => void
-  onSave: (patch: {
-    title?: string
-    description?: string
-    sortOrder?: number
-  }) => void
-  saving: boolean
-}) {
-  const [editing, setEditing] = useState(false)
-  const [title, setTitle] = useState(category.title)
-  const [description, setDescription] = useState(category.description)
-  const [sortOrder, setSortOrder] = useState(String(category.sortOrder))
-
-  function startEdit() {
-    setTitle(category.title)
-    setDescription(category.description)
-    setSortOrder(String(category.sortOrder))
-    setEditing(true)
-  }
-
-  function save(e: React.FormEvent) {
-    e.preventDefault()
-    const patch: { title?: string; description?: string; sortOrder?: number } =
-      {}
-    if (title.trim() && title.trim() !== category.title)
-      patch.title = title.trim()
-    if (description.trim() && description.trim() !== category.description)
-      patch.description = description.trim()
-    const n = Number(sortOrder)
-    if (Number.isFinite(n) && n >= 0 && n !== category.sortOrder)
-      patch.sortOrder = n
-    if (Object.keys(patch).length > 0) onSave(patch)
-    setEditing(false)
-  }
-
-  if (editing) {
-    return (
-      <li className="glass-card p-3">
-        <form onSubmit={save} className="flex flex-col gap-2">
-          <input
-            className="glass-input h-12 w-full px-3 text-base"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={80}
-            aria-label="Título"
-          />
-          <input
-            className="glass-input h-12 w-full px-3 text-base"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={200}
-            aria-label="Descripción"
-          />
-          <label className="flex items-center gap-2 text-xs text-[var(--medi-text-secondary)]">
-            Orden
-            <input
-              type="number"
-              min={0}
-              className="glass-input h-12 w-24 px-2 text-sm"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
-            <span className="text-[var(--medi-text-secondary)]">
-              (menor = más arriba)
-            </span>
-          </label>
-          <div className="flex gap-2">
-            <button
-              type="submit"
-              disabled={saving}
-              className="min-h-10 flex-1 rounded-[var(--glass-radius-sm)] bg-green-600 px-3 py-1.5 text-sm font-semibold !text-white disabled:opacity-50"
-            >
-              Guardar
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditing(false)}
-              className="glass-card-soft min-h-10 flex-1 rounded-[var(--glass-radius-sm)] border border-[var(--medi-border)] px-3 py-1.5 text-sm font-medium"
-            >
-              Cancelar
-            </button>
-          </div>
-        </form>
-      </li>
-    )
-  }
-
-  return (
-    <li className="glass-card flex items-start justify-between gap-3 p-3">
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
-          <p className="truncate text-sm font-semibold text-[var(--medi-text-primary)]">
-            {category.title}
-          </p>
-          {!category.active && (
-            <span className="glass-pill px-1.5 py-0.5 text-[10px] font-medium text-[var(--medi-text-secondary)]">
-              inactiva
-            </span>
-          )}
-        </div>
-        <p className="mt-0.5 line-clamp-2 text-xs text-[var(--medi-text-secondary)]">
-          {category.description}
-        </p>
-        <p className="mt-0.5 text-[10px] text-[var(--medi-text-secondary)]">
-          /{category.slug} · orden {category.sortOrder}
-        </p>
-      </div>
-      <div className="flex shrink-0 flex-col items-end gap-2">
-        <Switch
-          checked={category.active}
-          onCheckedChange={onToggle}
-          aria-label={`Activar categoría ${category.title}`}
-        />
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={startEdit}
-            className="text-xs font-medium text-[var(--medi-secondary)] hover:underline"
-          >
-            Editar
-          </button>
-          <span className="text-[var(--medi-border)]">·</span>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="text-xs font-medium text-red-600 hover:underline"
-          >
-            Eliminar
-          </button>
-        </div>
-      </div>
-    </li>
-  )
-}
-
-// ── Usuarios ────────────────────────────────────────────────────────────────
-
-function UsersSection() {
-  const qc = useQueryClient()
-  const { data: adminUser } = useQuery({
-    queryKey: ['me'],
-    queryFn: () => getCurrentUser(),
-  })
-  const actorId = adminUser?.id
-  const [q, setQ] = useState('')
-  const [page, setPage] = useState(1)
-  const debouncedQ = useDebounced(q)
-
-  const { data, isLoading } = useQuery({
-    queryKey: ['admin-users', debouncedQ, page],
+  const pendingAudios = pendingStories.length
+  const { data: usersRes } = useQuery({
+    queryKey: ['admin-users', '', 1],
     queryFn: () =>
-      listUsers({ data: { q: debouncedQ || undefined, page, pageSize: PAGE_SIZE } }),
-    placeholderData: keepPreviousData,
+      listUsers({ data: { q: undefined, page: 1, pageSize: 1 } }),
   })
-  const users = data?.rows ?? []
-  const total = data?.total ?? 0
+  const userCount = usersRes?.total ?? 0
 
-  const promote = useMutation({
-    mutationFn: (userId: string) => promoteToAdmin({ data: { userId } }),
-    onSuccess: (_d, userId) => {
-      if (actorId) {
-        track({
-          event: 'admin_user_promote',
-          category: 'admin',
-          actorId,
-          param1: userId,
-        })
-      }
-      qc.invalidateQueries({ queryKey: ['admin-users'] })
-      notify({
-        type: 'success',
-        title: 'Usuario promovido a admin',
-        body: 'Ahora tiene acceso al panel de administración.',
-      })
-    },
-    onError: () =>
-      notify({
-        type: 'error',
-        title: 'No se pudo promover',
-        body: 'Inténtalo de nuevo.',
-      }),
-  })
+  const needsAttention = pendingPros > 0 || pendingAudios > 0
 
   return (
-    <section className="mt-10">
-      <h2 className="border-b border-[var(--medi-border)] pb-1 text-sm font-semibold uppercase tracking-wide text-[var(--medi-text-secondary)]">
-        Usuarios
-      </h2>
-      <p className="mt-2 text-sm text-[var(--medi-text-secondary)]">
-        Promueve una cuenta a administrador. Solo para cuentas de confianza.
-      </p>
-      <div className="mt-3">
-        <SectionSearch
-          value={q}
-          onChange={(v) => {
-            setQ(v)
-            setPage(1)
-          }}
-          placeholder="Buscar por nombre o correo"
-        />
-      </div>
-      {isLoading ? (
-        <ul className="mt-3 flex flex-col gap-2" aria-busy="true">
-          {[0, 1, 2].map((i) => (
-            <li
-              key={i}
-              className="glass-card flex items-center justify-between gap-3 p-3"
-            >
-              <div className="flex flex-col gap-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-48" />
-              </div>
-              <Skeleton className="h-7 w-24 rounded-full" />
-            </li>
-          ))}
-        </ul>
-      ) : users.length === 0 ? (
-        <p className="glass-card-soft mt-3 p-4 text-center text-sm text-[var(--medi-text-secondary)]">
-          Sin resultados.
-        </p>
-      ) : (
-        <ul className="mt-3 flex flex-col gap-2">
-          {users.map((u) => (
-            <li
-              key={u.id}
-              className="glass-card flex items-center justify-between gap-3 p-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-[var(--medi-text-primary)]">
-                  {u.name}
-                </p>
-                <p className="truncate text-xs text-[var(--medi-text-secondary)]">
-                  {u.email}
-                </p>
-              </div>
-              {u.role === 'admin' ? (
-                <span className="shrink-0 rounded-full bg-[var(--medi-secondary)] px-3 py-1 text-xs font-semibold text-white">
-                  admin
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  disabled={promote.isPending}
-                  onClick={() => promote.mutate(u.id)}
-                  className="glass-card-soft shrink-0 rounded-[var(--glass-radius-sm)] px-3 py-2 text-xs font-semibold text-[var(--medi-secondary)] transition-all hover:translate-y-[-1px] disabled:opacity-60"
+    <>
+      {/* ── Needs attention ── */}
+      {/* ponytail: amber callout that deep-links into the queues. Hidden
+          entirely when there's nothing pending (no "0 tareas" box). Mirrors
+          the pro panel's empty-state-safe summary card. */}
+      {needsAttention && (
+        <section className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] border-l-4 border-amber-500 bg-amber-50/60 p-4">
+          <div className="flex items-center gap-2 text-amber-800">
+            <Clock className="size-5 shrink-0" aria-hidden="true" />
+            <h2 className="text-sm font-semibold">Necesita atención</h2>
+          </div>
+          <ul className="mt-2 flex flex-col gap-1.5 text-sm">
+            {pendingPros > 0 && (
+              <li>
+                <Link
+                  to="/admin/profesionales"
+                  className="font-semibold text-amber-800 underline-offset-2 hover:underline"
                 >
-                  Hacer admin
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
+                  {pendingPros} {pendingPros === 1 ? 'profesional por revisar' : 'profesionales por revisar'}
+                </Link>
+              </li>
+            )}
+            {pendingAudios > 0 && (
+              <li>
+                <Link
+                  to="/admin/audios"
+                  className="font-semibold text-amber-800 underline-offset-2 hover:underline"
+                >
+                  {pendingAudios} {pendingAudios === 1 ? 'audio por revisar' : 'audios por revisar'}
+                </Link>
+              </li>
+            )}
+          </ul>
+        </section>
       )}
-      <Pager page={page} total={total} pageSize={PAGE_SIZE} onPageChange={setPage} />
-    </section>
+
+      {/* ── KPI strip ── */}
+      <section
+        className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4"
+        aria-label="Resumen"
+      >
+        <Kpi
+          icon={Clock}
+          label="Pendientes"
+          value={pendingPros}
+          tone="amber"
+          to="/admin/profesionales"
+        />
+        <Kpi
+          icon={CheckCircle2}
+          label="Verificados"
+          value={verifiedCount}
+          tone="green"
+          to="/admin/profesionales"
+        />
+        <Kpi
+          icon={Headphones}
+          label="Audios pend."
+          value={pendingAudios}
+          tone="amber"
+          to="/admin/audios"
+        />
+        <Kpi
+          icon={Users}
+          label="Usuarios"
+          value={userCount}
+          tone="neutral"
+          to="/admin/usuarios"
+        />
+      </section>
+
+      {/* ── Section cards ── */}
+      <nav
+        className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2"
+        aria-label="Secciones de administración"
+      >
+        <SectionCard
+          to="/admin/profesionales"
+          icon={Briefcase}
+          title="Profesionales"
+          subtitle="Revisa credenciales, aprueba, suspende o edita perfiles"
+          meta={
+            pendingPros > 0 ? (
+              <span className="glass-pill shrink-0 bg-amber-100/80 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                {pendingPros}
+              </span>
+            ) : undefined
+          }
+        />
+        <SectionCard
+          to="/admin/audios"
+          icon={Headphones}
+          title="Audios de apoyo"
+          subtitle="Aprobación de clips enviados a Voces que acompañan"
+          meta={
+            pendingAudios > 0 ? (
+              <span className="glass-pill shrink-0 bg-amber-100/80 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                {pendingAudios}
+              </span>
+            ) : undefined
+          }
+        />
+        <SectionCard
+          to="/admin/categorias"
+          icon={Tags}
+          title="Categorías de audios"
+          subtitle="Crea, edita y reordena las categorías de los audios"
+        />
+        <SectionCard
+          to="/admin/usuarios"
+          icon={Users}
+          title="Usuarios"
+          subtitle="Promueve cuentas de confianza a administrador"
+        />
+        <SectionCard
+          to="/admin/analitica"
+          icon={BarChart3}
+          title="Analítica"
+          subtitle="KPIs, embudos, retención y estado operativo de D1"
+        />
+      </nav>
+    </>
+  )
+}
+
+// ponytail: a KPI tile in the dashboard strip. tone drives the icon color
+// (amber = action needed, green = healthy, neutral = informational). The whole
+// tile is a link so a tap jumps straight into the relevant section.
+function Kpi({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  to,
+}: {
+  icon: LucideIcon
+  label: string
+  value: number | undefined
+  tone: 'amber' | 'green' | 'neutral'
+  to: string
+}) {
+  const toneCls =
+    tone === 'amber'
+      ? 'text-amber-700'
+      : tone === 'green'
+        ? 'text-green-700'
+        : 'text-[var(--medi-secondary)]'
+  return (
+    <Link
+      to={to}
+      className="glass-card flex flex-col gap-1 p-3 transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+    >
+      <Icon className={`size-5 ${toneCls}`} aria-hidden="true" />
+      <span className="text-2xl font-bold text-[var(--medi-text-primary)]">
+        {value ?? '—'}
+      </span>
+      <span className="text-xs font-medium text-[var(--medi-text-secondary)]">
+        {label}
+      </span>
+    </Link>
+  )
+}
+
+// ponytail: a descriptive link-card. Mirrors the pro panel's PanelCard
+// (icon + title + subtitle + optional meta + chevron) so the admin branch
+// reads as part of the same app.
+function SectionCard({
+  to,
+  icon: Icon,
+  title,
+  subtitle,
+  meta,
+}: {
+  to: string
+  icon: LucideIcon
+  title: string
+  subtitle: string
+  meta?: ReactNode
+}) {
+  return (
+    <Link
+      to={to}
+      className="glass-card flex min-h-[4.5rem] items-center gap-3 p-4 text-left transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
+    >
+      <Icon className="size-6 shrink-0 text-[var(--medi-secondary)]" aria-hidden="true" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-base font-semibold text-[var(--medi-text-primary)]">
+          {title}
+        </span>
+        <span className="block text-sm text-[var(--medi-text-secondary)]">
+          {subtitle}
+        </span>
+      </span>
+      {meta}
+      <ChevronRight
+        className="size-5 shrink-0 text-[var(--medi-text-secondary)]"
+        aria-hidden="true"
+      />
+    </Link>
   )
 }
