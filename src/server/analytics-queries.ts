@@ -421,6 +421,15 @@ export const QUERIES: QueryDef[] = [
   // fixed 1/7/30-day windows (independent of the dashboard's `days` preset —
   // DAU/WAU/MAU are always those windows by definition). The consumer fires all
   // 3 in parallel.
+  //
+  // Sampling caveat: COUNT(DISTINCT) does NOT apply _sample_interval, so under
+  // sampling (which Analytics Engine only activates above ~1M writes/min) these
+  // would undercount — they count the distinct actors present in the sampled
+  // subset, not the true cardinality. At this app's volume (low thousands of
+  // events total, tens/day) sampling is NOT active, so these are exact. If
+  // volume ever crosses the sampling threshold, switch each query to
+  // `SELECT index1 FROM ... WHERE ... GROUP BY index1` and count the returned
+  // groups client-side (the documented exact-count-via-group-by escape hatch).
   {
     id: 'unique-actors-1d',
     title: 'Usuarios únicos (DAU)',
@@ -626,6 +635,13 @@ export const QUERIES: QueryDef[] = [
   },
 
   // ── Admin activity (admin) ───────────────────────────────────────────────
+  // ponytail: intentionally EXCLUDES admin_section_view. That event is a
+  // navigation ping (fires on every sub-nav switch) and would swamp the real
+  // admin ACTIONS this chart measures (review / toggle-service / audio-review
+  // / promote). admin_section_view exists for raw SQL-API section-popularity
+  // analysis, not for this actions bar chart — surfacing it here would make
+  // the metric useless. (CodeRabbit suggested adding it; declined for this
+  // reason.)
   {
     id: 'admin-activity',
     title: 'Actividad de administración',

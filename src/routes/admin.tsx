@@ -147,26 +147,27 @@ function AdminLayout() {
 // bottom-tabs (40).
 function AdminSubNav() {
   const matchRoute = useMatchRoute()
+  // ponytail: navigation, not tablist. These links switch routes; they don't
+  // control tabpanel regions or implement arrow-key handling, so ARIA tab
+  // roles would over-promise semantics (and screen readers would mis-announce
+  // them as tabs). Use aria-current="page" for the exact match only, and keep
+  // fuzzy matching purely for the active-styling affordance (so a deep route
+  // like /admin/profesionales/$id still highlights "Profesionales").
   return (
     <nav
       className="admin-subnav glass-card-soft mt-3 flex gap-1 overflow-x-auto rounded-[var(--glass-radius-sm)] p-1"
       aria-label="Secciones de administración"
-      role="tablist"
     >
       {ADMIN_SECTIONS.map((s) => {
-        // ponytail: fuzzy so /admin/profesionales/$id highlights
-        // "Profesionales". The dashboard ('/') and analitica are exact so the
-        // dashboard tab isn't always active on child routes.
         const fuzzy = s.fuzzy !== false
         const active = !!matchRoute({ to: s.to, fuzzy })
+        const current = !!matchRoute({ to: s.to, fuzzy: false })
         const Icon = s.icon
         return (
           <Link
             key={s.to}
             to={s.to}
-            role="tab"
-            aria-selected={active}
-            aria-current={active ? 'page' : undefined}
+            aria-current={current ? 'page' : undefined}
             data-active={active || undefined}
             className="admin-subnav-tab flex shrink-0 items-center gap-1.5 rounded-[var(--glass-radius-sm)] px-3 py-2 text-sm font-medium transition-all"
           >

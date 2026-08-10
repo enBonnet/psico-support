@@ -50,7 +50,22 @@ function AudioStoriesSection() {
         body: 'Inténtalo de nuevo.',
       })
     },
-    onSuccess: (_d, vars) => {
+    onSuccess: (d, vars) => {
+      // ponytail: conflict = another admin (or a double-click) already moved
+      // this story out of pending. The optimistic removal from the list is
+      // correct (it's genuinely no longer pending), so refetch to reconcile
+      // and surface a different message — don't fire the approve/reject toast
+      // nor the analytics event (no decision was made by this admin).
+      if (d.conflict) {
+        qc.invalidateQueries({ queryKey: ['pending-stories'] })
+        qc.invalidateQueries({ queryKey: ['story-tray'] })
+        notify({
+          type: 'warning',
+          title: 'Ya fue revisado',
+          body: 'Otro administrador ya decidió sobre este audio.',
+        })
+        return
+      }
       if (actorId) {
         track({
           event: 'admin_audio_review',
@@ -120,19 +135,21 @@ function AudioStoriesSection() {
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
+                  disabled={decideStory.isPending}
                   onClick={() =>
                     decideStory.mutate({ storyId: s.id, status: 'approved' })
                   }
-                  className="min-h-11 flex-1 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700"
+                  className="min-h-11 flex-1 rounded-[var(--glass-radius-sm)] bg-green-600 px-4 py-2 text-sm font-semibold !text-white transition-all hover:translate-y-[-1px] hover:bg-green-700 disabled:opacity-60"
                 >
                   Aprobar
                 </button>
                 <button
                   type="button"
+                  disabled={decideStory.isPending}
                   onClick={() =>
                     decideStory.mutate({ storyId: s.id, status: 'rejected' })
                   }
-                  className="glass-card-soft min-h-11 flex-1 rounded-[var(--glass-radius-sm)] border-2 border-red-600 px-4 py-2 text-sm font-semibold text-red-600 transition-all hover:translate-y-[-1px] hover:bg-red-50/60"
+                  className="glass-card-soft min-h-11 flex-1 rounded-[var(--glass-radius-sm)] border-2 border-red-600 px-4 py-2 text-sm font-semibold text-red-600 transition-all hover:translate-y-[-1px] hover:bg-red-50/60 disabled:opacity-60"
                 >
                   Rechazar
                 </button>

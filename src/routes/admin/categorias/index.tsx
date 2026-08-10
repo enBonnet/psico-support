@@ -34,6 +34,10 @@ export const Route = createFileRoute('/admin/categorias/')({
 // ['story-tray'] (the public page embeds category copy on each clip).
 function AudioCategoriesSection() {
   const qc = useQueryClient()
+  // ponytail: track which category id has an in-flight toggle so only that
+  // row's Switch disables (not every row's) — two rapid clicks on the same
+  // switch could otherwise race and persist the wrong active value.
+  const [togglingId, setTogglingId] = useState<number | null>(null)
   const { data: categories = [], isLoading } = useQuery({
     // ponytail: encode includeInactive in the key so this admin list
     // (inactive-included) doesn't collide with the pro recorder picker's
@@ -203,7 +207,11 @@ function AudioCategoriesSection() {
             <CategoryRow
               key={c.id}
               category={c}
-              onToggle={(active) => toggleCat.mutate({ id: c.id, active })}
+              onToggle={(active) => {
+                setTogglingId(c.id)
+                toggleCat.mutate({ id: c.id, active })
+              }}
+              toggling={toggleCat.isPending && togglingId === c.id}
               onDelete={() => {
                 if (
                   window.confirm(
@@ -232,6 +240,7 @@ function CategoryRow({
   onDelete,
   onSave,
   saving,
+  toggling,
 }: {
   category: AudioCategory
   onToggle: (active: boolean) => void
@@ -242,6 +251,7 @@ function CategoryRow({
     sortOrder?: number
   }) => void
   saving: boolean
+  toggling?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(category.title)
@@ -346,6 +356,7 @@ function CategoryRow({
         <Switch
           checked={category.active}
           onCheckedChange={onToggle}
+          disabled={toggling}
           aria-label={`Activar categoría ${category.title}`}
         />
         <div className="flex gap-1">

@@ -90,6 +90,12 @@ function ProfessionalsAuditSection() {
       }),
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ['admin-professionals'] })
+      // ponytail: snapshot every matching list page so a server failure
+      // restores the exact pre-optimization state across all filter/page
+      // variants (CodeRabbit: the old optimistic write had no rollback).
+      const prevSnap = qc.getQueriesData<AdminProList>({
+        queryKey: ['admin-professionals'],
+      })
       qc.setQueriesData<AdminProList>(
         { queryKey: ['admin-professionals'] },
         (old) => {
@@ -117,13 +123,20 @@ function ProfessionalsAuditSection() {
           }
         },
       )
+      return { prevSnap }
     },
-    onError: () =>
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prevSnap) {
+        for (const [key, cached] of ctx.prevSnap) {
+          qc.setQueryData(key, cached)
+        }
+      }
       notify({
         type: 'error',
         title: 'No se pudo actualizar el estado',
         body: 'Inténtalo de nuevo.',
-      }),
+      })
+    },
     onSuccess: (_d, vars) => {
       if (actorId) {
         track({
@@ -153,6 +166,9 @@ function ProfessionalsAuditSection() {
       }),
     onMutate: async (vars) => {
       await qc.cancelQueries({ queryKey: ['admin-professionals'] })
+      const prevSnap = qc.getQueriesData<AdminProList>({
+        queryKey: ['admin-professionals'],
+      })
       qc.setQueriesData<AdminProList>(
         { queryKey: ['admin-professionals'] },
         (old) => {
@@ -171,13 +187,20 @@ function ProfessionalsAuditSection() {
           }
         },
       )
+      return { prevSnap }
     },
-    onError: () =>
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prevSnap) {
+        for (const [key, cached] of ctx.prevSnap) {
+          qc.setQueryData(key, cached)
+        }
+      }
       notify({
         type: 'error',
         title: 'No se pudo actualizar',
         body: 'Inténtalo de nuevo.',
-      }),
+      })
+    },
     onSuccess: (_d, vars) => {
       if (actorId) {
         track({
@@ -297,9 +320,14 @@ const ACTION_BTN =
 function ProActions({
   pro,
   onStatus,
+  pending,
 }: {
   pro: AdminPro
   onStatus: (target: 'verified' | 'rejected' | 'disabled' | 'deleted') => void
+  // ponytail: disables every action button while a status mutation is in
+  // flight, so two rapid clicks (or two admins) can't queue conflicting
+  // transitions. ACTION_BTN carries disabled:opacity-60 for the dim.
+  pending: boolean
 }) {
   switch (pro.verifiedStatus) {
     case 'pending':
@@ -307,6 +335,7 @@ function ProActions({
         <>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('verified')}
             className={`${ACTION_BTN} bg-green-600 !text-white hover:bg-green-700`}
           >
@@ -314,6 +343,7 @@ function ProActions({
           </button>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('rejected')}
             className={`${ACTION_BTN} glass-card-soft border-2 border-red-600 text-red-600 hover:bg-red-50/60`}
           >
@@ -326,6 +356,7 @@ function ProActions({
         <>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('disabled')}
             className={`${ACTION_BTN} glass-card-soft border border-amber-500 text-amber-700 hover:bg-amber-50/60`}
           >
@@ -333,6 +364,7 @@ function ProActions({
           </button>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('deleted')}
             className={`${ACTION_BTN} glass-card-soft border border-red-300 text-red-700 hover:bg-red-50/60`}
           >
@@ -345,6 +377,7 @@ function ProActions({
         <>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('verified')}
             className={`${ACTION_BTN} bg-green-600 !text-white hover:bg-green-700`}
           >
@@ -352,6 +385,7 @@ function ProActions({
           </button>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('deleted')}
             className={`${ACTION_BTN} glass-card-soft border border-red-300 text-red-700 hover:bg-red-50/60`}
           >
@@ -364,6 +398,7 @@ function ProActions({
         <>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('verified')}
             className={`${ACTION_BTN} bg-green-600 !text-white hover:bg-green-700`}
           >
@@ -371,6 +406,7 @@ function ProActions({
           </button>
           <button
             type="button"
+            disabled={pending}
             onClick={() => onStatus('deleted')}
             className={`${ACTION_BTN} glass-card-soft border border-red-300 text-red-700 hover:bg-red-50/60`}
           >
@@ -558,9 +594,9 @@ function ProCard({
         {pro.verifiedStatus === 'pending' ? 'Revisar y editar' : 'Editar perfil'}
       </Link>
 
-      <div className="mt-2 flex gap-2 disabled:opacity-60">
-        <div className="flex flex-1 gap-2 opacity-100">
-          <ProActions pro={pro} onStatus={onStatus} />
+      <div className="mt-2 flex gap-2">
+        <div className="flex flex-1 gap-2">
+          <ProActions pro={pro} onStatus={onStatus} pending={statusPending} />
         </div>
       </div>
       {statusPending && (
