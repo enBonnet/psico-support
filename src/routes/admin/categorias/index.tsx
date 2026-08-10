@@ -34,10 +34,10 @@ export const Route = createFileRoute('/admin/categorias/')({
 // ['story-tray'] (the public page embeds category copy on each clip).
 function AudioCategoriesSection() {
   const qc = useQueryClient()
-  // ponytail: track which category id has an in-flight toggle so only that
-  // row's Switch disables (not every row's) — two rapid clicks on the same
-  // switch could otherwise race and persist the wrong active value.
-  const [togglingId, setTogglingId] = useState<number | null>(null)
+  // ponytail: Set of category ids with an in-flight toggle so each toggled
+  // row's Switch disables independently — a single value would be overwritten
+  // by a concurrent toggle on another row and re-enable the first row mid-flight.
+  const [togglingIds, setTogglingIds] = useState<Set<number>>(() => new Set())
   const { data: categories = [], isLoading } = useQuery({
     // ponytail: encode includeInactive in the key so this admin list
     // (inactive-included) doesn't collide with the pro recorder picker's
@@ -97,25 +97,45 @@ function AudioCategoriesSection() {
       // the pro picker's active-only key is unaffected and refetches normally.
       const adminKey = ['audio-categories', { includeInactive: true }] as const
       await qc.cancelQueries({ queryKey: adminKey })
-      const prev = qc.getQueryData<AudioCategory[]>(adminKey)
+      // ponytail: capture ONLY this category's previous active (not the whole
+      // list) so a concurrent toggle's optimistic update isn't clobbered when
+      // this one rolls back. Track this id in the pending Set so the row's
+      // Switch stays disabled until settle.
+      const prevList = qc.getQueryData<AudioCategory[]>(adminKey)
+      const prevActive = prevList?.find((c) => c.id === vars.id)?.active
       qc.setQueryData<AudioCategory[]>(adminKey, (old) =>
         old?.map((c) => (c.id === vars.id ? { ...c, active: vars.active } : c)),
       )
-      return { prev }
+      setTogglingIds((s) => {
+        const next = new Set(s)
+        next.add(vars.id)
+        return next
+      })
+      return { prevActive }
     },
-    onError: (_e, _vars, ctx) => {
-      if (ctx?.prev)
+    onError: (_e, vars, ctx) => {
+      // restore only this category's active; the invalidate below reconciles.
+      if (ctx?.prevActive !== undefined) {
         qc.setQueryData<AudioCategory[]>(
           ['audio-categories', { includeInactive: true }],
-          ctx.prev,
+          (old) =>
+            old?.map((c) =>
+              c.id === vars.id ? { ...c, active: ctx.prevActive! } : c,
+            ),
         )
+      }
       notify({
         type: 'error',
         title: 'No se pudo cambiar el estado',
         body: 'Inténtalo de nuevo.',
       })
     },
-    onSuccess: () => {
+    onSettled: (_d, _e, vars) => {
+      setTogglingIds((s) => {
+        const next = new Set(s)
+        next.delete(vars.id)
+        return next
+      })
       qc.invalidateQueries({ queryKey: ['audio-categories'] })
       qc.invalidateQueries({ queryKey: ['story-tray'] })
     },
@@ -207,11 +227,8 @@ function AudioCategoriesSection() {
             <CategoryRow
               key={c.id}
               category={c}
-              onToggle={(active) => {
-                setTogglingId(c.id)
-                toggleCat.mutate({ id: c.id, active })
-              }}
-              toggling={toggleCat.isPending && togglingId === c.id}
+              onToggle={(active) => toggleCat.mutate({ id: c.id, active })}
+              toggling={togglingIds.has(c.id)}
               onDelete={() => {
                 if (
                   window.confirm(
