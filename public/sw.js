@@ -130,11 +130,12 @@ self.addEventListener('fetch', (event) => {
   // callbacks (email verification, OAuth) without further SW edits.
   if (reqUrl.pathname.startsWith('/api/auth/')) return
 
-  // ponytail: document navigations fall back to the cached shell when the
-  // network (and any per-URL cache entry) is unavailable. This is what makes
-  // the app boot offline from a cold start. Online navigations to SSR routes
-  // (the profile page) still go to the worker first and get cached by the
-  // SWR branch below on success.
+  // ponytail: document navigations are NETWORK-FIRST (see return below): the
+  // worker serves real SSR HTML online, cached here on success for the next
+  // visit — so real content paints immediately instead of an empty shell.
+  // When the network is unavailable, the .catch falls back to the cached
+  // per-URL response or the precached shell, which is what boots the app
+  // offline from a cold start.
   //
   // /media/* URLs are EXCLUDED from navigation fallback: they're binary R2
   // reads (avatars, audio, certificates, support docs) served by server-only
@@ -163,7 +164,20 @@ self.addEventListener('fetch', (event) => {
             return res
           })
           .catch(() => fallback)
-        return cached || network
+        // ponytail: NETWORK-FIRST for navigations. The empty shell is always
+        // precached, so a cache-first policy (the old `return cached || network`)
+        // returned the empty shell on EVERY first visit and only showed real
+        // content after client-side hydration — every route looked blank on
+        // first paint, and the real SSR HTML was fetched in the background
+        // then discarded (cached only for the NEXT visit, which is why reload
+        // worked). Network-first honors SSR: online users get real HTML
+        // immediately; `network`'s .catch(() => fallback) above still returns
+        // the cached shell / per-URL entry when offline, so cold-boot offline
+        // is preserved. Ceiling: on very slow links this waits for the worker
+        // round-trip before painting — upgrade to a race-with-timeout (network
+        // if it resolves in ~300ms, else cached shell) if that proves worse
+        // than the old instant-shell-then-hydrate.
+        return network
       })(),
     )
     return
