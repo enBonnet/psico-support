@@ -106,8 +106,29 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET') return
-  const sameOrigin = new URL(req.url).origin === self.location.origin
+  const reqUrl = new URL(req.url)
+  const sameOrigin = reqUrl.origin === self.location.origin
   if (!sameOrigin) return
+
+  // ponytail: NEVER intercept /api/auth/* (Better Auth). These are API
+  // endpoints, not app routes — they return redirects (the password-reset
+  // callback GET /reset-password/:token → 302 to /recuperar?token=…), JSON,
+  // and set auth cookies, none of which the SW should cache or replay.
+  //
+  // This is load-bearing for password recovery: the email link points at
+  // /api/auth/reset-password/:token?callbackURL=… and is opened as a browser
+  // navigation. If the SW's navigation branch (below) ran for it, it would
+  // find the precached shell via cache.match(SHELL) and return it instantly
+  // (cache-first: `return cached || network`), so the browser would render
+  // the shell at the reset-callback URL and Better Auth's 302 to
+  // /recuperar?token=… would NEVER execute — the router would hydrate
+  // against /api/auth/reset-password/:token (a server-only route with no
+  // component) and the page would be blank. Letting these requests bypass
+  // the SW means the browser follows the 302 itself, lands on
+  // /recuperar?token=… (a real app route the SW then shells correctly), and
+  // the recovery form renders. Same reasoning protects any future GET
+  // callbacks (email verification, OAuth) without further SW edits.
+  if (reqUrl.pathname.startsWith('/api/auth/')) return
 
   // ponytail: document navigations fall back to the cached shell when the
   // network (and any per-URL cache entry) is unavailable. This is what makes
