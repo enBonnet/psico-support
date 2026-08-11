@@ -17,7 +17,9 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as RecuperarRouteImport } from './routes/recuperar'
 import { Route as PsicologosRouteImport } from './routes/psicologos'
 import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as MediasRouteImport } from './routes/medias'
 import { Route as EquipoRouteImport } from './routes/equipo'
+import { Route as EnlacesRouteImport } from './routes/enlaces'
 import { Route as DemoRouteImport } from './routes/demo'
 import { Route as CuentaRouteImport } from './routes/cuenta'
 import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
@@ -103,9 +105,19 @@ const PrivacidadRoute = PrivacidadRouteImport.update({
   path: '/privacidad',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MediasRoute = MediasRouteImport.update({
+  id: '/medias',
+  path: '/medias',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EquipoRoute = EquipoRouteImport.update({
   id: '/equipo',
   path: '/equipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnlacesRoute = EnlacesRouteImport.update({
+  id: '/enlaces',
+  path: '/enlaces',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DemoRoute = DemoRouteImport.update({
@@ -343,7 +355,9 @@ export interface FileRoutesByFullPath {
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRouteWithChildren
   '/demo': typeof DemoRoute
+  '/enlaces': typeof EnlacesRoute
   '/equipo': typeof EquipoRoute
+  '/medias': typeof MediasRoute
   '/privacidad': typeof PrivacidadRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
@@ -397,7 +411,9 @@ export interface FileRoutesByTo {
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRouteWithChildren
   '/demo': typeof DemoRoute
+  '/enlaces': typeof EnlacesRoute
   '/equipo': typeof EquipoRoute
+  '/medias': typeof MediasRoute
   '/privacidad': typeof PrivacidadRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
@@ -453,7 +469,9 @@ export interface FileRoutesById {
   '/como-funciona': typeof ComoFuncionaRoute
   '/cuenta': typeof CuentaRouteWithChildren
   '/demo': typeof DemoRoute
+  '/enlaces': typeof EnlacesRoute
   '/equipo': typeof EquipoRoute
+  '/medias': typeof MediasRoute
   '/privacidad': typeof PrivacidadRoute
   '/psicologos': typeof PsicologosRoute
   '/recuperar': typeof RecuperarRoute
@@ -510,7 +528,9 @@ export interface FileRouteTypes {
     | '/como-funciona'
     | '/cuenta'
     | '/demo'
+    | '/enlaces'
     | '/equipo'
+    | '/medias'
     | '/privacidad'
     | '/psicologos'
     | '/recuperar'
@@ -564,7 +584,9 @@ export interface FileRouteTypes {
     | '/como-funciona'
     | '/cuenta'
     | '/demo'
+    | '/enlaces'
     | '/equipo'
+    | '/medias'
     | '/privacidad'
     | '/psicologos'
     | '/recuperar'
@@ -619,7 +641,9 @@ export interface FileRouteTypes {
     | '/como-funciona'
     | '/cuenta'
     | '/demo'
+    | '/enlaces'
     | '/equipo'
+    | '/medias'
     | '/privacidad'
     | '/psicologos'
     | '/recuperar'
@@ -675,7 +699,9 @@ export interface RootRouteChildren {
   ComoFuncionaRoute: typeof ComoFuncionaRoute
   CuentaRoute: typeof CuentaRouteWithChildren
   DemoRoute: typeof DemoRoute
+  EnlacesRoute: typeof EnlacesRoute
   EquipoRoute: typeof EquipoRoute
+  MediasRoute: typeof MediasRoute
   PrivacidadRoute: typeof PrivacidadRoute
   PsicologosRoute: typeof PsicologosRoute
   RecuperarRoute: typeof RecuperarRoute
@@ -770,11 +796,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacidadRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/medias': {
+      id: '/medias'
+      path: '/medias'
+      fullPath: '/medias'
+      preLoaderRoute: typeof MediasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/equipo': {
       id: '/equipo'
       path: '/equipo'
       fullPath: '/equipo'
       preLoaderRoute: typeof EquipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enlaces': {
+      id: '/enlaces'
+      path: '/enlaces'
+      fullPath: '/enlaces'
+      preLoaderRoute: typeof EnlacesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/demo': {
@@ -1143,7 +1183,9 @@ const rootRouteChildren: RootRouteChildren = {
   ComoFuncionaRoute: ComoFuncionaRoute,
   CuentaRoute: CuentaRouteWithChildren,
   DemoRoute: DemoRoute,
+  EnlacesRoute: EnlacesRoute,
   EquipoRoute: EquipoRoute,
+  MediasRoute: MediasRoute,
   PrivacidadRoute: PrivacidadRoute,
   PsicologosRoute: PsicologosRoute,
   RecuperarRoute: RecuperarRoute,
@@ -1182,13 +1224,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
