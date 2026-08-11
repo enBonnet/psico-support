@@ -148,8 +148,8 @@ export default defineConfig(({ mode }) => {
           // `name` (install prompt, app drawer, home screen), iOS uses
           // `short_name` (icon label). The descriptive "Red de Apoyo Psicológico
           // Venezuela" still shows in the browser tab via <title> in __root.tsx.
-          name: 'Psicoayudaven',
-          short_name: 'Psicoayudaven',
+          name: 'Psicoayudas',
+          short_name: 'Psicoayudas',
           description:
             'Conecta a personas afectadas con psicólogos verificados en Venezuela.',
           theme_color: '#112a8d',

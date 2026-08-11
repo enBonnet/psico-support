@@ -438,7 +438,7 @@ function ProCard({
   // contact came through psicoayudaven.
   const waDigits = pro.whatsapp.replace(/\D/g, '')
   const waHref = `https://wa.me/${waDigits}?text=${encodeURIComponent(
-    'Hola, te escribimos desde PsicoAyudaVen.',
+    'Hola, te escribimos desde PsicoAyudas.',
   )}`
   return (
     <li className="glass-card p-4">

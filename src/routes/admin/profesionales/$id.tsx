@@ -162,7 +162,7 @@ function ProContextBlock({
 }) {
   const waDigits = pro.whatsapp.replace(/\D/g, '')
   const waHref = `https://wa.me/${waDigits}?text=${encodeURIComponent(
-    'Hola, te escribimos desde PsicoAyudaVen.',
+    'Hola, te escribimos desde PsicoAyudas.',
   )}`
   return (
     <section className="glass-card-soft mt-4 rounded-[var(--glass-radius-sm)] p-4">
@@ -470,7 +470,7 @@ function AdminProfileEditSection({
             className={inputCls}
             value={certifyingSchool}
             onChange={(e) => setCertifyingSchool(e.target.value)}
-            placeholder="Ej. Colegio de Psicólogos de Venezuela"
+            placeholder="Ej. Colegio de Psicólogos"
           />
         </FieldShell>
 

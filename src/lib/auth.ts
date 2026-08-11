@@ -45,9 +45,9 @@ function buildAuth() {
         // and leaving the user with a reset link that never arrives).
         await sendEmail({
           to: user.email,
-          subject: 'Restablece tu contraseña · PsicoAyudaVen',
+          subject: 'Restablece tu contraseña · PsicoAyudas',
           html: resetPasswordHtml(url),
-          text: `Restablece tu contraseña en PsicoAyudaVen.\n\nAbre este enlace (válido por 30 minutos):\n${url}\n\nSi no pediste este cambio, ignora este correo: tu contraseña no cambiará.`,
+          text: `Restablece tu contraseña en PsicoAyudas.\n\nAbre este enlace (válido por 30 minutos):\n${url}\n\nSi no pediste este cambio, ignora este correo: tu contraseña no cambiará.`,
         })
       },
     },

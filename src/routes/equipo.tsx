@@ -8,9 +8,9 @@ export const Route = createFileRoute('/equipo')({
   // /terminos.
   head: () =>
     seoHead({
-      title: 'Equipo · PsicoAyudaVen',
+      title: 'Equipo · PsicoAyudas',
       description:
-        'Un equipo multidisciplinario entre Venezuela, Chile, Perú, Colombia, México y España detrás de PsicoAyudaVen: psicología, trabajo social, salud mental, estrategia y desarrollo.',
+        'Un equipo multidisciplinario entre Venezuela, Chile, Perú, Colombia, México y España detrás de PsicoAyudas: psicología, trabajo social, salud mental, estrategia y desarrollo.',
       path: '/equipo',
     }),
   component: EquipoPage,
@@ -85,7 +85,7 @@ function EquipoPage() {
 
       <p className="section-kicker mt-6">Equipo</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Las personas detrás de PsicoAyudaVen
+        Las personas detrás de PsicoAyudas
       </h1>
       <div className="section-underline mt-2" />
 

@@ -18,7 +18,7 @@ import { resolveSiteUrl } from '#/lib/seo-server'
 // onboarded as a verified sender domain, so env.EMAIL.send() would reject any
 // other From. Swap for env only if a second sender domain is ever onboarded.
 const FROM_ADDRESS = 'noreply@psicoayudaven.com'
-const FROM_NAME = 'PsicoAyudaVen'
+const FROM_NAME = 'PsicoAyudas'
 
 // Mirrors Medicall tokens in src/styles.css — inline only (no CSS vars in mail).
 // ponytail: logoUrl is intentionally NOT here — it's per-request (resolved in
@@ -229,7 +229,7 @@ export function meetingConfirmationHtml(input: MeetingEmailInput): string {
   const intro =
     input.whoFor === 'client'
       ? 'Tu videollamada de apoyo psicológico está agendada. Te esperamos en el enlace a la hora acordada.'
-      : 'Tienes una nueva videollamada agendada en PsicoAyudaVen. Revisa los datos abajo.'
+      : 'Tienes una nueva videollamada agendada en PsicoAyudas. Revisa los datos abajo.'
   const body = `
     <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:${EMAIL.textMuted}">${intro}</p>
     ${meetingDetailsList(input)}

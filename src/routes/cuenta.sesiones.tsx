@@ -33,14 +33,14 @@ function buildIcsDataUrl(a: AppointmentListItem): string {
   const ics = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//PsicoAyudaVen//Appointment//ES',
+    'PRODID:-//PsicoAyudas//Appointment//ES',
     'BEGIN:VEVENT',
     `UID:psico-apt-${a.id}@psicoayudaven.com`,
     `DTSTAMP:${fmtUtc(Date.now())}Z`,
     `DTSTART:${fmtUtc(a.startAt)}Z`,
     `DTEND:${fmtUtc(a.endAt)}Z`,
     `SUMMARY:Videollamada con ${a.professionalName}`,
-    'DESCRIPTION:Sesión de apoyo psicológico a través de PsicoAyudaVen. Únete desde la app unos minutos antes de la hora.',
+    'DESCRIPTION:Sesión de apoyo psicológico a través de PsicoAyudas. Únete desde la app unos minutos antes de la hora.',
     'END:VEVENT',
     'END:VCALENDAR',
   ].join('\r\n')

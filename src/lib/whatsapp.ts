@@ -23,7 +23,7 @@
  * be worse than none.
  */
 export function whatsappMessage(proName: string): string {
-  return `Hola ${proName}, te escribo desde PsicoAyudaVen. Necesito hablar con alguien ahora mismo. ¿Tienes un momento para conversar?`
+  return `Hola ${proName}, te escribo desde PsicoAyudas. Necesito hablar con alguien ahora mismo. ¿Tienes un momento para conversar?`
 }
 
 /**

@@ -23,19 +23,19 @@ export const Route = createFileRoute('/')({
   head: () =>
     seoHead({
       // ponytail: title is ignored for path '/' (seoHead falls back to
-      // SITE_DEFAULT_TITLE — "Psico Ayuda Venezuela · Red de apoyo gratuito
+      // SITE_DEFAULT_TITLE — "Psico Ayudas · Red de apoyo gratuito
       // ante la contingencia"), but kept here as a self-documenting hint and
       // for callers that read this route's head config directly.
       title:
-        'Psico Ayuda Venezuela · Red de apoyo gratuito ante la contingencia',
+        'Psico Ayudas · Red de apoyo gratuito ante la contingencia',
       // ponytail: meta description must fit within Google's mobile SERP
       // preview (~3 lines, ~120 chars). The previous versions (189 chars,
       // then 138 chars) still exceeded the mobile 3-line limit. This version
       // is ~103 chars — safely within mobile, and keeps the key search-intent
-      // terms (apoyo psicológico, gratuito, Venezuela, psicólogos verificados,
+      // terms (apoyo psicológico, gratuito, Latinoamérica, psicólogos verificados,
       // WhatsApp, confidencial).
       description:
-        'Apoyo psicológico gratuito en Venezuela. Psicólogos verificados por WhatsApp. Servicio confidencial.',
+        'Apoyo psicológico gratuito en Latinoamérica. Psicólogos verificados por WhatsApp. Servicio confidencial.',
       path: '/',
     }),
   component: Landing,
@@ -143,7 +143,7 @@ function Landing() {
   return (
     <main className="page-wrap flex min-h-[100dvh] flex-col justify-between py-8">
       <header className="text-center">
-        <p className="section-kicker">Venezuela</p>
+        <p className="section-kicker">Latinoamérica</p>
         <h1 className="mt-2 text-3xl font-bold leading-tight text-[var(--medi-primary)] sm:text-4xl">
           Apoyo psicológico ante los terremotos
         </h1>
@@ -326,7 +326,7 @@ function Landing() {
 
       <Link
         to="/como-funciona"
-        aria-label="Cómo funciona Psico Ayuda Venezuela"
+        aria-label="Cómo funciona Psico Ayudas"
         className="glass-card-soft mt-10 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         ¿Primera vez aquí?{' '}
@@ -337,12 +337,12 @@ function Landing() {
 
       <Link
         to="/acerca-de"
-        aria-label="Acerca de Psico Ayuda Venezuela"
+        aria-label="Acerca de Psico Ayudas"
         className="glass-card-soft mt-2 block rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-sm text-[var(--medi-text-secondary)] transition-all hover:translate-y-[-1px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--medi-secondary)]"
       >
         Servicio gratuito y confidencial.{' '}
         <span className="font-medium text-[var(--medi-secondary)]">
-          Acerca de Psico Ayuda Venezuela
+          Acerca de Psico Ayudas
         </span>
       </Link>
 

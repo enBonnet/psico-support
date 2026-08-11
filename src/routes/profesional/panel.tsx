@@ -429,7 +429,7 @@ function PanelPage() {
             // the professional so the admin knows who's reaching out. Pure
             // client-side — no server fn / DB column needed.
             const supportText = encodeURIComponent(
-              `Hola, soy ${me.name} te escribo por medio de PsicoAyudaVen.`,
+              `Hola, soy ${me.name} te escribo por medio de PsicoAyudas.`,
             )
             const supportHref = `https://wa.me/${SUPPORT_WHATSAPP}?text=${supportText}`
             return (

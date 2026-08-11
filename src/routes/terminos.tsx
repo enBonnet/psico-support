@@ -19,7 +19,7 @@ export const Route = createFileRoute('/terminos')({
     seoHead({
       title: 'Términos para profesionales',
       description:
-        'Términos y condiciones para psicólogos que participan en PsicoAyudaVen: plataforma sin fines de lucro, apoyo gratuito, prohibición de cobros y supervisión clínica.',
+        'Términos y condiciones para psicólogos que participan en PsicoAyudas: plataforma sin fines de lucro, apoyo gratuito, prohibición de cobros y supervisión clínica.',
       path: '/terminos',
     }),
   component: TerminosPage,
@@ -42,7 +42,7 @@ function TerminosPage() {
       </h1>
       <div className="section-underline mt-2" />
       <p className="mt-4 text-sm text-[var(--medi-text-secondary)]">
-        Estos términos regulan la participación de psicólogos en PsicoAyudaVen.
+        Estos términos regulan la participación de psicólogos en PsicoAyudas.
         Al registrarte y ofrecer tu apoyo a través de la plataforma, declaras
         haberlos leído y aceptado.
       </p>
@@ -58,9 +58,9 @@ function TerminosPage() {
             Una plataforma sin fines de lucro
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
-            PsicoAyudaVen es una iniciativa <strong>sin fines de lucro</strong>,
+            PsicoAyudas es una iniciativa <strong>sin fines de lucro</strong>,
             creada para conectar a personas afectadas por la emergencia de los
-            sismos en Venezuela con psicólogos verificados. No se cobra por el
+            sismos en Latinoamérica con psicólogos verificados. No se cobra por el
             acceso, no se vende ningún servicio a través de la plataforma y no
             persigue beneficio económico alguno.
           </p>
@@ -76,7 +76,7 @@ function TerminosPage() {
             Somos una plataforma de conexión
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
-            PsicoAyudaVen funciona como un <strong>directorio verificado</strong>{' '}
+            PsicoAyudas funciona como un <strong>directorio verificado</strong>{' '}
             que facilita el contacto, por WhatsApp, entre la persona que busca
             apoyo y el psicólogo. La plataforma no presta los servicios
             psicológicos, no interviene en la consulta y no establece relación
@@ -116,7 +116,7 @@ function TerminosPage() {
             El apoyo es gratuito: no se cobra
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
-            La ayuda brindada a través de PsicoAyudaVen es{' '}
+            La ayuda brindada a través de PsicoAyudas es{' '}
             <strong>gratuita</strong>. Los profesionales que participan{' '}
             <strong>no deben cobrar</strong> por las intervenciones, consultas o
             acompañamientos que se inicien mediante la plataforma. Cobrar por
@@ -187,7 +187,7 @@ function TerminosPage() {
             Consentimiento
           </h2>
           <p className="mt-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
-            Al registrarte en PsicoAyudaVen y publicar tu disponibilidad,
+            Al registrarte en PsicoAyudas y publicar tu disponibilidad,
             declaras haber leído, comprendido y aceptado estos términos, así como
             comprometerte a cumplirlos. El equipo de la plataforma se reserva el
             derecho de suspender o retirar el acceso de quienes incumplan lo
@@ -219,7 +219,7 @@ function TerminosPage() {
       </div>
 
       <footer className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-xs text-[var(--medi-text-secondary)]">
-        Este documento es informativo y no constituye asesoría legal. PsicoAyudaVen
+        Este documento es informativo y no constituye asesoría legal. PsicoAyudas
         puede actualizar estos términos; la versión vigente es la publicada en
         esta página.
       </footer>

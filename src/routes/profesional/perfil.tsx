@@ -278,7 +278,7 @@ function ProfileSection({ me }: { me: NonNullable<MyPro> }) {
             className={inputCls}
             value={certifyingSchool}
             onChange={(e) => setCertifyingSchool(e.target.value)}
-            placeholder="Ej. Colegio de Psicólogos de Venezuela"
+            placeholder="Ej. Colegio de Psicólogos"
           />
         </FieldShell>
 

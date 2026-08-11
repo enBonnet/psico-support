@@ -17,16 +17,22 @@
 //     forged Host header can't mint OG/canonical URLs for an arbitrary domain.
 //
 // SITE_URL is kept as an alias of PRIMARY_SITE_URL for the few call sites that
-// intentionally want the canonical primary (visible brand text in demo/app,
-// .ics calendar identity) rather than the per-request host.
-export const PRIMARY_SITE_URL = 'https://psicoayudaven.com'
+// intentionally want the canonical primary rather than the per-request host
+// (e.g. default OG image fallback). NOTE: the email sender (FROM_ADDRESS) and
+// the .ics calendar identity (UID + organizer in email.ts /
+// cuenta.sesiones.tsx) are LITERAL '@psicoayudaven.com' strings, deliberately
+// NOT derived from PRIMARY_SITE_URL — psicoayudaven.com is the only domain
+// onboarded as a verified Email Service sender, and the UID must stay stable
+// or previously-imported appointments duplicate on re-import. Changing
+// PRIMARY_SITE_URL does NOT flip them.
+export const PRIMARY_SITE_URL = 'https://psicoayudas.com'
 export const SITE_URL = PRIMARY_SITE_URL
 export const KNOWN_HOSTS = new Set(['psicoayudaven.com', 'psicoayudas.com'])
-export const SITE_NAME = 'PsicoAyudaVen'
-export const SITE_BRAND = 'Psico Ayuda Venezuela'
+export const SITE_NAME = 'PsicoAyudas'
+export const SITE_BRAND = 'Psico Ayudas'
 // ponytail: tagline names the mission concisely. The full title
 // (SITE_DEFAULT_TITLE) must stay ≤ 60 chars / ~600px for Google's SERP
-// preview — "Psico Ayuda Venezuela · Apoyo psicológico gratuito" = 50 chars,
+// preview — "Psico Ayudas · Apoyo psicológico gratuito" = 42 chars,
 // safely within the limit. The previous tagline ("Red de apoyo gratuito ante
 // la contingencia") pushed the title to 66 chars and got truncated. The
 // description carries the fuller context (contingencia, WhatsApp, etc.).
@@ -117,7 +123,7 @@ export function seoHead({
     { property: 'og:type', content: type },
     { property: 'og:url', content: url },
     { property: 'og:image', content: resolvedImage },
-    { property: 'og:locale', content: 'es_VE' },
+    { property: 'og:locale', content: 'es_LA' },
     // ponytail: Twitter card tags use name= (not property= like OG). Twitter's
     // crawler only reads <meta name="twitter:*">; <meta property="twitter:*">
     // (which React renders when you pass `property`) is silently ignored —
@@ -213,8 +219,8 @@ export function organizationJsonLd() {
     url: origin,
     logo: `${origin}/logo512.png`,
     description:
-      'Red de apoyo psicológico gratuito para personas afectadas en Venezuela. Conecta con psicólogos verificados por WhatsApp o de forma presencial.',
-    areaServed: 'VE',
+      'Red de apoyo psicológico gratuito para personas afectadas en Latinoamérica. Conecta con psicólogos verificados por WhatsApp o de forma presencial.',
+    areaServed: 'Latinoamérica',
   }
 }
 
