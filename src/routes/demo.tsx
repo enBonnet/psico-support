@@ -35,7 +35,7 @@ export const Route = createFileRoute('/demo')({
     seoHead({
       title: 'Tour guiado por la plataforma',
       description:
-        'Recorre Psico Ayuda Venezuela paso a paso: cómo recibir ayuda, cómo se verifica cada psicólogo y cómo se administra la plataforma. Incluye manual descargable en PDF.',
+        'Recorre Psico Ayudas paso a paso: cómo recibir ayuda, cómo se verifica cada psicólogo y cómo se administra la plataforma. Incluye manual descargable en PDF.',
       path: '/demo',
     }),
   component: DemoPage,
@@ -103,7 +103,7 @@ function DemoPage() {
       <div className="demo-screen mt-6">
         <p className="section-kicker">Tour guiado</p>
         <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-          Cómo funciona Psico Ayuda Venezuela
+          Cómo funciona Psico Ayudas
         </h1>
         <div className="section-underline mt-2" />
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
@@ -264,7 +264,7 @@ function PrintManual() {
       <header>
         <h1>Manual de usuario</h1>
         <p>
-          <strong>Psico Ayuda Venezuela</strong> — Red gratuita y confidencial de
+          <strong>Psico Ayudas</strong> — Red gratuita y confidencial de
           apoyo psicológico
         </p>
         <p>
@@ -277,10 +277,10 @@ function PrintManual() {
       </header>
 
       <h2>Parte I — Personas que buscan ayuda</h2>
-      <h3>¿Qué es PsicoAyudaVen?</h3>
+      <h3>¿Qué es PsicoAyudas?</h3>
       <p>
         Una red gratuita y confidencial que conecta a personas afectadas por la
-        contingencia en Venezuela con psicólogos verificados. Te responde una
+        contingencia en Latinoamérica con psicólogos verificados. Te responde una
         persona real, sin bots ni inteligencia artificial.
       </p>
       <ul>
@@ -297,7 +297,7 @@ function PrintManual() {
         con un mensaje ya escrito:
       </p>
       <blockquote>
-        Hola {`{nombre}`}, te escribo desde PsicoAyudaVen. Necesito hablar con
+        Hola {`{nombre}`}, te escribo desde PsicoAyudas. Necesito hablar con
         alguien ahora mismo. ¿Tienes un momento para conversar?
       </blockquote>
       <p>

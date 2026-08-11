@@ -18,7 +18,7 @@ export const Route = createFileRoute('/app')({
     seoHead({
       title: 'Instalar la app',
       description:
-        'Cómo instalar la app de PsicoAyudaVen en tu celular Android o iPhone: acceso rápido desde tu pantalla de inicio y uso sin conexión.',
+        'Cómo instalar la app de PsicoAyudas en tu celular Android o iPhone: acceso rápido desde tu pantalla de inicio y uso sin conexión.',
       path: '/app',
     }),
   component: AppInstallPage,
@@ -67,7 +67,7 @@ function AppInstallPage() {
         </h1>
         <div className="section-underline mt-2" />
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-          PsicoAyudaVen funciona como una app en tu celular. Instálala una vez y
+          PsicoAyudas funciona como una app en tu celular. Instálala una vez y
           tendrás acceso rápido y uso sin conexión.
         </p>
       </header>
@@ -102,7 +102,7 @@ function AppInstallPage() {
             <Step n={1}>
               Abre{' '}
               <span className="font-medium text-[var(--medi-text-primary)]">
-                psicoayudaven.com
+                psicoayudas.com
               </span>{' '}
               en Google Chrome.
             </Step>
@@ -137,7 +137,7 @@ function AppInstallPage() {
             <Step n={1}>
               Abre{' '}
               <span className="font-medium text-[var(--medi-text-primary)]">
-                psicoayudaven.com
+                psicoayudas.com
               </span>{' '}
               en Safari.
             </Step>

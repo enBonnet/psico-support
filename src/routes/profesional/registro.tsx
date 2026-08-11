@@ -526,7 +526,7 @@ function RegisterPage() {
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    placeholder="Ej. Colegio de Psicólogos de Venezuela"
+                    placeholder="Ej. Colegio de Psicólogos"
                   />
                 </FieldShell>
               )}

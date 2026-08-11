@@ -17,7 +17,7 @@ export const Route = createFileRoute('/privacidad')({
     seoHead({
       title: 'Política de datos',
       description:
-        'Cómo trata PsicoAyudaVen tus datos personales: qué recopilamos, cuánto tiempo se conservan, dónde viven, qué pasa ante una filtración y qué régimen jurídico aplica (LOPDP Venezuela).',
+        'Cómo trata PsicoAyudas tus datos personales: qué recopilamos, cuánto tiempo se conservan, dónde viven, qué pasa ante una filtración y qué régimen jurídico aplica (LOPDP Venezuela).',
       path: '/privacidad',
     }),
   component: PrivacidadPage,
@@ -247,7 +247,7 @@ function PrivacidadPage() {
 
       <footer className="glass-card-soft mt-6 rounded-[var(--glass-radius-sm)] px-4 py-3 text-center text-xs text-[var(--medi-text-secondary)]">
         Este documento es informativo y no constituye asesoría legal.
-        PsicoAyudaVen puede actualizar esta política; la versión vigente es la
+        PsicoAyudas puede actualizar esta política; la versión vigente es la
         publicada en esta página.
       </footer>
     </main>

@@ -14,14 +14,14 @@ import { notify } from '#/lib/notifications'
 // init runs at worker boot with no request context — siteUrl() would fall back
 // to the primary domain for everyone.
 const SHARE_TEXT =
-  '¿Eres psicólogo/a? Únete a la red de apoyo psicológico de Venezuela y conecta con quienes te necesitan. Verificamos tus credenciales. Gratis y confidencial.'
+  '¿Eres psicólogo/a? Únete a la red de apoyo psicológico de Latinoamérica y conecta con quienes te necesitan. Verificamos tus credenciales. Gratis y confidencial.'
 
 export const Route = createFileRoute('/social')({
   head: () =>
     seoHead({
       title: 'Únete como psicólogo',
       description:
-        'Conecta con personas que necesitan apoyo psicológico en Venezuela. Verificamos tus credenciales, tú decides tu disponibilidad. Gratis y confidencial.',
+        'Conecta con personas que necesitan apoyo psicológico en Latinoamérica. Verificamos tus credenciales, tú decides tu disponibilidad. Gratis y confidencial.',
       path: '/social',
     }),
   component: SocialPage,
@@ -89,7 +89,7 @@ function SocialPage() {
         </h1>
         <div className="section-underline mx-auto mt-3" />
         <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
-          Conecta con personas que necesitan apoyo psicológico en Venezuela.
+          Conecta con personas que necesitan apoyo psicológico en Latinoamérica.
           Verificamos tus credenciales, tú decides tu disponibilidad y
           modalidad.
         </p>

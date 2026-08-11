@@ -433,7 +433,7 @@ src/
     analytics-client.ts  # typed track() + getAnonId() + trackProContact{,Random} — SSR-safe, fire-and-forget
     features.ts          # client feature flags (build-time VITE_ vars, e.g. APPOINTMENTS_ENABLED)
     notifications.tsx    # iOS-style fire-and-forget notify() + <NotificationStack/>
-    seo.ts               # seoHead() + profileJsonLd() helpers; SITE_URL constant
+    seo.ts               # seoHead() + profileJsonLd() + siteUrl() (per-request host resolver; PRIMARY_SITE_URL fallback)
     install-prompt.tsx   # useInstallPrompt() + <InstallCard/> (PWA install detection)
     whatsapp.ts          # centralized WhatsApp deep-link + message builder
     hooks/use-debounced.ts
@@ -462,10 +462,13 @@ public/
   (compile-time checked). Fire-and-forget — never `await`, never throw (see
   gotcha #10). Add new events to the catalog; **don't** rename or reshuffle
   existing ones (the column contract is immutable).
-- **Share/preview URLs** are absolute and use the constant
-  `SITE_URL = 'https://psicoayudaven.com'` (`src/lib/seo.ts`) — not an env var
-  (nobody shares localhost). Swap for env only if a staging domain needs
-  different previews.
+- **Share/preview URLs** are absolute and **self-reference the request host**
+  via `siteUrl()` in `src/lib/seo.ts` (canonical, og:url, default og:image,
+  JSON-LD). The constant `PRIMARY_SITE_URL = 'https://psicoayudas.com'` is only
+  the **fallback** for unknown hosts (localhost, previews, tests) and the few
+  call sites that want the canonical primary regardless of inbound host — never
+  an env var. See gotcha #11 for the dual-domain resolver + why this replaced
+  the old single-constant model.
 - **Responsive nav**: mobile = bottom bar (`md:hidden`); desktop = sticky top
   pill (`hidden md:flex`). Both hide on chromeless auth routes
   (`/signup`, `/profesional/{login,registro,completar}`).

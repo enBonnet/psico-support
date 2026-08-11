@@ -195,7 +195,7 @@ function ProfilePage() {
   // error. The shared URL is the current profile, which carries the OG tags.
   async function onShare() {
     const url = window.location.href
-    const shareTitle = `${pro.name} — Psicólogo en PsicoAyudaVen`
+    const shareTitle = `${pro.name} — Psicólogo en PsicoAyudas`
     // ponytail: Web Share API isn't in Firefox/older browsers at runtime, but
     // the DOM lib types navigator.share as always-present — feature-detect
     // anyway and fall back to clipboard.

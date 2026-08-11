@@ -48,7 +48,7 @@ function VoluntariadoPage() {
         </strong>{' '}
         hacia el que avanza el proyecto: personas con formación en salud mental,
         desde cualquier parte del mundo, acompañan de forma gratuita a quienes
-        enfrentan una emergencia humanitaria en Venezuela.
+        enfrentan una emergencia humanitaria en Latinoamérica.
       </p>
       {/* ponytail: aviso de transición — el directorio de profesionales
           verificados sigue operativo con sus propios términos (/terminos).
@@ -80,7 +80,7 @@ function VoluntariadoPage() {
           </p>
           <ul className="mt-1 space-y-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             {[
-              'Acompañamiento psicoemocional de primer nivel, voluntario y gratuito, para personas afectadas por una situación de desastre o emergencia humanitaria en Venezuela.',
+              'Acompañamiento psicoemocional de primer nivel, voluntario y gratuito, para personas afectadas por una situación de desastre o emergencia humanitaria en Latinoamérica.',
               'Una intervención breve orientada a la contención, la escucha activa, la estabilización emocional inmediata y la orientación hacia recursos y rutas de atención.',
               'Un servicio prestado a distancia por personas con formación en salud mental que actúan como voluntarias.',
             ].map((line) => (
@@ -126,7 +126,7 @@ function VoluntariadoPage() {
           </h2>
           <ul className="mt-3 space-y-2 text-sm leading-relaxed text-[var(--medi-text-secondary)]">
             {[
-              'Quien acompaña puede estar en cualquier país; quien es acompañado está, en su mayoría, en Venezuela.',
+              'Quien acompaña puede estar en cualquier país; quien es acompañado está, en su mayoría, en Latinoamérica.',
               'El acompañamiento no se presenta como ejercicio profesional regulado en territorio venezolano, ni como representación legal ni como actuación en nombre de instituciones venezolanas.',
               'El servicio es gratuito: no hay cobro ni contraprestación económica.',
               'Ninguna comunicación del proyecto promete resultados, garantiza protección o se presenta como autoridad médica o legal.',

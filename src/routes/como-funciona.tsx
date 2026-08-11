@@ -23,9 +23,9 @@ import { seoHead } from '#/lib/seo'
 export const Route = createFileRoute('/como-funciona')({
   head: () =>
     seoHead({
-      title: 'Cómo funciona Psico Ayuda Venezuela',
+      title: 'Cómo funciona Psico Ayudas',
       description:
-        'Cómo usar la red para recibir apoyo psicológico gratuito tras los terremotos en Venezuela, cómo se verifica cada psicólogo y cómo cuidamos tus datos. Servicio confidencial por WhatsApp o de forma presencial.',
+        'Cómo usar la red para recibir apoyo psicológico gratuito tras los terremotos en Latinoamérica, cómo se verifica cada psicólogo y cómo cuidamos tus datos. Servicio confidencial por WhatsApp o de forma presencial.',
       path: '/como-funciona',
     }),
   component: HowItWorksPage,
@@ -84,12 +84,12 @@ function HowItWorksPage() {
 
       <p className="section-kicker mt-6">Cómo funciona</p>
       <h1 className="mt-2 text-2xl font-bold text-[var(--medi-text-primary)]">
-        Cómo funciona Psico Ayuda Venezuela
+        Cómo funciona Psico Ayudas
       </h1>
       <div className="section-underline mt-2" />
       <p className="mt-4 text-base text-[var(--medi-text-secondary)]">
         Una red de psicólogos verificados que acompaña, de forma gratuita y
-        confidencial, a las personas afectadas por los terremotos en Venezuela.
+        confidencial, a las personas afectadas por los terremotos en Latinoamérica.
         Aquí explicamos cómo recibir ayuda, cómo se verifica cada profesional y
         cómo cuidamos tu información.
       </p>
@@ -112,7 +112,7 @@ function HowItWorksPage() {
           <strong>acompañamiento psicoemocional voluntario</strong>: personas
           con formación en salud mental, desde cualquier parte del mundo, que
           acompañan de forma gratuita a quienes enfrentan la emergencia en
-          Venezuela. No es psicoterapia ni ejercicio profesional regulado, sino
+          Latinoamérica. No es psicoterapia ni ejercicio profesional regulado, sino
           contención, escucha activa y orientación hacia recursos.
         </p>
         <div className="mt-3 flex flex-wrap gap-3">
@@ -369,7 +369,7 @@ function HowItWorksPage() {
           to="/acerca-de"
           className="font-medium text-[var(--medi-secondary)] hover:underline"
         >
-          Acerca de Psico Ayuda Venezuela
+          Acerca de Psico Ayudas
         </Link>
       </footer>
     </main>

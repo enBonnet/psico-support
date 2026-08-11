@@ -709,7 +709,7 @@ export const createAppointment = createServerFn({ method: 'POST' })
         clientIcs = buildIcsAttachment({
           appointmentId: appt.id,
           title: `Videollamada con ${row.name}`,
-          description: `Sesión de apoyo psicológico con ${row.name} a través de PsicoAyudaVen.`,
+          description: `Sesión de apoyo psicológico con ${row.name} a través de PsicoAyudas.`,
           startAt, endAt, meetingUrl,
           organizerName: row.name,
           attendeeName: client.name,
@@ -760,9 +760,9 @@ export const createAppointment = createServerFn({ method: 'POST' })
               proIcs = buildIcsAttachment({
                 appointmentId: appt.id,
                 title: `Videollamada con ${client.name}`,
-                description: `Sesión agendada con ${client.name} a través de PsicoAyudaVen.`,
+                description: `Sesión agendada con ${client.name} a través de PsicoAyudas.`,
                 startAt, endAt, meetingUrl,
-                organizerName: 'PsicoAyudaVen',
+                organizerName: 'PsicoAyudas',
                 attendeeName: client.name,
                 attendeeEmail: client.email,
               })
