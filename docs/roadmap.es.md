@@ -59,26 +59,28 @@ premios — **no** es fundador, financiador ni una relación institucional conti
 
 **Costo anual hoy:** ~$200–400 (dominio + servicios mínimos).
 
-**Métricas desde el lanzamiento (2026-06-28):**
+**Métricas desde el lanzamiento (2026-06-28), consultadas el 2026-08-03:**
 
 | Métrica | Valor | Fuente |
 |---------|-------|--------|
-| Visitantes únicos | 4.140 | Cloudflare Web Analytics |
-| Visitantes únicos/día (actual) | ~300 | Cloudflare Web Analytics |
-| Actores con interacción (≥1 evento tracked) | 651 (~16% de los visitantes) | Analytics Engine |
-| Eventos tracked totales | 2.538 | Analytics Engine |
-| Contactos por WhatsApp (todos los CTAs) | ~109 — help-now 64, tarjeta del directorio 27, `/ahora` 10, al azar 8 | Analytics Engine |
-| Instalaciones PWA | 6 | Analytics Engine |
+| Visitantes únicos | 4.140 (al 2026-07-14) | Cloudflare Web Analytics |
+| Visitantes únicos/día (actual) | ~300 (al 2026-07-14) | Cloudflare Web Analytics |
+| Actores con interacción (≥1 evento tracked) | 839 (~20% de los visitantes) | Analytics Engine |
+| Eventos tracked totales | 3.448 | Analytics Engine |
+| Contactos por WhatsApp (todos los CTAs) | 131 — help-now 85, tarjeta del directorio 28, `/ahora` 10, al azar 8 | Analytics Engine |
+| Instalaciones PWA | 13 | Analytics Engine |
 
-**Alcance vs compromiso:** ~4.140 visitantes llegaron al sitio, pero solo
-~651 (~16%) dispararon una acción tracked y ~109 (~2,6%) abrieron una
-conversación de WhatsApp. Los actores con interacción picaron en 212 el día
-del lanzamiento (2 jul) y ahora se mueven en ~30–60/día frente a ~300
-visitantes únicos/día en bruto. El CTA "necesito ayuda ahora" (help-now) es el
-mayor conversor individual (64 de 109 contactos). Esta brecha es el caso
-cuantitativo para el trabajo de reconstrucción del embudo en Q4 — la
-plataforma tiene alcance; convertir ese alcance en contactos de quienes buscan
-ayuda es el problema abierto de producto.
+**Alcance vs compromiso:** ~4.140 visitantes llegaron al sitio (última
+consulta 2026-07-14 — Web Analytics no es consultable vía la API de eventos),
+mientras que 839 (~20%) dispararon una acción tracked y 131 (~3,2%) abrieron
+una conversación de WhatsApp. Los actores con interacción picaron en 212 el
+día del lanzamiento (2 jul) y se han asentado en ~10–20/día hacia finales de
+julio frente a ~300 visitantes únicos/día en bruto. El CTA "necesito ayuda
+ahora" (help-now) es el mayor conversor individual (85 de 131 contactos, arriba
+de 64 hace tres semanas). Esta brecha es el caso cuantitativo para el trabajo
+de reconstrucción del embudo en Q4 — la plataforma tiene alcance; convertir ese
+alcance en contactos de quienes buscan ayuda es el problema abierto de
+producto.
 
 ---
 

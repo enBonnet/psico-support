@@ -58,24 +58,26 @@ institutional relationship).
 
 **Annual run-rate today:** ~$200–400 (domain + minimal services).
 
-**Metrics since launch (2026-06-28):**
+**Metrics since launch (2026-06-28), pulled 2026-08-03:**
 
 | Metric | Value | Source |
 |--------|-------|--------|
-| Unique visitors | 4,140 | Cloudflare Web Analytics |
-| Unique visitors/day (current) | ~300 | Cloudflare Web Analytics |
-| Engaged actors (≥1 tracked event) | 651 (~16% of visitors) | Analytics Engine |
-| Total tracked events | 2,538 | Analytics Engine |
-| WhatsApp contacts (all CTAs) | ~109 — help-now 64, directory card 27, `/ahora` 10, random 8 | Analytics Engine |
-| PWA installs | 6 | Analytics Engine |
+| Unique visitors | 4,140 (as of 2026-07-14) | Cloudflare Web Analytics |
+| Unique visitors/day (current) | ~300 (as of 2026-07-14) | Cloudflare Web Analytics |
+| Engaged actors (≥1 tracked event) | 839 (~20% of visitors) | Analytics Engine |
+| Total tracked events | 3,448 | Analytics Engine |
+| WhatsApp contacts (all CTAs) | 131 — help-now 85, directory card 28, `/ahora` 10, random 8 | Analytics Engine |
+| PWA installs | 13 | Analytics Engine |
 
-**Reach vs engagement:** ~4,140 visitors reached the site, but only ~651
-(~16%) triggered a tracked action and ~109 (~2.6%) opened a WhatsApp
-conversation. Engaged actors peaked at 212 on launch day (Jul 2) and now run
-~30–60/day against ~300 raw visitors/day. The help-now CTA is the single
-biggest converter (64 of 109 contacts). This gap is the quantitative case for
-the funnel-rebuild work in Q4 — the platform has reach; converting that reach
-into help-seeker contacts is the open product problem.
+**Reach vs engagement:** ~4,140 visitors reached the site (last pulled
+2026-07-14 — Web Analytics isn't queryable via the events API), while 839
+(~20%) triggered a tracked action and 131 (~3.2%) opened a WhatsApp
+conversation. Engaged actors peaked at 212 on launch day (Jul 2) and have
+settled to ~10–20/day through late July against ~300 raw visitors/day. The
+help-now CTA is the single biggest converter (85 of 131 contacts, up from 64
+three weeks ago). This gap is the quantitative case for the funnel-rebuild
+work in Q4 — the platform has reach; converting that reach into help-seeker
+contacts is the open product problem.
 
 ---
 
