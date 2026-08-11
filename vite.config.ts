@@ -146,12 +146,12 @@ export default defineConfig(({ mode }) => {
           // ponytail: both name + short_name are the brand handle so the
           // installed-app label is consistent across platforms — Android uses
           // `name` (install prompt, app drawer, home screen), iOS uses
-          // `short_name` (icon label). The descriptive "Red de Apoyo Psicológico
-          // Venezuela" still shows in the browser tab via <title> in __root.tsx.
+          // `short_name` (icon label). The descriptive "Psico Ayudas · Apoyo
+          // psicológico gratuito" still shows in the browser tab via <title> in __root.tsx.
           name: 'Psicoayudas',
           short_name: 'Psicoayudas',
           description:
-            'Conecta a personas afectadas con psicólogos verificados en Venezuela.',
+            'Conecta a personas afectadas con psicólogos verificados en Latinoamérica.',
           theme_color: '#112a8d',
           background_color: '#eff7fe',
           display: 'standalone',
