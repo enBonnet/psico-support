@@ -9,7 +9,11 @@ import { createServerEntry } from '@tanstack/react-start/server-entry'
 import { setCloudflareEnv } from '#/db'
 import type { CloudflareEnv } from '#/db'
 import { getSentryInitOptions } from '#/lib/sentry'
-import { SITE_URL } from '#/lib/seo'
+// ponytail: importing seo-server registers the per-request siteUrl resolver
+// (side effect at module load) AND gives the sitemap the request-based
+// resolver it needs (sitemap runs BEFORE the TanStack handler, so it can't
+// use getRequestHeaders — it has no AsyncLocalStorage context yet).
+import { resolveSiteUrlFromRequest } from '#/lib/seo-server'
 import { trackVanityRedirect } from '#/server/analytics'
 import { listVerifiedProIdsRaw } from '#/server/professionals'
 
@@ -92,19 +96,23 @@ function xmlEscape(s: string): string {
     .replaceAll('>', '&gt;')
 }
 
-async function sitemapResponse(): Promise<Response> {
+async function sitemapResponse(origin: string): Promise<Response> {
   // ponytail: fail-soft to [] (listVerifiedProIdsRaw swallows D1 errors) so a
   // transient DB hiccup serves a static-only sitemap instead of 500ing —
   // Google keeps the previous sitemap and retries next crawl.
   const proIds = await listVerifiedProIdsRaw()
+  // ponytail: origin is the per-request host (psicoayudaven.com OR
+  // psicoayudas.com during the side-by-side rollout) so each domain's
+  // sitemap self-references — resolved in the worker fetch below via
+  // resolveSiteUrlFromRequest (this branch runs outside the handler's ALS).
   const staticUrls = SITEMAP_STATIC_PATHS.map(
     (p) =>
-      `  <url><loc>${xmlEscape(`${SITE_URL}${p}`)}</loc><changefreq>monthly</changefreq><priority>${p === '/' ? '1.0' : '0.7'}</priority></url>`,
+      `  <url><loc>${xmlEscape(`${origin}${p}`)}</loc><changefreq>monthly</changefreq><priority>${p === '/' ? '1.0' : '0.7'}</priority></url>`,
   ).join('\n')
   const proUrls = proIds
     .map(
       (id) =>
-        `  <url><loc>${xmlEscape(`${SITE_URL}/ayuda/profesionales/${id}`)}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`,
+        `  <url><loc>${xmlEscape(`${origin}/ayuda/profesionales/${id}`)}</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>`,
     )
     .join('\n')
   const body = `<?xml version="1.0" encoding="UTF-8"?>
@@ -173,10 +181,11 @@ const entry = createServerEntry(
 
       // ponytail: /sitemap.xml — handled here because TanStack's file-router
       // mis-parses the dotted filename. Only matches the literal /sitemap.xml
-      // path; everything else flows to the app handler.
+      // path; everything else flows to the app handler. Resolved per-request so
+      // each domain's sitemap self-references (origin from the inbound host).
       const url = new URL(request.url)
       if (url.pathname === '/sitemap.xml') {
-        return sitemapResponse()
+        return sitemapResponse(resolveSiteUrlFromRequest(request))
       }
 
       // @ts-expect-error — worker fetch passes env as the second argument

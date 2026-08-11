@@ -14,7 +14,7 @@ import { notify } from '#/lib/notifications'
 import { track, trackProContact } from '#/lib/analytics-client'
 import { APPOINTMENTS_ENABLED } from '#/lib/features'
 import { whatsappHref } from '#/lib/whatsapp'
-import { seoHead, profileJsonLd, SITE_URL } from '#/lib/seo'
+import { seoHead, profileJsonLd, siteUrl } from '#/lib/seo'
 import { Avatar } from '#/components/avatar'
 import { SocialIcon } from '#/components/social-icons'
 
@@ -92,9 +92,10 @@ export const Route = createFileRoute('/ayuda/profesionales/$id')({
     // ponytail: when the pro has an avatar, use it as og/twitter:image instead
     // of the default site logo — the face is the CTR lever on WhatsApp/Twitter
     // shares. publicAvatarUrl returns a root-relative path (/media/avatar/...);
-    // OG needs absolute, so prepend SITE_URL.
+    // OG needs absolute, so prepend the per-request origin (psicoayudaven.com
+    // OR psicoayudas.com) so the share preview image matches the shared host.
     const ogImage = pro.avatarKey
-      ? `${SITE_URL}${publicAvatarUrl(pro.avatarKey)}`
+      ? `${siteUrl()}${publicAvatarUrl(pro.avatarKey)}`
       : undefined
     return seoHead({
       title: `${pro.name} — Psicólogo${locationText ? ` en ${locationText}` : ''}`,
@@ -247,7 +248,7 @@ function ProfilePage() {
           __html: JSON.stringify(
             profileJsonLd({
               name: pro.name,
-              url: `${SITE_URL}/ayuda/profesionales/${pro.id}`,
+              url: `${siteUrl()}/ayuda/profesionales/${pro.id}`,
               locality: pro.ciudad ?? pro.estado,
               country: pro.country,
               populations: pro.population,

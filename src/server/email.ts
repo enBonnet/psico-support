@@ -1,17 +1,29 @@
 import { createEvent as buildIcs } from 'ics'
 
 import { getEmailBinding } from '#/db'
-import { SITE_NAME, SITE_URL } from '#/lib/seo'
+import { SITE_NAME } from '#/lib/seo'
+// ponytail: resolveSiteUrl (server-only) so email action links + logo match
+// the host the triggering request landed on (psicoayudaven.com OR
+// psicoayudas.com). Cookie/session scope is per-domain, so a cancel/reset
+// link must NOT cross domains or the user lands logged-out. The SENDER
+// address (FROM_ADDRESS below) intentionally stays on psicoayudaven.com —
+// only that domain is onboarded as a verified Email Service sender.
+import { resolveSiteUrl } from '#/lib/seo-server'
 
 // ponytail: from-address is a constant — better-auth sendResetPassword and any
 // future transactional mail all share it. The local part is arbitrary once the
 // domain is onboarded (see wrangler.jsonc send_email ponytail for the one-time
-// `wrangler email sending enable` step + DNS records). Swap for env only if a
-// staging domain needs a different sender.
+// `wrangler email sending enable` step + DNS records). Kept on psicoayudaven.com
+// even when the request came through psicoayudas.com: only psicoayudaven.com is
+// onboarded as a verified sender domain, so env.EMAIL.send() would reject any
+// other From. Swap for env only if a second sender domain is ever onboarded.
 const FROM_ADDRESS = 'noreply@psicoayudaven.com'
 const FROM_NAME = 'PsicoAyudaVen'
 
 // Mirrors Medicall tokens in src/styles.css — inline only (no CSS vars in mail).
+// ponytail: logoUrl is intentionally NOT here — it's per-request (resolved in
+// emailLayout from the inbound host) so the logo image URL matches the domain
+// the email links back to.
 const EMAIL = {
   primary: '#112a8d',
   secondary: '#199bee',
@@ -23,7 +35,6 @@ const EMAIL = {
   cardSoft: '#f7fbff',
   font:
     "'Open Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-  logoUrl: `${SITE_URL}/logo512.png`,
 } as const
 
 type SendEmailInput = {
@@ -85,11 +96,19 @@ function escapeHtml(value: string): string {
 }
 
 // Shared Medicall-branded shell: soft blue page bg, logo header, glass-like
-// white card, gradient section underline. Remote logo is intentional — emails
-// always target real users on the prod domain; SITE_URL matches seo.ts / OG.
+// white card, gradient section underline. Logo + footer link resolve to the
+// inbound request's host (psicoayudaven.com / psicoayudas.com) via
+// resolveSiteUrl, so an email triggered from psicoayudas.com links back to
+// psicoayudas.com — keeping the user within their session-cookie domain.
 // Exported so the meeting-confirmation/cancellation emails (and any future
 // transactional mail) compose the same branded shell.
 export function emailLayout({ title, body }: EmailLayoutInput): string {
+  const origin = resolveSiteUrl()
+  const logoUrl = `${origin}/logo512.png`
+  // ponytail: footer link text shows the host (without scheme) so the visible
+  // label matches where the link goes — never "psicoayudaven.com" pointing at
+  // psicoayudas.com or vice versa.
+  const footerHost = origin.replace(/^https?:\/\//, '')
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -107,7 +126,7 @@ export function emailLayout({ title, body }: EmailLayoutInput): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
           <tr>
             <td align="center" style="padding:0 0 20px">
-              <img src="${EMAIL.logoUrl}" width="72" height="72" alt="${escapeAttr(SITE_NAME)}" style="display:block;width:72px;height:72px;border:0;border-radius:16px">
+              <img src="${logoUrl}" width="72" height="72" alt="${escapeAttr(SITE_NAME)}" style="display:block;width:72px;height:72px;border:0;border-radius:16px">
             </td>
           </tr>
           <tr>
@@ -124,7 +143,7 @@ export function emailLayout({ title, body }: EmailLayoutInput): string {
           </tr>
           <tr>
             <td align="center" style="padding:20px 8px 0;font-size:13px;line-height:1.5;color:${EMAIL.textMuted}">
-              ${escapeAttr(SITE_NAME)} · <a href="${SITE_URL}" style="color:${EMAIL.secondary};text-decoration:none">psicoayudaven.com</a>
+              ${escapeAttr(SITE_NAME)} · <a href="${origin}" style="color:${EMAIL.secondary};text-decoration:none">${escapeAttr(footerHost)}</a>
             </td>
           </tr>
         </table>

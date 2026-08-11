@@ -1,7 +1,27 @@
-// ponytail: OG/canonical need an absolute URL and nobody shares localhost, so
-// the prod domain is a constant here — not an env var. Swap for an env-driven
-// value only if a staging domain ever needs different previews.
-export const SITE_URL = 'https://psicoayudaven.com'
+// ponytail: canonical/OG/sitemap/email links need an absolute URL, and during
+// the psicoayudas.com rollout TWO prod domains run side-by-side on the same
+// worker. With self-referencing canonical (the chosen SEO strategy), those
+// URLs must match the host the request ACTUALLY landed on — otherwise the
+// psicoayudas.com sitemap/share-preview would leak psicoayudaven.com URLs.
+//
+// siteUrl() resolves the current origin:
+//   - server: via a resolver registered once at worker boot
+//     (src/lib/seo-server.ts). It reads the per-request Host header through
+//     getRequestHeaders, which is AsyncLocalStorage-backed — per-request
+//     isolated, safe under concurrent isolates (gotcha #9). seo.ts can't
+//     import that helper directly because @tanstack/react-start/server pulls
+//     in node:async_hooks + h3 and would pollute the client bundle.
+//   - client: window.location.origin (share buttons, CSR head re-render).
+//   - fallback: PRIMARY_SITE_URL, used outside any request (tests, scripts,
+//     build-time prerender) and for unknown hosts (localhost, previews) so a
+//     forged Host header can't mint OG/canonical URLs for an arbitrary domain.
+//
+// SITE_URL is kept as an alias of PRIMARY_SITE_URL for the few call sites that
+// intentionally want the canonical primary (visible brand text in demo/app,
+// .ics calendar identity) rather than the per-request host.
+export const PRIMARY_SITE_URL = 'https://psicoayudaven.com'
+export const SITE_URL = PRIMARY_SITE_URL
+export const KNOWN_HOSTS = new Set(['psicoayudaven.com', 'psicoayudas.com'])
 export const SITE_NAME = 'PsicoAyudaVen'
 export const SITE_BRAND = 'Psico Ayuda Venezuela'
 // ponytail: tagline names the mission concisely. The full title
@@ -15,7 +35,40 @@ export const SITE_BRAND = 'Psico Ayuda Venezuela'
 export const SITE_TAGLINE = 'Apoyo psicológico gratuito'
 export const SITE_TITLE_SEPARATOR = ' · '
 export const SITE_DEFAULT_TITLE = `${SITE_BRAND}${SITE_TITLE_SEPARATOR}${SITE_TAGLINE}`
-const DEFAULT_IMAGE = `${SITE_URL}/logo512.png`
+
+// ponytail: server-side resolver hook. seo.ts is shared (client + server) and
+// MUST NOT import @tanstack/react-start/server (it pulls in node:async_hooks +
+// h3, polluting the client bundle). src/lib/seo-server.ts (server-only)
+// registers its resolver here once at worker boot. Assigning the function ref
+// once is safe — the per-request state lives in AsyncLocalStorage inside the
+// resolver, NOT on a module/global variable (gotcha #9).
+type SiteUrlResolver = () => string
+let _serverResolver: SiteUrlResolver | null = null
+export function _registerSiteUrlResolver(fn: SiteUrlResolver) {
+  _serverResolver = fn
+}
+
+// ponytail: the current site origin. Use this everywhere an absolute URL to
+// the SITE itself is rendered (canonical, og:url, JSON-LD url/logo, sitemap,
+// share links, email action URLs). For stable brand identity (sender domain,
+// .ics UID) keep SITE_URL/PRIMARY_SITE_URL instead — those must NOT flip per
+// host or calendar entries duplicate and email sender validation breaks.
+export function siteUrl(): string {
+  // Client: the real origin the user is on (share buttons, CSR head updates).
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname
+    if (KNOWN_HOSTS.has(host)) return window.location.origin
+  }
+  // Server: resolver registered at boot reads the current request's headers.
+  if (_serverResolver) {
+    try {
+      return _serverResolver()
+    } catch {
+      // getRequestHeaders throws outside a request context (tests/scripts).
+    }
+  }
+  return PRIMARY_SITE_URL
+}
 
 type SeoInput = {
   /** Page title without the brand suffix — required, but ignored when path is `/` (uses SITE_DEFAULT_TITLE). */
@@ -44,10 +97,12 @@ export function seoHead({
   title,
   description,
   path,
-  image = DEFAULT_IMAGE,
+  image,
   type = 'website',
 }: SeoInput) {
-  const url = `${SITE_URL}${path}`
+  const origin = siteUrl()
+  const url = `${origin}${path}`
+  const resolvedImage = image ?? `${origin}/logo512.png`
   const documentTitle =
     path === '/'
       ? SITE_DEFAULT_TITLE
@@ -61,7 +116,7 @@ export function seoHead({
     { property: 'og:description', content: description },
     { property: 'og:type', content: type },
     { property: 'og:url', content: url },
-    { property: 'og:image', content: image },
+    { property: 'og:image', content: resolvedImage },
     { property: 'og:locale', content: 'es_VE' },
     // ponytail: Twitter card tags use name= (not property= like OG). Twitter's
     // crawler only reads <meta name="twitter:*">; <meta property="twitter:*">
@@ -71,7 +126,7 @@ export function seoHead({
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: shareTitle },
     { name: 'twitter:description', content: description },
-    { name: 'twitter:image', content: image },
+    { name: 'twitter:image', content: resolvedImage },
     { name: 'twitter:url', content: url },
   ]
   const links = [{ rel: 'canonical', href: url }]
@@ -149,13 +204,14 @@ export function profileJsonLd(p: {
 // with a placeholder query — Google's docs allow this even if the directory's
 // filtering isn't full-text search; it's a "find a psychologist" entry point.
 export function organizationJsonLd() {
+  const origin = siteUrl()
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: SITE_BRAND,
     alternateName: SITE_NAME,
-    url: SITE_URL,
-    logo: `${SITE_URL}/logo512.png`,
+    url: origin,
+    logo: `${origin}/logo512.png`,
     description:
       'Red de apoyo psicológico gratuito para personas afectadas en Venezuela. Conecta con psicólogos verificados por WhatsApp o de forma presencial.',
     areaServed: 'VE',
@@ -163,11 +219,12 @@ export function organizationJsonLd() {
 }
 
 export function websiteJsonLd() {
+  const origin = siteUrl()
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE_BRAND,
-    url: SITE_URL,
+    url: origin,
     inLanguage: 'es-VE',
     publisher: { '@type': 'Organization', name: SITE_BRAND },
     // ponytail: SearchAction targets the directory's `?q=` param (validated
@@ -176,7 +233,7 @@ export function websiteJsonLd() {
     // psychologist" entry point — it unlocks the sitelinks search box.
     potentialAction: {
       '@type': 'SearchAction',
-      target: `${SITE_URL}/ayuda/profesionales?q={search_term_string}`,
+      target: `${origin}/ayuda/profesionales?q={search_term_string}`,
       'query-input': 'required name=search_term_string',
     },
   }

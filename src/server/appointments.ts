@@ -7,7 +7,11 @@ import { z } from 'zod'
 import { getCloudflareEnv, getDb } from '#/db'
 import { appointments, professionals, user } from '#/db/schema'
 import { getAuth } from '#/lib/auth'
-import { SITE_URL } from '#/lib/seo'
+// ponytail: cancelUrl/bookAgainUrl are emailed as action links and MUST match
+// the host the booking request landed on — session cookies are per-domain, so
+// a psicoayudas.com user clicking a psicoayudaven.com cancel link would land
+// logged-out. resolveSiteUrl reads the per-request host (ALS-isolated).
+import { resolveSiteUrl } from '#/lib/seo-server'
 import {
   sendEmail,
   meetingConfirmationHtml,
@@ -686,7 +690,11 @@ export const createAppointment = createServerFn({ method: 'POST' })
       })
 
       // Emails (best-effort: a send failure must not fail the booking).
-      const cancelUrl = `${SITE_URL}/cuenta/sesiones`
+      // ponytail: origin matches the inbound host so emailed cancel links keep
+      // the user in their own session-cookie domain (psicoayudaven.com OR
+      // psicoayudas.com during the side-by-side rollout).
+      const origin = resolveSiteUrl()
+      const cancelUrl = `${origin}/cuenta/sesiones`
       const proWhen = formatWhen(startAt, tz)
       const proTzLabel = tzLabel(tz)
       const clientWhen = formatWhen(startAt, clientTz)
@@ -767,7 +775,7 @@ export const createAppointment = createServerFn({ method: 'POST' })
               whenLabel: proWhen,
               tzLabel: proTzLabel,
               meetingUrl,
-              cancelUrl: `${SITE_URL}/profesional/sesiones`,
+              cancelUrl: `${origin}/profesional/sesiones`,
             })
             const proText = `Tienes una videollamada agendada con ${client.name} para el ${proWhen} (${proTzLabel}). Únete aquí: ${meetingUrl}.`
             await sendEmail({
@@ -964,6 +972,9 @@ export const cancelAppointment = createServerFn({ method: 'POST' })
       ])
       const pro = proRows.at(0)
       const client = clientRows.at(0)
+      // ponytail: origin matches the inbound host so the book-again link keeps
+      // the user in their own session-cookie domain (see createAppointment).
+      const origin = resolveSiteUrl()
       // ponytail: render the time in EACH recipient's tz — matches the
       // confirmation emails in createAppointment. The client sees their own
       // wall-clock time (appt.clientTz); the pro sees theirs. Both reference
@@ -981,7 +992,7 @@ export const cancelAppointment = createServerFn({ method: 'POST' })
             whenLabel: clientWhen,
             tzLabel: clientTzL,
             reason: data.reason,
-            bookAgainUrl: `${SITE_URL}/cuenta/sesiones/agendar/${appt.professionalId}`,
+            bookAgainUrl: `${origin}/cuenta/sesiones/agendar/${appt.professionalId}`,
           })
           await sendEmail({
             to: client.email,

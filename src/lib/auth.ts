@@ -59,15 +59,27 @@ function buildAuth() {
     // Wildcard patterns are matched by matchesOriginPattern via wildcardMatch.
     // Safe unconditionally: a browser's Origin reflects the real initiating
     // context, and localhost/127.0.0.1 are hardcoded to loopback, so a remote
-    // attacker cannot forge a loopback Origin against a public domain. No-op
-    // in prod (requests come from psicoayudaven.com). Works under both
-    // `npm run dev` and `wrangler dev` (no build-time DEV gate, which would
-    // mis-fire under the prod-bundle PWA test path).
+    // attacker cannot forge a loopback Origin against a public domain. Works
+    // under both `npm run dev` and `wrangler dev` (no build-time DEV gate,
+    // which would mis-fire under the prod-bundle PWA test path).
+    //
+    // The two prod domains are listed explicitly even though Better Auth
+    // already auto-trusts the request's own origin per-request: `baseURL` is
+    // unset here, so getTrustedOrigins() resolves it from the inbound Host
+    // (verified in better-auth/dist/context/helpers.mjs — getBaseURL(request)),
+    // meaning a psicoayudas.com request auto-trusts psicoayudas.com. Listing
+    // them is belt-and-suspenders: documents the multi-domain setup (AGENTS.md
+    // gotcha #11) AND keeps auth working if baseURL is ever pinned to a static
+    // string. The client (auth-client.ts) uses relative URLs, so it always
+    // calls the SAME origin the page is served from — no cross-domain auth
+    // calls, no CORS.
     trustedOrigins: [
       'http://localhost:*',
       'http://127.0.0.1:*',
       'https://localhost:*',
       'https://127.0.0.1:*',
+      'https://psicoayudaven.com',
+      'https://psicoayudas.com',
     ],
   })
 }

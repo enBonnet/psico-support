@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
-import { seoHead, SITE_URL } from '#/lib/seo'
+import { seoHead, siteUrl } from '#/lib/seo'
 import { track } from '#/lib/analytics-client'
 import { notify } from '#/lib/notifications'
 
@@ -8,7 +8,11 @@ import { notify } from '#/lib/notifications'
 // crawlers — this page exists to be shared, the preview is the whole point.
 // No loader: the pitch is static copy, no DB read needed.
 
-const SHARE_URL = `${SITE_URL}/social`
+// ponytail: share copy is host-agnostic; the URL is computed per-render inside
+// SocialPage via siteUrl() so a psicoayudas.com visitor shares a psicoayudas.com
+// link (and vice versa). It can't be a module-level constant because module
+// init runs at worker boot with no request context — siteUrl() would fall back
+// to the primary domain for everyone.
 const SHARE_TEXT =
   '¿Eres psicólogo/a? Únete a la red de apoyo psicológico de Venezuela y conecta con quienes te necesitan. Verificamos tus credenciales. Gratis y confidencial.'
 
@@ -26,16 +30,24 @@ export const Route = createFileRoute('/social')({
 // ponytail: native share-intent URLs — no JS SDKs, one outbound link per
 // platform. WhatsApp folds text+url into the wa.me `text` param; X/Facebook
 // use their official sharer endpoints. target=_blank so the user keeps our page.
-const SHARE_LINKS = {
-  whatsapp: `https://wa.me/?text=${encodeURIComponent(`${SHARE_TEXT} ${SHARE_URL}`)}`,
-  twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(SHARE_URL)}`,
-  facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(SHARE_URL)}`,
-} as const
+function buildShareLinks(shareUrl: string) {
+  return {
+    whatsapp: `https://wa.me/?text=${encodeURIComponent(`${SHARE_TEXT} ${shareUrl}`)}`,
+    twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(SHARE_TEXT)}&url=${encodeURIComponent(shareUrl)}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+  } as const
+}
 
 const EXTERNAL = { target: '_blank', rel: 'noopener noreferrer' } as const
 
 function SocialPage() {
   const [hasShare, setHasShare] = useState(false)
+  // ponytail: resolve per-render so the shared URL matches the host the visitor
+  // is on (client: window.location; SSR: per-request host). Share buttons are
+  // clicked client-side, so this is effectively window.location.origin + path.
+  const shareUrl = `${siteUrl()}/social`
+  const shareLinks = buildShareLinks(shareUrl)
+
   // ponytail: feature-detect navigator.share on mount (client-only — it's
   // undefined during SSR). Offers the native sheet on mobile where it beats
   // hand-picking a platform.
@@ -48,7 +60,7 @@ function SocialPage() {
       await navigator.share({
         title: 'Únete como psicólogo',
         text: SHARE_TEXT,
-        url: SHARE_URL,
+        url: shareUrl,
       })
       track({ event: 'social_share', category: 'public', param1: 'native' })
     } catch {
@@ -58,11 +70,11 @@ function SocialPage() {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(SHARE_URL)
+      await navigator.clipboard.writeText(shareUrl)
       track({ event: 'social_share', category: 'public', param1: 'copy' })
       notify({ type: 'success', title: 'Enlace copiado' })
     } catch {
-      notify({ type: 'warning', title: 'No se pudo copiar', body: SHARE_URL })
+      notify({ type: 'warning', title: 'No se pudo copiar', body: shareUrl })
     }
   }
 
@@ -125,7 +137,7 @@ function SocialPage() {
           )}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <a
-              href={SHARE_LINKS.whatsapp}
+              href={shareLinks.whatsapp}
               {...EXTERNAL}
               onClick={() =>
                 track({ event: 'social_share', category: 'public', param1: 'whatsapp' })
@@ -135,7 +147,7 @@ function SocialPage() {
               WhatsApp
             </a>
             <a
-              href={SHARE_LINKS.twitter}
+              href={shareLinks.twitter}
               {...EXTERNAL}
               onClick={() =>
                 track({ event: 'social_share', category: 'public', param1: 'twitter' })
@@ -145,7 +157,7 @@ function SocialPage() {
               X / Twitter
             </a>
             <a
-              href={SHARE_LINKS.facebook}
+              href={shareLinks.facebook}
               {...EXTERNAL}
               onClick={() =>
                 track({ event: 'social_share', category: 'public', param1: 'facebook' })
