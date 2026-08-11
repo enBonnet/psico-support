@@ -169,6 +169,13 @@ export const TRACKED_EVENTS = [
   'install_prompt_dismiss',
   'app_installed',
   'social_share',
+  // social_profile_click: a visitor taps one of the app's own social profile
+  // links on /enlaces (the link-in-bio page). param1 = platform slug
+  // ('instagram' | 'tiktok' | 'x'). Distinct from social_share (which is about
+  // a visitor sharing the SITE outbound) and profile_social_click (a pro's
+  // socials on their profile) — this measures follow-intent on the project's
+  // own accounts. category=public (fired client-side, no session needed).
+  'social_profile_click',
 ] as const
 
 export type TrackedEvent = (typeof TRACKED_EVENTS)[number]
