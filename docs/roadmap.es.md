@@ -72,9 +72,9 @@ premios — **no** es fundador, financiador ni una relación institucional conti
 
 **Alcance vs compromiso:** ~4.140 visitantes llegaron al sitio (última
 consulta 2026-07-14 — Web Analytics no es consultable vía la API de eventos),
-mientras que 839 (~20%) dispararon una acción tracked y 131 (~3,2%) abrieron
+mientras que 839 (~20% de la foto de visitantes al 2026-07-14) dispararon una acción tracked y 131 (~3,2%) abrieron
 una conversación de WhatsApp. Los actores con interacción picaron en 212 el
-día del lanzamiento (2 jul) y se han asentado en ~10–20/día hacia finales de
+día pico (2 jul) y se han asentado en ~10–20/día hacia finales de
 julio frente a ~300 visitantes únicos/día en bruto. El CTA "necesito ayuda
 ahora" (help-now) es el mayor conversor individual (85 de 131 contactos, arriba
 de 64 hace tres semanas). Esta brecha es el caso cuantitativo para el trabajo

@@ -71,10 +71,10 @@ institutional relationship).
 
 **Reach vs engagement:** ~4,140 visitors reached the site (last pulled
 2026-07-14 — Web Analytics isn't queryable via the events API), while 839
-(~20%) triggered a tracked action and 131 (~3.2%) opened a WhatsApp
-conversation. Engaged actors peaked at 212 on launch day (Jul 2) and have
-settled to ~10–20/day through late July against ~300 raw visitors/day. The
-help-now CTA is the single biggest converter (85 of 131 contacts, up from 64
+(~20% of the Jul-14 visitor snapshot) triggered a tracked action and 131
+(~3.2%) opened a WhatsApp conversation. Engaged actors peaked at 212 on the
+peak day (Jul 2) and have settled to ~10–20/day through late July against
+~300 raw visitors/day. The help-now CTA is the single biggest converter (85 of 131 contacts, up from 64
 three weeks ago). This gap is the quantitative case for the funnel-rebuild
 work in Q4 — the platform has reach; converting that reach into help-seeker
 contacts is the open product problem.
