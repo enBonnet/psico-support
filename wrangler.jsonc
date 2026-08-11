@@ -6,9 +6,20 @@
 		"nodejs_compat"
 	],
 	"main": "./src/server.ts",
+	// ponytail: two prod domains run side-by-side for ~2 weeks during the
+	// psicoayudas.com rollout. Both are custom_domain routes on the SAME worker
+	// + D1 — there is no per-domain config; seo.ts emits self-referencing
+	// canonical/OG/sitemap per request host (see src/lib/seo-server.ts). Apex
+	// only (mirrors psicoayudaven.com); add a www entry here only if www is
+	// ever needed. To cut over permanently, remove the old route + 301 at the
+	// edge (Cloudflare bulk redirect), don't just delete it (link equity).
 	"routes": [
 		{
 			"pattern": "psicoayudaven.com",
+			"custom_domain": true
+		},
+		{
+			"pattern": "psicoayudas.com",
 			"custom_domain": true
 		},
 	],

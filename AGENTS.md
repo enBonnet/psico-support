@@ -305,6 +305,55 @@ the `proId`, so anonymous visitors can still be tracked but contacts can still
 be attributed per account. Reading the dataset back is via the SQL API with an
 account-level API token (the binding is **write-only**).
 
+### 11. Multi-domain: psicoayudaven.com + psicoayudas.com (side-by-side)
+
+Two prod domains run on the **same worker + same D1** during the psicoayudas.com
+rollout. There is **no per-domain config, branch, or DB** — both hostnames are
+`custom_domain` routes in `wrangler.jsonc` and hit the identical code path. The
+only thing that differs per domain is the absolute URLs emitted in SEO/share
+context, which resolve per-request from the inbound `Host` header.
+
+- **Self-referencing canonical.** Each domain emits canonical/OG/sitemap/JSON-LD
+  pointing at its **own** host (chosen so both are independently indexable and
+  share previews match the shared host). Resolution flows through `siteUrl()` in
+  `src/lib/seo.ts`: on the client it reads `window.location.origin`; on the
+  server it calls a resolver registered once at worker boot.
+- **`src/lib/seo-server.ts` is SERVER-ONLY.** It imports
+  `@tanstack/react-start/server` (`getRequestHeaders` → `node:async_hooks` +
+  `h3`) to read the per-request Host. `seo.ts` (shared) MUST NOT import it —
+  that would pollute the client bundle. Instead `seo-server.ts` calls
+  `_registerSiteUrlResolver()` at module load, and `siteUrl()` invokes the
+  registered ref. Assigning the ref once is gotcha #9-safe: the per-request
+  state lives in TanStack's AsyncLocalStorage inside the resolver, not on a
+  module/global. Verified post-build: `getRequestHeaders`/`async_hooks` appear
+  in `dist/server/**` only, never `dist/client/**`.
+- **Known-host allowlist.** `KNOWN_HOSTS = {psicoayudaven.com, psicoayudas.com}`
+  in `seo.ts`. Any other Host (localhost, wrangler dev, preview hostname, a
+  forged header) falls back to `PRIMARY_SITE_URL` so a crafted request can't
+  mint OG/canonical URLs for an arbitrary domain.
+- **`SITE_URL` is kept as an alias of `PRIMARY_SITE_URL`** for the few call
+  sites that intentionally want the canonical primary regardless of inbound
+  host: visible brand text (`demo.tsx`, `app.tsx`), and `.ics` calendar identity
+  (`uid`/organizer/filename in `email.ts` + `cuenta.sesiones.tsx`) — calendar
+  UIDs must NOT flip per host or re-imports duplicate entries.
+- **Email sender stays `noreply@psicoayudaven.com`.** Only that domain is
+  onboarded as a verified Email Service sender; the From address does not follow
+  the request host. Email **action links** (logo, footer, cancel/reset/book) DO
+  follow the host via `resolveSiteUrl()` — session cookies are per-domain, so a
+  cancel link that crossed domains would land the user logged-out.
+- **Better Auth `baseURL` already resolves from the request**, so password-reset
+  links initiated on psicoayudas.com are psicoayudas.com links with no code
+  change (`recuperar.tsx` uses `window.location.origin` for `redirectTo`).
+- **Sitemap** (`src/server.ts`) runs BEFORE the TanStack handler, so it has no
+  AsyncLocalStorage context — it uses `resolveSiteUrlFromRequest(request)`
+  (explicit-request variant) instead of `resolveSiteUrl()`.
+- **To cut over permanently to one domain:** add a Cloudflare bulk-redirect
+  (301) from the retired domain to the survivor at the edge, THEN remove the old
+  route from `wrangler.jsonc`. Don't just delete the route — link equity needs
+  the 301. After cutover, the multi-host machinery here can stay (it's a no-op
+  once only one KNOWN_HOST remains in practice) or be collapsed back to a
+  constant.
+
 ## Outbound communications
 
 `docs/professional-communications.md` is the log of every broadcast message
