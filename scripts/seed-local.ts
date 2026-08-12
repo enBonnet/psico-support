@@ -282,7 +282,7 @@ const PROS: ProSeed[] = [
 		// pending — lands in the admin review queue
 		name: 'Dra. Carmen Díaz',
 		email: 'carmen.diaz@example.com',
-		certificationNumber: 'VP-00007',
+		certificationNumber: 'VP-5338',
 		certifyingSchool: 'Colegio de Psicólogos de Venezuela',
 		population: ['Niños'],
 		focusGroups: [],
@@ -304,7 +304,7 @@ const PROS: ProSeed[] = [
 		// rejected — kept for audit, never surfaces publicly
 		name: 'Dr. Rafael Morales',
 		email: 'rafael.morales@example.com',
-		certificationNumber: 'VP-00008',
+		certificationNumber: 'VP-7897',
 		certifyingSchool: 'Colegio de Psicólogos de Venezuela',
 		population: ['Adultos'],
 		focusGroups: [],

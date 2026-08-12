@@ -42,3 +42,4 @@ export function createScriptDb(): ScriptDb {
   const sqlite = new Database(dbPath)
   sqlite.pragma('journal_mode = WAL')
   return drizzle(sqlite, { schema })
+}

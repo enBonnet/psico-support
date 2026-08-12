@@ -1,11 +1,13 @@
 import { config } from 'dotenv'
-import { createScriptDb } from '../src/services/fpv/db.ts'
-import { getProfessionalsForVerification } from '../src/services/fpv/repository.ts'
-import { verifyProfessional } from '../src/services/fpv/verifier.ts'
-import { fpvConfig } from '../src/services/fpv/config.ts'
 
-// Load .env.local so fpvConfig and DATABASE_URL are available
+//Load environment variables FIRST
 config({ path: '.env.local' })
+
+//Import the rest DYNAMICALLY (after dotenv ran)
+const { createScriptDb } = await import('../src/services/fpv/db.ts')
+const { getProfessionalsForVerification } = await import('../src/services/fpv/repository.ts')
+const { verifyProfessional } = await import('../src/services/fpv/verifier.ts')
+const { fpvConfig } = await import('../src/services/fpv/config.ts')
 
 // ANSI colors for readable console output
 const green = (s: string) => `\x1b[32m${s}\x1b[0m`
@@ -104,4 +106,6 @@ function sleep(ms: number): Promise<void> {
 
 main().catch((err) => {
   console.error(red('\n✗ Script failed:'), err)
-  process.exit(1)
+  process.exit(1) 
+})
+
