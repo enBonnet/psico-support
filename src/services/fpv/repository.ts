@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { professionals, fpvSearchRequests, fpvRawResults } from '#/db/schema.ts'
-import type { Db } from '#/db/.index.ts'
+import type { Db } from '#/db/index.ts'
 import type { FetchFpvResult } from './client.ts'
 
 // A professional pending FPV verification, as read from the DB.
@@ -16,7 +16,7 @@ export interface CreateSearchRequestInput {
   searchValue: string
   normalizedValue: string
   normalizedKey: string
-  professionalId?: number
+  professionalId: number
 }
 
 // Reads professionals with verifiedStatus='pending' so the script knows
@@ -50,7 +50,7 @@ export async function createSearchRequest(
       searchValue: input.searchValue,
       normalizedValue: input.normalizedValue,
       normalizedKey: input.normalizedKey,
-      professionalId: input.professionalId ?? null,
+      professionalId: input.professionalId,
       status: 'pending',
     })
     .returning({ id: fpvSearchRequests.id })
@@ -91,7 +91,7 @@ export async function updateSearchRequestStatus(
   db: Db,
   requestId: number,
   fetchResult: FetchFpvResult,
-  professionalId?: number,
+  professionalId: number,
 ): Promise<void> {
   const status = mapStatus(fetchResult.status)
 
@@ -100,7 +100,7 @@ export async function updateSearchRequestStatus(
     .set({
       status,
       executedAt: new Date(),
-      professionalId: professionalId ?? null,
+      professionalId: professionalId,
       errorMessage: fetchResult.error,
     })
     .where(eq(fpvSearchRequests.id, requestId))
