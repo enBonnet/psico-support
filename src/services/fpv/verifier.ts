@@ -34,7 +34,13 @@ export async function verifyProfessional(
   db: ScriptDb,
   professional: ProfessionalForVerification,
 ): Promise<VerificationResult> {
+  
   // 1. Normalize the certificationNumber as FPV
+  // ponytail: MVP searches by FPV number only. Name search is deferred
+  // because `professionals.name` is a single full-name field, and the FPV
+  // API expects separate `apellido` and `nombre` params. Splitting names
+  // reliably requires a dedicated parser or schema change (firstName/lastName).
+  // Upgrade: add a name-search strategy once the schema or parser is ready.
   const search = buildSearchByFpv(professional.certificationNumber)
 
   if (!search.isValid) {

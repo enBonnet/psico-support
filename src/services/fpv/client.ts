@@ -41,6 +41,10 @@ function buildUrl(search: Search): string {
     page: '1',
     per_page: '25',
   })
+   // ponytail: MVP fetches only page 1 (up to 25 items). If the API returns
+  // >25 matches, classifyStatus marks it 'ambiguous' without paginating.
+  // Ceiling: if we ever need to confirm a match among >25 homonyms, implement
+  // a pagination loop here to fetch all pages before classifying.
 
   if (search.type === 'fpv') {
     params.set('fpv', search.fpv.normalized)
@@ -92,7 +96,7 @@ export async function fetchFpvSearch(search: Search): Promise<FetchFpvResult> {
 
   try {
     const controller = new AbortController()
-    const timeoutMs = 10000
+    const timeoutMs = fpvConfig.FPV_TIMEOUT_MS
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
     const response = await fetch(sourceUrl, {
