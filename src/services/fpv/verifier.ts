@@ -8,6 +8,7 @@ import {
 } from './repository.ts'
 import type { Db } from '#/db/index.ts'
 import type { ProfessionalForVerification } from './repository.ts'
+import type { FetchFpvResult } from './client.ts'
 
 // Result of verifying a single professional against the FPV API.
 export interface VerificationResult {
@@ -62,23 +63,58 @@ export async function verifyProfessional(
   })
 
   // 3. Call the FPV API (async — this is the only async step)
-  const fetchResult = await fetchFpvSearch(search)
+   let fetchResult: FetchFpvResult
+  try {
+    fetchResult = await fetchFpvSearch(search)
+  } catch (err) {
+    // If the fetch throws unexpectedly, close the audit row with 'error'
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    const errorResult: FetchFpvResult = {
+      ok: false,
+      status: 'error',
+      sourceUrl: null,
+      raw: null,
+      itemCount: 0,
+      error: `Unexpected fetch error: ${errorMessage}`,
+    }
+    await updateSearchRequestStatus(db, requestId, errorResult, professional.id)
+    return {
+      professionalId: professional.id,
+      status: 'error',
+      error: errorResult.error,
+    }
+  }
 
   // 4. Save raw result (audit trail) — only if the HTTP call succeeded
   if (fetchResult.ok) {
-    saveRawResult(db, requestId, fetchResult)
+    await saveRawResult(db, requestId, fetchResult)
   }
 
   // 5. Update search request status (closes the loop)
-  updateSearchRequestStatus(db, requestId, fetchResult, professional.id)
+  await updateSearchRequestStatus(db, requestId, fetchResult, professional.id)
 
   // 6. Decision: exact match?
-  if (fetchResult.ok && fetchResult.status === 'ok' && fetchResult.itemCount === 1) {
-    await markProfessionalVerified(db, professional.id)
+  const isExactMatch = fetchResult.ok && fetchResult.status === 'ok' && fetchResult.itemCount === 1
+
+  if (isExactMatch && fetchResult.raw?.data?.items?.[0]) {
+    const returnedItem = fetchResult.raw.data.items[0]
+    const returnedFpv = String(returnedItem.fpv ?? '').trim()
+    
+    // Security check: the FPV returned by the API must match the one we searched
+    if (returnedFpv === search.normalizedValue) {
+      await markProfessionalVerified(db, professional.id)
+      return {
+        professionalId: professional.id,
+        status: 'verified',
+        fpvNumber: search.normalizedValue,
+      }
+    }
+    
+    // If the FPV doesn't match, it's a data mismatch (false positive)
     return {
       professionalId: professional.id,
-      status: 'verified',
-      fpvNumber: search.normalizedValue,
+      status: 'error',
+      error: `FPV mismatch: searched for ${search.normalizedValue}, API returned ${returnedFpv}`,
     }
   }
 
