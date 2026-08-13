@@ -1,4 +1,5 @@
 import { config } from 'dotenv'
+import type { Db } from '../src/db/index.ts' 
 
 // Load environment variables FIRST
 config({ path: '.env.local' })
@@ -22,10 +23,10 @@ async function main() {
 
   // 1. Connect to the wrangler-managed local D1
   console.log(dim('Connecting to local D1...'))
-  const db = createScriptDb()
+  const db = createScriptDb() as unknown as Db
 
   // 2. Read pending professionals
-  const pending = getProfessionalsForVerification(db)
+  const pending = await getProfessionalsForVerification(db)
 
   if (pending.length === 0) {
     console.log(yellow('No professionals pending verification.'))

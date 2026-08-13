@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { professionals, fpvSearchRequests, fpvRawResults } from '#/db/schema.ts'
-import type { ScriptDb } from './db.ts'
+import type { Db } from '#/db/.index.ts'
 import type { FetchFpvResult } from './client.ts'
 
 // A professional pending FPV verification, as read from the DB.
@@ -21,10 +21,10 @@ export interface CreateSearchRequestInput {
 
 // Reads professionals with verifiedStatus='pending' so the script knows
 // who needs to be verified against the FPV API.
-export function getProfessionalsForVerification(
-  db: ScriptDb,
-): ProfessionalForVerification[] {
-  const rows = db
+export async function getProfessionalsForVerification(
+  db: Db,
+): Promise<ProfessionalForVerification[]> {
+  const rows = await db
     .select({
       id: professionals.id,
       name: professionals.name,
@@ -39,11 +39,11 @@ export function getProfessionalsForVerification(
 
 // Creates a search request record (audit trail) before hitting the API.
 // Returns the inserted row id.
-export function createSearchRequest(
-  db: ScriptDb,
+export async function createSearchRequest(
+  db: Db,
   input: CreateSearchRequestInput,
-): number {
-  const result = db
+): Promise<number> {
+  const result = await db
     .insert(fpvSearchRequests)
     .values({
       searchType: input.searchType,
@@ -61,12 +61,12 @@ export function createSearchRequest(
 
 // Saves the raw API response (audit trail). Cédula is already redacted
 // by client.ts (redactSensitive) BEFORE reaching this function.
-export function saveRawResult(
-  db: ScriptDb,
+export async function saveRawResult(
+  db: Db,
   requestId: number,
   fetchResult: FetchFpvResult,
-): void {
-  db
+): Promise<void> {
+  await db
     .insert(fpvRawResults)
     .values({
       requestId,
@@ -78,7 +78,6 @@ export function saveRawResult(
 }
 
 // Maps the client status to the DB status enum.
-// Client 'ok' → DB 'success'; the rest match directly.
 function mapStatus(clientStatus: string): 'success' | 'ambiguous' | 'empty' | 'error' {
   if (clientStatus === 'ok') return 'success'
   if (clientStatus === 'empty' || clientStatus === 'ambiguous' || clientStatus === 'error') {
@@ -88,16 +87,15 @@ function mapStatus(clientStatus: string): 'success' | 'ambiguous' | 'empty' | 'e
 }
 
 // Updates the search request status after the API call completes.
-// Sets executedAt to now and optionally links the professional or records an error.
-export function updateSearchRequestStatus(
-  db: ScriptDb,
+export async function updateSearchRequestStatus(
+  db: Db,
   requestId: number,
   fetchResult: FetchFpvResult,
   professionalId?: number,
-): void {
+): Promise<void> {
   const status = mapStatus(fetchResult.status)
 
-  db
+  await db
     .update(fpvSearchRequests)
     .set({
       status,
@@ -111,13 +109,13 @@ export function updateSearchRequestStatus(
 
 // Marks a professional as verified. Called only when the API returned
 // an exact match (status='ok', itemCount=1).
-export function markProfessionalVerified(
-  db: ScriptDb,
+export async function markProfessionalVerified(
+  db: Db,
   professionalId: number,
-): void {
-  db
+): Promise<void> {
+  await db
     .update(professionals)
     .set({ verifiedStatus: 'verified' })
     .where(eq(professionals.id, professionalId))
     .run()
-}
+  }

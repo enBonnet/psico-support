@@ -6,7 +6,7 @@ import {
   updateSearchRequestStatus,
   markProfessionalVerified,
 } from './repository.ts'
-import type { ScriptDb } from './db.ts'
+import type { Db } from '#/db/index.ts'
 import type { ProfessionalForVerification } from './repository.ts'
 
 // Result of verifying a single professional against the FPV API.
@@ -31,7 +31,7 @@ export interface VerificationResult {
 // This function processes ONE professional. The calling script
 // handles the loop and rate limiting between calls.
 export async function verifyProfessional(
-  db: ScriptDb,
+  db: Db,
   professional: ProfessionalForVerification,
 ): Promise<VerificationResult> {
   
@@ -53,7 +53,7 @@ export async function verifyProfessional(
   }
 
   // 2. Create search request (audit trail) BEFORE calling the API
-  const requestId = createSearchRequest(db, {
+  const requestId = await createSearchRequest(db, {
     searchType: 'fpv',
     searchValue: professional.certificationNumber,
     normalizedValue: search.normalizedValue,
@@ -74,7 +74,7 @@ export async function verifyProfessional(
 
   // 6. Decision: exact match?
   if (fetchResult.ok && fetchResult.status === 'ok' && fetchResult.itemCount === 1) {
-    markProfessionalVerified(db, professional.id)
+    await markProfessionalVerified(db, professional.id)
     return {
       professionalId: professional.id,
       status: 'verified',
