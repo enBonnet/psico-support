@@ -49,8 +49,8 @@ function buildUrl(search: Search): string {
   if (search.type === 'fpv') {
     params.set('fpv', search.fpv.normalized)
   } else if (search.type === 'name') {
-    params.set('apellido', search.apellido.normalized)
-    params.set('nombre', search.nombre.normalized)
+    params.set('apellido', search.surname.normalized)
+    params.set('nombre', search.name.normalized)
   } else {
     throw new Error(`Unsupported search type: ${search['type']}`)
   }

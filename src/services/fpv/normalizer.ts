@@ -15,8 +15,8 @@ export interface NamePartNormalization {
 
 export interface SearchByName {
   type: 'name'
-  apellido: NamePartNormalization
-  nombre: NamePartNormalization
+  surname: NamePartNormalization
+  name: NamePartNormalization
   normalizedValue: string
   normalizedKey: string
   isValid: boolean
@@ -72,17 +72,17 @@ export function normalizeNamePart(rawName: unknown): NamePartNormalization {
 }
 
 export function buildSearchByName(
-  rawApellido: unknown,
-  rawNombre: unknown,
+  rawSurname: unknown,
+  rawName: unknown,
 ): SearchByName {
-  const apellido = normalizeNamePart(rawApellido)
-  const nombre = normalizeNamePart(rawNombre)
+  const surname = normalizeNamePart(rawSurname)
+  const name = normalizeNamePart(rawName)
 
-  if (!apellido.isValid || !nombre.isValid) {
-    return {
+  if (!surname.isValid || !name.isValid) {
+  return {
       type: 'name',
-      apellido,
-      nombre,
+      surname,
+      name,
       normalizedValue: '',
       normalizedKey: '',
       isValid: false,
@@ -90,18 +90,18 @@ export function buildSearchByName(
     }
   }
 
-  const normalizedValue = [apellido.normalized, nombre.normalized]
+  const normalizedValue = [surname.normalized, name.normalized]
     .filter(Boolean)
     .join(' | ')
 
-  const normalizedKey = [apellido.normalizedKey, nombre.normalizedKey]
+  const normalizedKey = [surname.normalizedKey, name.normalizedKey]
     .filter(Boolean)
     .join(' ')
 
   return {
     type: 'name',
-    apellido,
-    nombre,
+    surname,
+    name,
     normalizedValue,
     normalizedKey,
     isValid: true,

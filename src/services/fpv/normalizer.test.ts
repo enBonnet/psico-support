@@ -7,105 +7,105 @@ import {
 } from './normalizer.ts'
 
 describe('normalizeFpv', () => {
-  it('normaliza un FPV simple', () => {
+  it('normalizes a simple FPV', () => {
     expect(normalizeFpv('5338').normalized).toBe('5338')
   })
 
-  it('extrae dígitos de "FPV-5338"', () => {
+  it('extracts digits from "FPV-5338"', () => {
     expect(normalizeFpv('FPV-5338').normalized).toBe('5338')
   })
 
-  it('extrae dígitos de "fpv 5338"', () => {
+  it('extracts digits from "fpv 5338"', () => {
     expect(normalizeFpv('fpv 5338').normalized).toBe('5338')
   })
 
-  it('quita ceros adelante', () => {
+  it('removes leading zeros', () => {
     expect(normalizeFpv('005338').normalized).toBe('5338')
   })
 
-  it('rechaza vacío', () => {
+  it('rejects empty input', () => {
     expect(normalizeFpv('').isValid).toBe(false)
   })
 
-  it('rechaza "FPV" sin dígitos', () => {
+  it('rejects "FPV" without digits', () => {
     expect(normalizeFpv('FPV').normalized).toBe('')
   })
 
-  it('rechaza más de 8 dígitos', () => {
+  it('rejects more than 8 digits', () => {
     expect(normalizeFpv('9'.repeat(20)).isValid).toBe(false)
   })
 
-  it('rechaza null', () => {
+  it('rejects null', () => {
     expect(normalizeFpv(null).isValid).toBe(false)
   })
 
-  it('rechaza undefined', () => {
+  it('rejects undefined', () => {
     expect(normalizeFpv(undefined).isValid).toBe(false)
   })
 })
 
 describe('normalizeNamePart', () => {
-  it('Title Case con acentos y espacios múltiples', () => {
+  it('applies Title Case with accents and multiple spaces', () => {
     const r = normalizeNamePart('  díaz   rivera  ')
     expect(r.normalized).toBe('Díaz Rivera')
     expect(r.normalizedKey).toBe('diaz rivera')
   })
 
-  it('TODO MAYÚS -> Title Case', () => {
+  it('converts ALL CAPS to Title Case', () => {
     expect(normalizeNamePart('JUSAGNY AMÉRICA').normalized).toBe('Jusagny América')
   })
 
-  it('"martinez" -> "Martinez"', () => {
+  it('converts "martinez" to "Martinez"', () => {
     expect(normalizeNamePart('martinez').normalized).toBe('Martinez')
   })
 
-  it('rechaza vacío', () => {
+  it('rejects empty input', () => {
     expect(normalizeNamePart('').isValid).toBe(false)
   })
 
-  it('rechaza solo espacios', () => {
+  it('rejects only spaces', () => {
     expect(normalizeNamePart('   ').isValid).toBe(false)
   })
 
-  it('rechaza null', () => {
+  it('rejects null', () => {
     expect(normalizeNamePart(null).isValid).toBe(false)
   })
 })
 
 describe('buildSearchByName', () => {
-  it('construye búsqueda válida', () => {
-    const b = buildSearchByName('díaz rivera', 'jusagnny américa')
+  it('builds a valid search', () => {
+    const b = buildSearchByName('díaz rivera', 'jusagny américa')
     expect(b.isValid).toBe(true)
-    expect(b.normalizedValue).toBe('Díaz Rivera | Jusagnny América')
-    expect(b.apellido.normalized).toBe('Díaz Rivera')
-    expect(b.nombre.normalized).toBe('Jusagnny América')
-    expect(b.normalizedKey).toBe('diaz rivera jusagnny america')
+    expect(b.normalizedValue).toBe('Díaz Rivera | Jusagny América')
+    expect(b.surname.normalized).toBe('Díaz Rivera')
+    expect(b.name.normalized).toBe('Jusagny América')
+    expect(b.normalizedKey).toBe('diaz rivera jusagny america')
   })
 
-  it('rechaza solo apellido', () => {
+  it('rejects surname only', () => {
     const b = buildSearchByName('Díaz', '')
     expect(b.isValid).toBe(false)
     expect(b.error).not.toBeNull()
   })
 
-  it('rechaza solo nombre', () => {
-    expect(buildSearchByName('', 'Jusagnny').isValid).toBe(false)
+  it('rejects name only', () => {
+    expect(buildSearchByName('', 'Jusagny').isValid).toBe(false)
   })
 
-  it('rechaza ambos vacíos', () => {
+  it('rejects both empty', () => {
     expect(buildSearchByName('', '').isValid).toBe(false)
   })
 })
 
 describe('buildSearchByFpv', () => {
-  it('FPV "FPV-5338" válido', () => {
+  it('validates FPV "FPV-5338"', () => {
     const f = buildSearchByFpv('FPV-5338')
     expect(f.isValid).toBe(true)
     expect(f.normalizedValue).toBe('5338')
     expect(f.normalizedKey).toBe('5338')
   })
 
-  it('FPV vacío inválido', () => {
+  it('rejects empty FPV', () => {
     expect(buildSearchByFpv('').isValid).toBe(false)
   })
 })
