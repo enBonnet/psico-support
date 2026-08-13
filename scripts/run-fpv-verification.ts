@@ -1,9 +1,9 @@
 import { config } from 'dotenv'
 
-//Load environment variables FIRST
+// Load environment variables FIRST
 config({ path: '.env.local' })
 
-//Import the rest DYNAMICALLY (after dotenv ran)
+// Import the rest DYNAMICALLY (after dotenv ran)
 const { createScriptDb } = await import('../src/services/fpv/db.ts')
 const { getProfessionalsForVerification } = await import('../src/services/fpv/repository.ts')
 const { verifyProfessional } = await import('../src/services/fpv/verifier.ts')

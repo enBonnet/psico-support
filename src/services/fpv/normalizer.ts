@@ -1,4 +1,3 @@
-//tipos que son obligatorios en typescript
 export interface FpvNormalization {
   raw: string
   normalized: string

@@ -10,9 +10,9 @@ const fpvEnvSchema = z.object({
 const parsed = fpvEnvSchema.safeParse(process.env)
 
 if (!parsed.success) {
-  console.error('❌ Invalid or missing FPV environment variables:')
-  console.error(parsed.error.flatten().fieldErrors)
-  throw new Error('invalid FPV configuration')
+  throw new Error(
+    `Invalid FPV configuration: ${JSON.stringify(parsed.error.flatten().fieldErrors)}`,
+  )
 }
 
 export const fpvConfig = parsed.data
