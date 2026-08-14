@@ -9,12 +9,13 @@
 //   2. NAVIGATION FALLBACK — any document navigation that can't be served
 //      from cache falls back to the cached shell, so the app always boots
 //      instead of showing the browser's offline error page.
-//   3. RUNTIME caching for same-origin GETs — but NOT uniformly: build-hashed
-//      assets are cache-first (SWR), public /media binaries are cached for
-//      offline replay (private credential media is bypassed entirely), and GET
-//      server-fn RPC responses are NETWORK-FIRST (cookie-dependent).
-//      Last-known data (directory list, session, etc.) is still served offline
-//      as the fallback. Mutations are POST and never enter here.
+//   3. RUNTIME caching for same-origin GETs — cache-first ONLY for immutable-
+//      by-construction assets (/assets/* content-hashed, /media/avatar/*
+//      write-once UUID keys); EVERYTHING else (GET server-fn RPC responses,
+//      /media/audio/*, manifest, icons) is NETWORK-FIRST, with the cached
+//      copy kept purely as the offline fallback — last-known data (directory
+//      list, session, stories) still serves offline. Mutations are POST and
+//      never enter here.
 //
 // The shell's build-hashed CSS/JS are precached at install by parsing the
 // shell HTML for its own /assets/*.{css,js} URLs (see install below). Without
@@ -141,49 +142,15 @@ self.addEventListener('fetch', (event) => {
   // cache-first with NO auth check: after logout (or as a different account on
   // the same browser profile) the cached bytes served straight from the SW,
   // defeating the route's gate entirely. Offline replay of private credentials
-  // is not a feature, so: never intercept, never cache. Public media
-  // (/media/avatar/*, /media/audio/*) stay SWR-cached by design — see the
-  // route comments.
+  // is not a feature, so: never intercept, never cache. Public media is
+  // cached by design for offline replay (/media/avatar/* cache-first —
+  // write-once keys; /media/audio/* network-first — see the default branch).
   if (
     reqUrl.pathname.startsWith('/api/auth/') ||
     reqUrl.pathname.startsWith('/media/certificate/') ||
     reqUrl.pathname.startsWith('/media/document/')
   )
     return
-
-  // ponytail: server-fn RPC GETs are NETWORK-FIRST, not cache-first. TanStack
-  // Start's client fetcher tags every server-fn call with the x-tsr-serverFn
-  // request header, so this reliably identifies RPC traffic. Their responses
-  // can depend on the session cookie (getCurrentUser, amIAdmin,
-  // getMyProfessional, my appointments/follow-ups, …) and the Cache API does
-  // NOT vary on cookies — a cached anonymous response (null / false) was
-  // replayed to a freshly-logged-in user, so /cuenta rendered the logged-out
-  // view and the admin card stayed hidden until a manual reload (the old SWR
-  // branch's background revalidation only fixed the NEXT visit's cache — the
-  // current caller had already received the stale response). Network-first
-  // keeps the cached copy purely as the OFFLINE fallback (successful 200s are
-  // still cached) while guaranteeing online callers always get fresh,
-  // session-accurate data. Build-hashed assets (immutable) and /media
-  // binaries (public R2 reads) keep the cache-first SWR branch below.
-  // Ceiling: online callers now always pay the full RPC round-trip (no
-  // serve-stale). If that proves costly on slow links, upgrade to
-  // stale-while-revalidate-with-short-TTL — never plain cache-first.
-  if (req.headers.get('x-tsr-serverFn') === 'true') {
-    event.respondWith(
-      (async () => {
-        const cache = await caches.open(CACHE)
-        const cached = await cache.match(req)
-        const fallback = cached || Response.error()
-        return fetch(req)
-          .then((res) => {
-            if (res && res.status === 200) cache.put(req, res.clone())
-            return res
-          })
-          .catch(() => fallback)
-      })(),
-    )
-    return
-  }
 
   // ponytail: document navigations are NETWORK-FIRST (see return below): the
   // worker serves real SSR HTML online, cached here on success for the next
@@ -197,7 +164,7 @@ self.addEventListener('fetch', (event) => {
   // route handlers with NO client route component. If the SW fell back to the
   // shell for one of these, the router would hydrate against a path with no
   // matching route → TanStack's hydrate() invariant throws (WEB-C). Let these
-  // go straight to the network always; the runtime-SWR branch below still
+  // go straight to the network always; the default branch below still
   // caches successful 200s for offline replay.
   //
   // If the network rejects AND there's no per-URL cache AND the shell isn't
@@ -238,31 +205,82 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // ponytail: everything else (build-hashed assets, /media binaries, other
-  // same-origin GETs) — runtime SWR.
+  // ponytail: cache-first SWR, ONLY for immutable-by-construction assets:
+  // /assets/* (Vite content-hashes the filename — a different build is a
+  // different URL) and /media/avatar/* (write-once UUID keys — a replace
+  // uploads a NEW key, and there is no delete path, so the origin itself
+  // serves an old key forever). These can never go stale, so serving from
+  // cache without revalidation is free latency savings.
   //
   // NOTE: dead /assets/*.{js,css} chunks after a deploy (the OLD app shell
   // still running in an open tab asking for a hashed URL that no longer
-  // exists on the origin) are intentionally NOT special-cased here. The
-  // runtime SWR branch below returns the 404 (or network error) unchanged;
-  // the dynamic-import promise then rejects with "Failed to fetch dynamically
-  // imported module" / "Unable to preload CSS for …", and the client-side
-  // recovery in src/lib/pwa-update.ts (CHUNK_ERR_PATTERNS + the Vite
-  // `vite:preloadError` event listener) catches it and reloads once onto
-  // the new build. Returning an HTML fallback for a script-style request
-  // would change the error to a MIME-mismatch message that doesn't match
-  // the recovery patterns — actively defeating the client handler.
+  // exists on the origin) are intentionally NOT special-cased here. This
+  // branch returns the 404 (or network error) unchanged; the dynamic-import
+  // promise then rejects with "Failed to fetch dynamically imported module" /
+  // "Unable to preload CSS for …", and the client-side recovery in
+  // src/lib/pwa-update.ts (CHUNK_ERR_PATTERNS + the Vite `vite:preloadError`
+  // event listener) catches it and reloads once onto the new build. Returning
+  // an HTML fallback for a script-style request would change the error to a
+  // MIME-mismatch message that doesn't match the recovery patterns — actively
+  // defeating the client handler.
+  if (
+    reqUrl.pathname.startsWith('/assets/') ||
+    reqUrl.pathname.startsWith('/media/avatar/')
+  ) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE)
+        const cached = await cache.match(req)
+        const network = fetch(req)
+          .then((res) => {
+            if (res && res.status === 200) cache.put(req, res.clone())
+            return res
+          })
+          .catch(() => cached)
+        return cached || network
+      })(),
+    )
+    return
+  }
+
+  // ponytail: everything else — GET server-fn RPC responses, /media/audio/*,
+  // manifest, icons, any future same-origin GET — NETWORK-FIRST, never
+  // cache-first. Two reasons, both load-bearing:
+  //
+  //   1. RPC responses can depend on the session cookie (getCurrentUser,
+  //      amIAdmin, getMyProfessional, my appointments/follow-ups, …) and the
+  //      Cache API does NOT vary on cookies — a cached anonymous response
+  //      (null / false) was replayed to a freshly-logged-in user, so /cuenta
+  //      rendered the logged-out view and the admin card stayed hidden until
+  //      a manual reload. Online callers must always get fresh, session-
+  //      accurate data.
+  //   2. /media/audio/* clips can be DELETED (deleteMyStory drops the row +
+  //      R2 object); network-first honors the route's 24h max-age, and the
+  //      404-eviction below stops replay of deleted clips once online.
+  //
+  // Successful 200s are still cached, so the cached copy remains the OFFLINE
+  // fallback (last-known data serves offline — directory list, session,
+  // stories), and a 404/410 evicts the cached copy so a later offline window
+  // can't resurrect deleted content. The policy is deliberately NOT based on
+  // the x-tsr-serverFn request header: that's a TanStack internal convention,
+  // and if an upgrade renames it, RPC GETs still land here (network-first) —
+  // the stale-session bug structurally can't return. Ceiling: online callers
+  // always pay the round-trip (within the browser HTTP cache's TTL for
+  // cacheable responses). If that proves costly on slow links, upgrade to
+  // stale-while-revalidate-with-short-TTL — never plain cache-first.
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE)
       const cached = await cache.match(req)
-      const network = fetch(req)
+      const fallback = cached || Response.error()
+      return fetch(req)
         .then((res) => {
           if (res && res.status === 200) cache.put(req, res.clone())
+          else if (res && (res.status === 404 || res.status === 410))
+            cache.delete(req)
           return res
         })
-        .catch(() => cached)
-      return cached || network
+        .catch(() => fallback)
     })(),
   )
 })

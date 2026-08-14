@@ -7,24 +7,16 @@ import { STORY_KEY_PREFIX } from '#/server/audio-stories'
 // server-route convention. No auth — content is public by intent; the
 // moderation gate is upstream in src/server/audio-stories.ts (only approved
 // clips' keys ever leave the server, and the UUID suffixes are unguessable, so
-// a guessed/brute-forced URL simply 404s at the R2.get). Cache-Control is
-// immutable because keys are write-once (uuid + status transition is the only
-// mutation, and that creates a NEW key rather than mutating an existing one).
-//
-// The SW's runtime SWR (gotcha #7) will SWR-cache these responses — desirable
-// here (a story heard once replays offline at 3am). Named ceiling: exclude
-// /media/ from SWR if video lands and the payload sizes grow.
-//
-// Ceiling: REVOCATION GAP. immutable + SW cache-first means a pro deleting an
-// approved story (deleteMyStory drops the row + R2 object) does NOT recall
-// bytes already cached: the HTTP cache holds them immutable and the SW serves
-// its copy without revalidation until LRU eviction or a version bump wipes the
-// SW cache. Mitigations: the tray list (RPC, network-first) drops the deleted
-// key immediately so discovery stops; direct-URL replay only affects devices
-// that already played it. If recall-on-delete ever becomes a hard requirement
-// (right-to-be-forgotten enforcement), drop immutable → max-age=86400 and make
-// the SW's /media/audio branch network-first — costs the offline-replay
-// feature, so it's a product call, not a bug.
+// a guessed/brute-forced URL simply 404s at the R2.get). Keys are write-once
+// (a re-record creates a NEW uuid key), but clips can be DELETED
+// (deleteMyStory drops the row + the R2 object), so Cache-Control is 24h —
+// NOT immutable — bounding replay-after-delete. The SW cooperates (gotcha #7):
+// /media/audio/* rides the network-first default, and a 404/410 evicts the
+// SW's cached copy, so a deleted clip stops replaying once the device is
+// online. A device that is offline keeps replaying its cached copy until it's
+// next online — the inherent limit of offline replay, not a cache bug.
+// Offline replay itself is desirable (a story heard once replays offline at
+// 3am); revisit max-age if video lands and payload sizes grow.
 export const Route = createFileRoute('/media/audio/$')({
   server: {
     handlers: {
@@ -62,7 +54,7 @@ export const Route = createFileRoute('/media/audio/$')({
         // ponytail: R2 supports range requests for media seeking; advertise
         // it so <audio> can scrub without re-fetching the whole clip.
         headers.set('Accept-Ranges', 'bytes')
-        headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+        headers.set('Cache-Control', 'public, max-age=86400')
         return new Response(obj.body, { headers })
       },
     },
