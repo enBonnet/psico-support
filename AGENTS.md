@@ -235,6 +235,11 @@ manifest). It does three things:
    last-known data (directory list, session) serves offline as the fallback.
    Mutations are POST and never cached. **Never make the RPC branch
    cache-first again** — cookie-dependent responses must not replay stale.
+   The `x-tsr-serverFn` header is a TanStack internal convention (verified
+   against `start-client-core`'s `serverFnFetcher`); **re-verify it still
+   exists after any TanStack upgrade** — if it's renamed, the RPC branch goes
+   dead and RPC GETs silently fall through to cache-first SWR (the original
+   bug).
 4. **Private credential media are NEVER intercepted**: `/media/certificate/*`
    (admin-only) and `/media/document/*` (owner-or-admin) bypass the SW
    entirely — no caching, no offline replay. Same rationale as `/api/auth/*`:

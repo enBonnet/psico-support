@@ -14,6 +14,17 @@ import { STORY_KEY_PREFIX } from '#/server/audio-stories'
 // The SW's runtime SWR (gotcha #7) will SWR-cache these responses — desirable
 // here (a story heard once replays offline at 3am). Named ceiling: exclude
 // /media/ from SWR if video lands and the payload sizes grow.
+//
+// Ceiling: REVOCATION GAP. immutable + SW cache-first means a pro deleting an
+// approved story (deleteMyStory drops the row + R2 object) does NOT recall
+// bytes already cached: the HTTP cache holds them immutable and the SW serves
+// its copy without revalidation until LRU eviction or a version bump wipes the
+// SW cache. Mitigations: the tray list (RPC, network-first) drops the deleted
+// key immediately so discovery stops; direct-URL replay only affects devices
+// that already played it. If recall-on-delete ever becomes a hard requirement
+// (right-to-be-forgotten enforcement), drop immutable → max-age=86400 and make
+// the SW's /media/audio branch network-first — costs the offline-replay
+// feature, so it's a product call, not a bug.
 export const Route = createFileRoute('/media/audio/$')({
   server: {
     handlers: {
