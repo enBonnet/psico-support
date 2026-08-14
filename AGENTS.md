@@ -226,17 +226,18 @@ manifest). It does three things:
    redirects to it; point the SW at `/_shell` to avoid caching a redirect).
 3. **Runtime caching** for same-origin GETs, split by mutability:
    **cache-first ONLY for immutable-by-construction assets** — `/assets/*`
-   (Vite content-hashed) and `/media/avatar/*` (write-once UUID keys).
-   **Everything else is NETWORK-FIRST** with the cached copy as the offline
-   fallback only: GET server-fn RPC responses, `/media/audio/*`, manifest,
-   icons. Why: RPC responses can depend on the session cookie
-   (`getCurrentUser`, `amIAdmin`, …) and the Cache API does **not** vary on
-   cookies — cache-first replayed a stale anonymous `null` to a freshly
-   logged-in user, so `/cuenta` looked logged-out (and the admin card stayed
-   hidden) until a manual reload. Network-first still caches 200s, so
-   last-known data (directory list, session) serves offline as the fallback;
-   404/410 responses evict the cached copy so deleted audio stops replaying
-   once online. Mutations are POST and never cached. **Never widen the
+   (Vite content-hashed). **Everything else is NETWORK-FIRST** with the cached
+   copy as the offline fallback only: GET server-fn RPC responses,
+   `/media/avatar/*`, `/media/audio/*`, manifest, icons. Why: RPC responses
+   can depend on the session cookie (`getCurrentUser`, `amIAdmin`, …) and the
+   Cache API does **not** vary on cookies — cache-first replayed a stale
+   anonymous `null` to a freshly logged-in user, so `/cuenta` looked
+   logged-out (and the admin card stayed hidden) until a manual reload. And
+   both public media types have DELETE paths (`removeMyAvatar`,
+   `deleteMyStory`), so they need the network-first branch's 404/410 eviction
+   to bound replay-after-delete. Network-first still caches 200s, so
+   last-known data (directory list, session, stories) serves offline as the
+   fallback. Mutations are POST and never cached. **Never widen the
    cache-first allowlist** beyond immutable assets — cookie-dependent or
    revocable responses must not replay stale. The split is structural, not
    header-based: the old `x-tsr-serverFn` header detection was dropped, so
@@ -247,10 +248,11 @@ manifest). It does three things:
    entirely — no caching, no offline replay. Same rationale as `/api/auth/*`:
    the Cache API ignores `Cache-Control: private`, so caching these would
    replay personal credential docs post-logout / cross-account on a shared
-   browser profile. Public media stays cached by design:
-   `/media/avatar/*` cache-first (write-once, no delete path — origin serves
-   old keys forever anyway), `/media/audio/*` network-first (deletable —
-   bounded revocation via the route's 24h max-age + 404 eviction).
+   browser profile. Public media stays cached by design (network-first +
+   offline fallback): `/media/avatar/*` and `/media/audio/*` both emit 24h
+   max-age and rely on 404 eviction to bound revocation (avatar withdraw /
+   story delete propagates once the device is online; offline devices replay
+   until reconnect — inherent limit of offline replay).
 
 The `<link rel="manifest">` must be in `__root.tsx` `head()` (it was missing;
 browsers only found the manifest by auto-probing). The SW registers only in

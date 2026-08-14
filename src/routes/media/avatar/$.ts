@@ -6,9 +6,14 @@ import { AVATAR_KEY_PREFIX } from '#/server/professionals'
 // ponytail: public R2 read path for professional avatars. Mirrors /media/audio/$
 // (NOT /media/certificate/$): avatars are public-by-intent (shown on the public
 // profile), so the route is unauthed and relies on UUID-key unguessability — a
-// guessed/brute-forced URL simply 404s at the R2.get. Cache-Control is immutable
-// because avatar keys are write-once (a replace uploads a NEW uuid key, it never
-// mutates an existing object), so caching the old key forever is safe.
+// guessed/brute-forced URL simply 404s at the R2.get. Keys are write-once (a
+// replace uploads a NEW uuid key), but a WITHDRAW path exists (removeMyAvatar
+// deletes the R2 object; a replace deletes the old key), so Cache-Control is
+// 24h — NOT immutable — bounding replay-after-withdrawal. The SW cooperates
+// (gotcha #7): /media/avatar/* rides the network-first default and a 404/410
+// evicts its cached copy, so a withdrawn photo stops serving once the device
+// is online. Important in this context: a psychologist pulling their face off
+// a public directory may have safety reasons.
 export const Route = createFileRoute('/media/avatar/$')({
   server: {
     handlers: {
@@ -38,7 +43,7 @@ export const Route = createFileRoute('/media/avatar/$')({
           'Content-Type',
           obj.httpMetadata?.contentType ?? 'application/octet-stream',
         )
-        headers.set('Cache-Control', 'public, max-age=31536000, immutable')
+        headers.set('Cache-Control', 'public, max-age=86400')
         return new Response(obj.body, { headers })
       },
     },

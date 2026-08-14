@@ -10,12 +10,11 @@
 //      from cache falls back to the cached shell, so the app always boots
 //      instead of showing the browser's offline error page.
 //   3. RUNTIME caching for same-origin GETs — cache-first ONLY for immutable-
-//      by-construction assets (/assets/* content-hashed, /media/avatar/*
-//      write-once UUID keys); EVERYTHING else (GET server-fn RPC responses,
-//      /media/audio/*, manifest, icons) is NETWORK-FIRST, with the cached
-//      copy kept purely as the offline fallback — last-known data (directory
-//      list, session, stories) still serves offline. Mutations are POST and
-//      never enter here.
+//      by-construction assets (/assets/* content-hashed by Vite); EVERYTHING
+//      else (GET server-fn RPC responses, /media/avatar/*, /media/audio/*,
+//      manifest, icons) is NETWORK-FIRST, with the cached copy kept purely as
+//      the offline fallback — last-known data (directory list, session,
+//      stories) still serves offline. Mutations are POST and never enter here.
 //
 // The shell's build-hashed CSS/JS are precached at install by parsing the
 // shell HTML for its own /assets/*.{css,js} URLs (see install below). Without
@@ -143,8 +142,9 @@ self.addEventListener('fetch', (event) => {
   // the same browser profile) the cached bytes served straight from the SW,
   // defeating the route's gate entirely. Offline replay of private credentials
   // is not a feature, so: never intercept, never cache. Public media is
-  // cached by design for offline replay (/media/avatar/* cache-first —
-  // write-once keys; /media/audio/* network-first — see the default branch).
+  // cached by design for offline replay, but network-first (see the default
+  // branch): avatars and audio clips both have DELETE paths, so they need the
+  // 404-eviction of the default branch to bound replay-after-delete.
   if (
     reqUrl.pathname.startsWith('/api/auth/') ||
     reqUrl.pathname.startsWith('/media/certificate/') ||
@@ -207,10 +207,16 @@ self.addEventListener('fetch', (event) => {
 
   // ponytail: cache-first SWR, ONLY for immutable-by-construction assets:
   // /assets/* (Vite content-hashes the filename — a different build is a
-  // different URL) and /media/avatar/* (write-once UUID keys — a replace
-  // uploads a NEW key, and there is no delete path, so the origin itself
-  // serves an old key forever). These can never go stale, so serving from
-  // cache without revalidation is free latency savings.
+  // different URL, so the cached bytes can never be stale). Free latency
+  // savings with no revocation concern.
+  //
+  // /media/avatar/* is deliberately NOT here even though keys are write-once
+  // UUIDs: a DELETE path exists (removeMyAvatar drops the R2 object, and an
+  // avatar replace deletes the old key), so a withdrawn photo would keep
+  // replaying from this branch (no 404 eviction) until the next version-bump
+  // cache rename — unacceptable for a psychologist removing their face from a
+  // public directory, possibly for safety. Avatars ride the network-first
+  // default: fresh online, cached for offline replay, evicted on first 404.
   //
   // NOTE: dead /assets/*.{js,css} chunks after a deploy (the OLD app shell
   // still running in an open tab asking for a hashed URL that no longer
@@ -223,10 +229,7 @@ self.addEventListener('fetch', (event) => {
   // an HTML fallback for a script-style request would change the error to a
   // MIME-mismatch message that doesn't match the recovery patterns — actively
   // defeating the client handler.
-  if (
-    reqUrl.pathname.startsWith('/assets/') ||
-    reqUrl.pathname.startsWith('/media/avatar/')
-  ) {
+  if (reqUrl.pathname.startsWith('/assets/')) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE)
@@ -243,9 +246,9 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // ponytail: everything else — GET server-fn RPC responses, /media/audio/*,
-  // manifest, icons, any future same-origin GET — NETWORK-FIRST, never
-  // cache-first. Two reasons, both load-bearing:
+  // ponytail: everything else — GET server-fn RPC responses, /media/avatar/*,
+  // /media/audio/*, manifest, icons, any future same-origin GET —
+  // NETWORK-FIRST, never cache-first. Reasons, all load-bearing:
   //
   //   1. RPC responses can depend on the session cookie (getCurrentUser,
   //      amIAdmin, getMyProfessional, my appointments/follow-ups, …) and the
@@ -257,6 +260,9 @@ self.addEventListener('fetch', (event) => {
   //   2. /media/audio/* clips can be DELETED (deleteMyStory drops the row +
   //      R2 object); network-first honors the route's 24h max-age, and the
   //      404-eviction below stops replay of deleted clips once online.
+  //   3. /media/avatar/* can be WITHDRAWN (removeMyAvatar deletes the R2
+  //      object; a replace deletes the old key) — same bounded revocation as
+  //      audio: fresh online, offline fallback, 404 eviction.
   //
   // Successful 200s are still cached, so the cached copy remains the OFFLINE
   // fallback (last-known data serves offline — directory list, session,
