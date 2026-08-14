@@ -12,6 +12,9 @@ import { CERT_KEY_PREFIX } from '#/server/professionals'
 // authenticated admin page, so getSession resolves normally. Cache-Control is
 // private + short-lived: keys are write-once (a re-upload creates a new UUID
 // key), but we don't want a stale doc cached on a shared device after logout.
+// The SW cooperates: it bypasses /media/certificate/* entirely (never
+// intercepts, never caches — see public/sw.js), so the Cache API can't
+// outlive this max-age and replay the doc post-logout.
 export const Route = createFileRoute('/media/certificate/$')({
   server: {
     handlers: {

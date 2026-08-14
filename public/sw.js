@@ -10,10 +10,11 @@
 //      from cache falls back to the cached shell, so the app always boots
 //      instead of showing the browser's offline error page.
 //   3. RUNTIME caching for same-origin GETs — but NOT uniformly: build-hashed
-//      assets are cache-first (SWR), /media binaries are cached for offline
-//      replay, and GET server-fn RPC responses are NETWORK-FIRST (cookie-
-//      dependent). Last-known data (directory list, session, etc.) is still
-//      served offline as the fallback. Mutations are POST and never enter here.
+//      assets are cache-first (SWR), public /media binaries are cached for
+//      offline replay (private credential media is bypassed entirely), and GET
+//      server-fn RPC responses are NETWORK-FIRST (cookie-dependent).
+//      Last-known data (directory list, session, etc.) is still served offline
+//      as the fallback. Mutations are POST and never enter here.
 //
 // The shell's build-hashed CSS/JS are precached at install by parsing the
 // shell HTML for its own /assets/*.{css,js} URLs (see install below). Without
@@ -130,7 +131,25 @@ self.addEventListener('fetch', (event) => {
   // /recuperar?token=… (a real app route the SW then shells correctly), and
   // the recovery form renders. Same reasoning protects any future GET
   // callbacks (email verification, OAuth) without further SW edits.
-  if (reqUrl.pathname.startsWith('/api/auth/')) return
+  //
+  // ponytail: PRIVATE credential media — /media/certificate/* (admin-only)
+  // and /media/document/* (owner-or-admin) — are also bypassed, never cached.
+  // These routes serve personal credential documents and deliberately emit
+  // `Cache-Control: private, max-age=60` so a doc doesn't linger on a shared
+  // device after logout — but the Cache API ignores Cache-Control and this SW
+  // used to cache their 200s in the runtime SWR branch and replay them
+  // cache-first with NO auth check: after logout (or as a different account on
+  // the same browser profile) the cached bytes served straight from the SW,
+  // defeating the route's gate entirely. Offline replay of private credentials
+  // is not a feature, so: never intercept, never cache. Public media
+  // (/media/avatar/*, /media/audio/*) stay SWR-cached by design — see the
+  // route comments.
+  if (
+    reqUrl.pathname.startsWith('/api/auth/') ||
+    reqUrl.pathname.startsWith('/media/certificate/') ||
+    reqUrl.pathname.startsWith('/media/document/')
+  )
+    return
 
   // ponytail: server-fn RPC GETs are NETWORK-FIRST, not cache-first. TanStack
   // Start's client fetcher tags every server-fn call with the x-tsr-serverFn

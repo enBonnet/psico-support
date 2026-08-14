@@ -235,6 +235,13 @@ manifest). It does three things:
    last-known data (directory list, session) serves offline as the fallback.
    Mutations are POST and never cached. **Never make the RPC branch
    cache-first again** — cookie-dependent responses must not replay stale.
+4. **Private credential media are NEVER intercepted**: `/media/certificate/*`
+   (admin-only) and `/media/document/*` (owner-or-admin) bypass the SW
+   entirely — no caching, no offline replay. Same rationale as `/api/auth/*`:
+   the Cache API ignores `Cache-Control: private`, so caching these would
+   replay personal credential docs post-logout / cross-account on a shared
+   browser profile. Public media (`/media/avatar/*`, `/media/audio/*`) stay
+   SWR-cached by design.
 
 The `<link rel="manifest">` must be in `__root.tsx` `head()` (it was missing;
 browsers only found the manifest by auto-probing). The SW registers only in
