@@ -224,9 +224,35 @@ manifest). It does three things:
    cached shell when offline, so the app boots instead of showing the browser
    error page. **Canonical shell URL is `/_shell`** (the `.html` form 307-
    redirects to it; point the SW at `/_shell` to avoid caching a redirect).
-3. **Runtime SWR** for same-origin GETs, including the GET server-fn RPC
-   responses (directory list, session) — so last-known data serves offline.
-   Mutations are POST and never cached.
+3. **Runtime caching** for same-origin GETs, split by mutability:
+   **cache-first ONLY for immutable-by-construction assets** — `/assets/*`
+   (Vite content-hashed). **Everything else is NETWORK-FIRST** with the cached
+   copy as the offline fallback only: GET server-fn RPC responses,
+   `/media/avatar/*`, `/media/audio/*`, manifest, icons. Why: RPC responses
+   can depend on the session cookie (`getCurrentUser`, `amIAdmin`, …) and the
+   Cache API does **not** vary on cookies — cache-first replayed a stale
+   anonymous `null` to a freshly logged-in user, so `/cuenta` looked
+   logged-out (and the admin card stayed hidden) until a manual reload. And
+   both public media types have DELETE paths (`removeMyAvatar`,
+   `deleteMyStory`), so they need the network-first branch's 404/410 eviction
+   to bound replay-after-delete. Network-first still caches 200s, so
+   last-known data (directory list, session, stories) serves offline as the
+   fallback. Mutations are POST and never cached. **Never widen the
+   cache-first allowlist** beyond immutable assets — cookie-dependent or
+   revocable responses must not replay stale. The split is structural, not
+   header-based: the old `x-tsr-serverFn` header detection was dropped, so
+   even if TanStack renames its RPC conventions, RPC GETs land in the
+   network-first default and the stale-session bug can't silently return.
+4. **Private credential media are NEVER intercepted**: `/media/certificate/*`
+   (admin-only) and `/media/document/*` (owner-or-admin) bypass the SW
+   entirely — no caching, no offline replay. Same rationale as `/api/auth/*`:
+   the Cache API ignores `Cache-Control: private`, so caching these would
+   replay personal credential docs post-logout / cross-account on a shared
+   browser profile. Public media stays cached by design (network-first +
+   offline fallback): `/media/avatar/*` and `/media/audio/*` both emit 24h
+   max-age and rely on 404 eviction to bound revocation (avatar withdraw /
+   story delete propagates once the device is online; offline devices replay
+   until reconnect — inherent limit of offline replay).
 
 The `<link rel="manifest">` must be in `__root.tsx` `head()` (it was missing;
 browsers only found the manifest by auto-probing). The SW registers only in

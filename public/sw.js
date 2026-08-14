@@ -9,9 +9,12 @@
 //   2. NAVIGATION FALLBACK — any document navigation that can't be served
 //      from cache falls back to the cached shell, so the app always boots
 //      instead of showing the browser's offline error page.
-//   3. RUNTIME SWR for same-origin GETs (assets + the GET server-fn RPC
-//      responses) — so last-known data (directory list, session, etc.) is
-//      served offline. Mutations are POST and never enter here.
+//   3. RUNTIME caching for same-origin GETs — cache-first ONLY for immutable-
+//      by-construction assets (/assets/* content-hashed by Vite); EVERYTHING
+//      else (GET server-fn RPC responses, /media/avatar/*, /media/audio/*,
+//      manifest, icons) is NETWORK-FIRST, with the cached copy kept purely as
+//      the offline fallback — last-known data (directory list, session,
+//      stories) still serves offline. Mutations are POST and never enter here.
 //
 // The shell's build-hashed CSS/JS are precached at install by parsing the
 // shell HTML for its own /assets/*.{css,js} URLs (see install below). Without
@@ -128,7 +131,26 @@ self.addEventListener('fetch', (event) => {
   // /recuperar?token=… (a real app route the SW then shells correctly), and
   // the recovery form renders. Same reasoning protects any future GET
   // callbacks (email verification, OAuth) without further SW edits.
-  if (reqUrl.pathname.startsWith('/api/auth/')) return
+  //
+  // ponytail: PRIVATE credential media — /media/certificate/* (admin-only)
+  // and /media/document/* (owner-or-admin) — are also bypassed, never cached.
+  // These routes serve personal credential documents and deliberately emit
+  // `Cache-Control: private, max-age=60` so a doc doesn't linger on a shared
+  // device after logout — but the Cache API ignores Cache-Control and this SW
+  // used to cache their 200s in the runtime SWR branch and replay them
+  // cache-first with NO auth check: after logout (or as a different account on
+  // the same browser profile) the cached bytes served straight from the SW,
+  // defeating the route's gate entirely. Offline replay of private credentials
+  // is not a feature, so: never intercept, never cache. Public media is
+  // cached by design for offline replay, but network-first (see the default
+  // branch): avatars and audio clips both have DELETE paths, so they need the
+  // 404-eviction of the default branch to bound replay-after-delete.
+  if (
+    reqUrl.pathname.startsWith('/api/auth/') ||
+    reqUrl.pathname.startsWith('/media/certificate/') ||
+    reqUrl.pathname.startsWith('/media/document/')
+  )
+    return
 
   // ponytail: document navigations are NETWORK-FIRST (see return below): the
   // worker serves real SSR HTML online, cached here on success for the next
@@ -142,7 +164,7 @@ self.addEventListener('fetch', (event) => {
   // route handlers with NO client route component. If the SW fell back to the
   // shell for one of these, the router would hydrate against a path with no
   // matching route → TanStack's hydrate() invariant throws (WEB-C). Let these
-  // go straight to the network always; the runtime-SWR branch below still
+  // go straight to the network always; the default branch below still
   // caches successful 200s for offline replay.
   //
   // If the network rejects AND there's no per-URL cache AND the shell isn't
@@ -183,30 +205,88 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // ponytail: everything else (assets, GET server-fn RPC) — runtime SWR.
+  // ponytail: cache-first SWR, ONLY for immutable-by-construction assets:
+  // /assets/* (Vite content-hashes the filename — a different build is a
+  // different URL, so the cached bytes can never be stale). Free latency
+  // savings with no revocation concern.
+  //
+  // /media/avatar/* is deliberately NOT here even though keys are write-once
+  // UUIDs: a DELETE path exists (removeMyAvatar drops the R2 object, and an
+  // avatar replace deletes the old key), so a withdrawn photo would keep
+  // replaying from this branch (no 404 eviction) until the next version-bump
+  // cache rename — unacceptable for a psychologist removing their face from a
+  // public directory, possibly for safety. Avatars ride the network-first
+  // default: fresh online, cached for offline replay, evicted on first 404.
   //
   // NOTE: dead /assets/*.{js,css} chunks after a deploy (the OLD app shell
   // still running in an open tab asking for a hashed URL that no longer
-  // exists on the origin) are intentionally NOT special-cased here. The
-  // runtime SWR branch below returns the 404 (or network error) unchanged;
-  // the dynamic-import promise then rejects with "Failed to fetch dynamically
-  // imported module" / "Unable to preload CSS for …", and the client-side
-  // recovery in src/lib/pwa-update.ts (CHUNK_ERR_PATTERNS + the Vite
-  // `vite:preloadError` event listener) catches it and reloads once onto
-  // the new build. Returning an HTML fallback for a script-style request
-  // would change the error to a MIME-mismatch message that doesn't match
-  // the recovery patterns — actively defeating the client handler.
+  // exists on the origin) are intentionally NOT special-cased here. This
+  // branch returns the 404 (or network error) unchanged; the dynamic-import
+  // promise then rejects with "Failed to fetch dynamically imported module" /
+  // "Unable to preload CSS for …", and the client-side recovery in
+  // src/lib/pwa-update.ts (CHUNK_ERR_PATTERNS + the Vite `vite:preloadError`
+  // event listener) catches it and reloads once onto the new build. Returning
+  // an HTML fallback for a script-style request would change the error to a
+  // MIME-mismatch message that doesn't match the recovery patterns — actively
+  // defeating the client handler.
+  if (reqUrl.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE)
+        const cached = await cache.match(req)
+        const network = fetch(req)
+          .then((res) => {
+            if (res && res.status === 200) cache.put(req, res.clone())
+            return res
+          })
+          .catch(() => cached)
+        return cached || network
+      })(),
+    )
+    return
+  }
+
+  // ponytail: everything else — GET server-fn RPC responses, /media/avatar/*,
+  // /media/audio/*, manifest, icons, any future same-origin GET —
+  // NETWORK-FIRST, never cache-first. Reasons, all load-bearing:
+  //
+  //   1. RPC responses can depend on the session cookie (getCurrentUser,
+  //      amIAdmin, getMyProfessional, my appointments/follow-ups, …) and the
+  //      Cache API does NOT vary on cookies — a cached anonymous response
+  //      (null / false) was replayed to a freshly-logged-in user, so /cuenta
+  //      rendered the logged-out view and the admin card stayed hidden until
+  //      a manual reload. Online callers must always get fresh, session-
+  //      accurate data.
+  //   2. /media/audio/* clips can be DELETED (deleteMyStory drops the row +
+  //      R2 object); network-first honors the route's 24h max-age, and the
+  //      404-eviction below stops replay of deleted clips once online.
+  //   3. /media/avatar/* can be WITHDRAWN (removeMyAvatar deletes the R2
+  //      object; a replace deletes the old key) — same bounded revocation as
+  //      audio: fresh online, offline fallback, 404 eviction.
+  //
+  // Successful 200s are still cached, so the cached copy remains the OFFLINE
+  // fallback (last-known data serves offline — directory list, session,
+  // stories), and a 404/410 evicts the cached copy so a later offline window
+  // can't resurrect deleted content. The policy is deliberately NOT based on
+  // the x-tsr-serverFn request header: that's a TanStack internal convention,
+  // and if an upgrade renames it, RPC GETs still land here (network-first) —
+  // the stale-session bug structurally can't return. Ceiling: online callers
+  // always pay the round-trip (within the browser HTTP cache's TTL for
+  // cacheable responses). If that proves costly on slow links, upgrade to
+  // stale-while-revalidate-with-short-TTL — never plain cache-first.
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE)
       const cached = await cache.match(req)
-      const network = fetch(req)
+      const fallback = cached || Response.error()
+      return fetch(req)
         .then((res) => {
           if (res && res.status === 200) cache.put(req, res.clone())
+          else if (res && (res.status === 404 || res.status === 410))
+            cache.delete(req)
           return res
         })
-        .catch(() => cached)
-      return cached || network
+        .catch(() => fallback)
     })(),
   )
 })

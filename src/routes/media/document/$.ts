@@ -12,7 +12,10 @@ import { SUPPORT_DOC_KEY_PREFIX } from '#/server/professionals'
 // the doc row belongs to them, OR falls back to admin. Non-authorized callers
 // get a 404 (not 403 — don't leak that a key exists). Cache-Control is private
 // + short-lived: these are personal credential docs, never cached on a shared
-// device after logout (same posture as the certificate route).
+// device after logout (same posture as the certificate route). The SW
+// cooperates: it bypasses /media/document/* entirely (never intercepts, never
+// caches — see public/sw.js), so the Cache API can't outlive this max-age and
+// replay the doc post-logout.
 export const Route = createFileRoute('/media/document/$')({
   server: {
     handlers: {
