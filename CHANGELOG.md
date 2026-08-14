@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Service Worker replayeaba respuestas RPC anónimas cacheadas tras iniciar sesión** ([public/sw.js](public/sw.js)): la rama runtime-SWR del SW era `cache-first` (`return cached || network`) para **todos** los GET same-origin, incluyendo las RPC de server functions GET (`getCurrentUser`, `amIAdmin`, `getMyProfessional`, …). Como el Cache API **no varía por cookies**, una respuesta anónima cacheada (`null` / `false`) — grabada en cualquier visita pre-login a `/cuenta` — se replayeaba al usuario recién logueado: la página renderizaba la vista de "Inicia sesión" y la tarjeta de Administración quedaba oculta hasta una recarga manual (la revalidación en segundo plano del viejo SWR solo arreglaba el cache de la visita **siguiente** — el llamador actual ya había recibido el response stale). El SW ahora trata las RPC GET de server fns (identificadas vía el header `x-tsr-serverFn: true` que el client fetcher de TanStack Start pone en cada llamada) como **network-first**: los usuarios online siempre reciben data fresca acorde a su sesión, y el cache se conserva solo como fallback offline (los 200 se siguen cacheando, preservando el objetivo de "última data conocida offline" del directorio y la sesión). Los assets build-hashed (inmutables) mantienen el cache-first. Recomendado bump de versión para invalidar el cache key del SW y forzar la adopción en clientes PWA instalados.
+
 ## [1.33.0] - 2026-08-11
 
 ### Added

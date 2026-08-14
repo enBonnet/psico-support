@@ -224,9 +224,17 @@ manifest). It does three things:
    cached shell when offline, so the app boots instead of showing the browser
    error page. **Canonical shell URL is `/_shell`** (the `.html` form 307-
    redirects to it; point the SW at `/_shell` to avoid caching a redirect).
-3. **Runtime SWR** for same-origin GETs, including the GET server-fn RPC
-   responses (directory list, session) — so last-known data serves offline.
-   Mutations are POST and never cached.
+3. **Runtime SWR** for same-origin GETs — but **not uniformly**: build-hashed
+   assets are cache-first, while **GET server-fn RPC responses are
+   NETWORK-FIRST** (detected via the `x-tsr-serverFn` request header TanStack's
+   client fetcher sets). RPC responses can depend on the session cookie
+   (`getCurrentUser`, `amIAdmin`, …) and the Cache API does **not** vary on
+   cookies — cache-first replayed a stale anonymous `null` to a freshly
+   logged-in user, so `/cuenta` looked logged-out (and the admin card stayed
+   hidden) until a manual reload. Network-first still caches 200s, so
+   last-known data (directory list, session) serves offline as the fallback.
+   Mutations are POST and never cached. **Never make the RPC branch
+   cache-first again** — cookie-dependent responses must not replay stale.
 
 The `<link rel="manifest">` must be in `__root.tsx` `head()` (it was missing;
 browsers only found the manifest by auto-probing). The SW registers only in

@@ -9,9 +9,11 @@
 //   2. NAVIGATION FALLBACK — any document navigation that can't be served
 //      from cache falls back to the cached shell, so the app always boots
 //      instead of showing the browser's offline error page.
-//   3. RUNTIME SWR for same-origin GETs (assets + the GET server-fn RPC
-//      responses) — so last-known data (directory list, session, etc.) is
-//      served offline. Mutations are POST and never enter here.
+//   3. RUNTIME caching for same-origin GETs — but NOT uniformly: build-hashed
+//      assets are cache-first (SWR), /media binaries are cached for offline
+//      replay, and GET server-fn RPC responses are NETWORK-FIRST (cookie-
+//      dependent). Last-known data (directory list, session, etc.) is still
+//      served offline as the fallback. Mutations are POST and never enter here.
 //
 // The shell's build-hashed CSS/JS are precached at install by parsing the
 // shell HTML for its own /assets/*.{css,js} URLs (see install below). Without
@@ -130,6 +132,40 @@ self.addEventListener('fetch', (event) => {
   // callbacks (email verification, OAuth) without further SW edits.
   if (reqUrl.pathname.startsWith('/api/auth/')) return
 
+  // ponytail: server-fn RPC GETs are NETWORK-FIRST, not cache-first. TanStack
+  // Start's client fetcher tags every server-fn call with the x-tsr-serverFn
+  // request header, so this reliably identifies RPC traffic. Their responses
+  // can depend on the session cookie (getCurrentUser, amIAdmin,
+  // getMyProfessional, my appointments/follow-ups, …) and the Cache API does
+  // NOT vary on cookies — a cached anonymous response (null / false) was
+  // replayed to a freshly-logged-in user, so /cuenta rendered the logged-out
+  // view and the admin card stayed hidden until a manual reload (the old SWR
+  // branch's background revalidation only fixed the NEXT visit's cache — the
+  // current caller had already received the stale response). Network-first
+  // keeps the cached copy purely as the OFFLINE fallback (successful 200s are
+  // still cached) while guaranteeing online callers always get fresh,
+  // session-accurate data. Build-hashed assets (immutable) and /media
+  // binaries (public R2 reads) keep the cache-first SWR branch below.
+  // Ceiling: online callers now always pay the full RPC round-trip (no
+  // serve-stale). If that proves costly on slow links, upgrade to
+  // stale-while-revalidate-with-short-TTL — never plain cache-first.
+  if (req.headers.get('x-tsr-serverFn') === 'true') {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(CACHE)
+        const cached = await cache.match(req)
+        const fallback = cached || Response.error()
+        return fetch(req)
+          .then((res) => {
+            if (res && res.status === 200) cache.put(req, res.clone())
+            return res
+          })
+          .catch(() => fallback)
+      })(),
+    )
+    return
+  }
+
   // ponytail: document navigations are NETWORK-FIRST (see return below): the
   // worker serves real SSR HTML online, cached here on success for the next
   // visit — so real content paints immediately instead of an empty shell.
@@ -183,7 +219,8 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // ponytail: everything else (assets, GET server-fn RPC) — runtime SWR.
+  // ponytail: everything else (build-hashed assets, /media binaries, other
+  // same-origin GETs) — runtime SWR.
   //
   // NOTE: dead /assets/*.{js,css} chunks after a deploy (the OLD app shell
   // still running in an open tab asking for a hashed URL that no longer
