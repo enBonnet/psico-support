@@ -96,8 +96,18 @@ export async function verifyProfessional(
   // 6. Decision: exact match?
   const isExactMatch = fetchResult.ok && fetchResult.status === 'ok' && fetchResult.itemCount === 1
 
-  if (isExactMatch && fetchResult.raw?.data?.items?.[0]) {
-    const returnedItem = fetchResult.raw.data.items[0]
+  if (isExactMatch) {
+    const returnedItem = fetchResult.raw?.data?.items?.[0]
+    
+    // Security check: if the API claims 1 result but sends no item, it's an error
+    if (!returnedItem) {
+      return {
+        professionalId: professional.id,
+        status: 'error',
+        error: 'FPV API reported one result without a result item',
+      }
+    }
+
     const returnedFpv = String(returnedItem.fpv ?? '').trim()
     
     // Security check: the FPV returned by the API must match the one we searched
@@ -117,7 +127,6 @@ export async function verifyProfessional(
       error: `FPV mismatch: searched for ${search.normalizedValue}, API returned ${returnedFpv}`,
     }
   }
-
   // 7. Not an exact match — return the status for the script to log
   return {
     professionalId: professional.id,
