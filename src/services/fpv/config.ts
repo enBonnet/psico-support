@@ -5,7 +5,7 @@ const fpvEnvSchema = z.object({
   FPV_WEB_PUBLIC_URL: z.string().url(),
   FPV_USER_AGENT: z.string().min(10),
   FPV_RATE_LIMIT_MS: z.coerce.number().int().positive().default(1500),
-  FPV_TIMEOUT_MS: z.coerce.number().int().positive().default(10000), 
+  FPV_TIMEOUT_MS: z.coerce.number().int().positive().max(2147483647).default(10000),
 })
 
 const parsed = fpvEnvSchema.safeParse(process.env)
