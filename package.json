@@ -26,6 +26,7 @@
     "db:reset-passwords": "tsx scripts/reset-local-passwords.ts",
     "db:seed": "tsx scripts/seed-local.ts",
     "db:promote-admin": "tsx scripts/promote-local-admin.ts",
+    "db:normalize-names": "tsx scripts/normalize-names.ts",
     "analytics": "tsx scripts/analytics.ts",
     "analytics:dashboard": "tsx scripts/analytics-dashboard.ts",
     "docs": "node scripts/serve-docs.mjs"
