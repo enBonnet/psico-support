@@ -7,6 +7,7 @@ import { getRequestHeaders } from '@tanstack/react-start/server'
 import { getDb } from '#/db'
 import * as schema from '#/db/schema'
 import { user as userTable } from '#/db/schema'
+import { normalizeName } from '#/lib/name'
 import { resetPasswordHtml, sendEmail } from '#/server/email'
 
 // ponytail: Better Auth expects a singleton, but the D1 binding is only
@@ -49,6 +50,21 @@ function buildAuth() {
           html: resetPasswordHtml(url),
           text: `Restablece tu contraseña en PsicoAyudas.\n\nAbre este enlace (válido por 30 minutos):\n${url}\n\nSi no pediste este cambio, ignora este correo: tu contraseña no cambiará.`,
         })
+      },
+    },
+    databaseHooks: {
+      // ponytail: canonical name casing ("Ender Bonnet Borrero") at the auth
+      // boundary — catches every user-creation path (signup.tsx,
+      // registerProfessional's signUpEmail, raw /api/auth/sign-up/email
+      // calls) so user.name is normalized even when no app-level Zod schema
+      // runs first. App schemas also normalize (src/server/professionals.ts)
+      // — belt and suspenders, both idempotent.
+      user: {
+        create: {
+          before: async (user) => ({
+            data: { name: normalizeName(user.name) },
+          }),
+        },
       },
     },
     plugins: [tanstackStartCookies()],

@@ -9,6 +9,7 @@ import { useState } from 'react'
 import { z } from 'zod'
 import { authClient } from '#/lib/auth-client'
 import { track } from '#/lib/analytics-client'
+import { normalizeName } from '#/lib/name'
 import { getCurrentUser } from '#/server/professionals'
 import { noindexHead } from '#/lib/seo'
 
@@ -65,7 +66,9 @@ function SignupPage() {
     setLoading(true)
     try {
       const { error: err } = await authClient.signUp.email({
-        name,
+        // canonical casing up front so the account hub renders it correctly
+        // on first paint (the auth-layer hook normalizes again server-side)
+        name: normalizeName(name),
         email,
         password,
       })
