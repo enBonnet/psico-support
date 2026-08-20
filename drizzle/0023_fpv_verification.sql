@@ -1,3 +1,11 @@
+-- FPV verification audit tables (fpv_search_requests + fpv_raw_results).
+-- Originally generated as 0018_sweet_nekra; renumbered to 0023 because
+-- 0018_verified_provides_service_idx.sql already existed (the journal was
+-- stale through 0016 — see the note in 0019_appointments.sql). The journal's
+-- last entry is now idx 23 with the full-schema snapshot at
+-- meta/0023_snapshot.json, so the next `db:generate` emits 0024_* and can
+-- no longer collide with the hand-written 0017–0022 files. Never applied to
+-- any D1 (local or remote) under its old name — safe to have renamed.
 CREATE TABLE `fpv_search_requests` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
 	`search_type` text NOT NULL,
