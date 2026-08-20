@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.35.0] - 2026-08-19
+
+### Added
+- **Servicio de verificación automática contra el registro FPV** ([src/services/fpv/](src/services/fpv), [src/db/schema.ts](src/db/schema.ts), [drizzle/0023_fpv_verification.sql](drizzle/0023_fpv_verification.sql)): servicio que consulta la API pública de la Federación de Psicólogos de Venezuela para verificar profesionales con `verifiedStatus='pending'` — normaliza el número de colegiatura como FPV, deja auditoría completa por búsqueda (`fpv_search_requests` + `fpv_raw_results`, con cédula/tipo de documento/id **redactados antes de persistir**), y solo marca `verified` ante coincidencia exacta donde el número devuelto por la API hace eco del buscado. **Dormante por ahora**: el runner que lo invoca aún no existe, así que ningún flujo de usuario cambia; las tablas aterrizan en D1 listas para cuando se conecte. La migración se renumeró de `0018_sweet_nekra` a `0023_fpv_verification` — el `0018` original colisionaba con el `0018_verified_provides_service_idx.sql` ya aplicado, y el journal de drizzle estaba desfasado; nunca se aplicó bajo el nombre viejo, así que el renombre es seguro. Verificación: `pnpm run db:generate` reporta "No schema changes" (journal idx 23 correcto).
+
+### Changed
+- **pnpm es el único gestor de paquetes** ([package.json](package.json), [pnpm-lock.yaml](pnpm-lock.yaml), [pnpm-workspace.yaml](pnpm-workspace.yaml), [.github/workflows/deploy.yml](.github/workflows/deploy.yml)): se elimina `package-lock.json`, se fija `pnpm@11.5.2` vía `packageManager`, y las aprobaciones de build scripts viven en `pnpm-workspace.yaml` (`allowBuilds`; pnpm 11 ignora el viejo bloque `pnpm.onlyBuiltDependencies`). El workflow de deploy instala con `pnpm install --frozen-lockfile` y ejecuta wrangler vía `pnpm exec`. Todos los `npm`/`npx` de scripts, comentarios de código y documentación pasan a `pnpm`/`pnpm exec`/`pnpm dlx` (los logs históricos de `docs/professional-communications.md` se conservan tal cual — registran eventos pasados). Verificación: `pnpm install --frozen-lockfile` + build de producción con prerender del shell PWA (`CLOUDFLARE_VITE_FORCE_LOCAL=true pnpm build`) OK sobre un `node_modules` limpio.
+
+### Fixed
+- **`@sentry/core` era dependencia fantasma** ([package.json](package.json), [src/lib/sentry.ts](src/lib/sentry.ts)): el import funcionaba solo por el hoisting plano de npm; con el layout estricto de pnpm dejaba de resolver (y el layout híbrido npm+pnpm producía dos instancias de tipos Sentry en conflicto). Ahora es dependencia declarada.
+- **Errores de tipos y lint que el CI no detectaba** ([src/services/fpv/client.ts](src/services/fpv/client.ts), [src/services/fpv/verifier.ts](src/services/fpv/verifier.ts), [src/routes/profesional/disponibilidad.tsx](src/routes/profesional/disponibilidad.tsx)): el PR #71 aterrizó con 4 errores de `tsc` y 7 de `eslint` (no hay paso de typecheck en CI, y el `node_modules` híbrido los enmascaraba). Corregidos: timeout fuera de scope en el catch, guards honestos sobre JSON no confiable en la redacción, narrowing del estado `'ok'` en el verificador, y el payload de duraciones de disponibilidad acotado al union literal del schema. Verificación: `pnpm exec tsc --noEmit` (solo queda el error de env-typing preexistente de `drizzle.config.ts`), `pnpm lint` y `pnpm test` (21/21) limpios.
+
+### Notes
+- **Migración D1 obligatoria post-deploy** (gotcha #1): `pnpm exec wrangler d1 migrations apply psico-support-db --remote` y `--local`, luego `pnpm exec wrangler d1 migrations list psico-support-db --remote` (debe quedar vacío). La `0023` es puramente aditiva (dos tablas nuevas + índices) — sin impacto en tablas existentes. El CI del deploy la aplica automáticamente tras `wrangler deploy`.
+
 ## [1.34.0] - 2026-08-19
 
 ### Changed
