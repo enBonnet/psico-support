@@ -7,14 +7,14 @@
 // `wrangler d1 migrations apply psico-support-db --local`.
 //
 // Usage:
-//   npm run db:seed                    # insert (skip if a user email already exists)
-//   npm run db:seed -- --reset         # DELETE all rows from every table first
-//   npm run db:seed -- --password foo  # override default password (password123)
+//   ppnpm run db:seed                    # insert (skip if a user email already exists)
+//   ppnpm run db:seed -- --reset         # DELETE all rows from every table first
+//   ppnpm run db:seed -- --password foo  # override default password (password123)
 //
 // Idempotent by email: re-running won't duplicate users. --reset wipes
 // user/session/account/professionals/audio_stories/follow_ups/professional_documents
 // then re-inserts. Does NOT re-apply migrations — run
-// `npx wrangler d1 migrations apply psico-support-db --local` first if needed.
+// `pnpm exec wrangler d1 migrations apply psico-support-db --local` first if needed.
 //
 // Hashing matches Better Auth's scrypt params (see reset-local-passwords.ts):
 //   scrypt N=16384, r=16, p=1, dkLen=64, NFKC-normalized, format `salt:hash`.
@@ -48,7 +48,7 @@ function parseArgs(argv: string[]): Args {
 		else if (a === '--help' || a === '-h') {
 			console.log(
 				[
-					'Usage: npm run db:seed -- [options]',
+					'Usage: ppnpm run db:seed -- [options]',
 					'',
 					'Options:',
 					'  --password, -p <pw>   password for all seeded accounts (default: password123)',
@@ -75,13 +75,13 @@ function findLocalDb(): string {
 	} catch {
 		throw new Error(
 			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
 		)
 	}
 	if (files.length === 0)
 		throw new Error(
 			`No D1 sqlite files in ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
 		)
 	files.sort((a, b) => statSync(b).size - statSync(a).size)
 	return files[0]
@@ -282,7 +282,7 @@ const PROS: ProSeed[] = [
 		// pending — lands in the admin review queue
 		name: 'Dra. Carmen Díaz',
 		email: 'carmen.diaz@example.com',
-		certificationNumber: 'VP-00007',
+		certificationNumber: '00007',
 		certifyingSchool: 'Colegio de Psicólogos de Venezuela',
 		population: ['Niños'],
 		focusGroups: [],

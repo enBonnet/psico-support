@@ -7,10 +7,10 @@
 // without knowing each user's real prod password.
 //
 // Usage:
-//   npm run db:reset-passwords                 # default password: password123
-//   npm run db:reset-passwords -- --password secret
-//   npm run db:reset-passwords -- --email foo@x.com --password secret  # one user
-//   npm run db:reset-passwords -- --dry-run    # show counts, don't write
+//   pnpm run db:reset-passwords                 # default password: password123
+//   pnpm run db:reset-passwords -- --password secret
+//   pnpm run db:reset-passwords -- --email foo@x.com --password secret  # one user
+//   pnpm run db:reset-passwords -- --dry-run    # show counts, don't write
 //
 // Hashing matches Better Auth's exact scrypt params
 // (@better-auth/utils/better-auth/crypto/password.node.cjs):
@@ -71,7 +71,7 @@ function parseArgs(argv: string[]): Args {
 		else if (a === '--help' || a === '-h') {
 			console.log(
 				[
-					'Usage: npm run db:reset-passwords -- [options]',
+					'Usage: pnpm run db:reset-passwords -- [options]',
 					'',
 					'Options:',
 					'  --password, -p <pw>   password to set (default: password123)',
@@ -112,13 +112,13 @@ function findLocalDb(): string {
 	} catch {
 		throw new Error(
 			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first to create it.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first to create it.',
 		)
 	}
 	if (files.length === 0) {
 		throw new Error(
 			`No D1 sqlite files in ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
 		)
 	}
 	// Pick the largest file — heuristic for the active DB when multiple exist

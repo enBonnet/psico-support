@@ -9,150 +9,65 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as YaRouteImport } from './routes/ya'
-import { Route as VoluntariadoRouteImport } from './routes/voluntariado'
-import { Route as TerminosRouteImport } from './routes/terminos'
-import { Route as SocialRouteImport } from './routes/social'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as RecuperarRouteImport } from './routes/recuperar'
-import { Route as PsicologosRouteImport } from './routes/psicologos'
-import { Route as PrivacidadRouteImport } from './routes/privacidad'
-import { Route as MediasRouteImport } from './routes/medias'
-import { Route as EquipoRouteImport } from './routes/equipo'
-import { Route as EnlacesRouteImport } from './routes/enlaces'
-import { Route as DemoRouteImport } from './routes/demo'
-import { Route as CuentaRouteImport } from './routes/cuenta'
-import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
-import { Route as AyudameRouteImport } from './routes/ayudame'
-import { Route as AppRouteImport } from './routes/app'
-import { Route as AhoraRouteImport } from './routes/ahora'
-import { Route as AdminRouteImport } from './routes/admin'
-import { Route as AcercaDeRouteImport } from './routes/acerca-de'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
-import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
-import { Route as ApoyoIndexRouteImport } from './routes/apoyo/index'
+import { Route as AcercaDeRouteImport } from './routes/acerca-de'
+import { Route as AdminRouteImport } from './routes/admin'
+import { Route as AhoraRouteImport } from './routes/ahora'
+import { Route as AppRouteImport } from './routes/app'
+import { Route as AyudameRouteImport } from './routes/ayudame'
+import { Route as ComoFuncionaRouteImport } from './routes/como-funciona'
+import { Route as CuentaRouteImport } from './routes/cuenta'
+import { Route as DemoRouteImport } from './routes/demo'
+import { Route as EnlacesRouteImport } from './routes/enlaces'
+import { Route as EquipoRouteImport } from './routes/equipo'
+import { Route as MediasRouteImport } from './routes/medias'
+import { Route as PrivacidadRouteImport } from './routes/privacidad'
+import { Route as PsicologosRouteImport } from './routes/psicologos'
+import { Route as RecuperarRouteImport } from './routes/recuperar'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as SocialRouteImport } from './routes/social'
+import { Route as TerminosRouteImport } from './routes/terminos'
+import { Route as VoluntariadoRouteImport } from './routes/voluntariado'
+import { Route as YaRouteImport } from './routes/ya'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as RecursosRespirarRouteImport } from './routes/recursos/respirar'
-import { Route as RecursosReaccionesNormalesRouteImport } from './routes/recursos/reacciones-normales'
-import { Route as RecursosPrimerosAuxiliosRouteImport } from './routes/recursos/primeros-auxilios'
-import { Route as RecursosEnraizamientoRouteImport } from './routes/recursos/enraizamiento'
-import { Route as RecursosAutochequeoRouteImport } from './routes/recursos/autochequeo'
-import { Route as ProfesionalSesionesRouteImport } from './routes/profesional/sesiones'
-import { Route as ProfesionalSeguimientoRouteImport } from './routes/profesional/seguimiento'
-import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
-import { Route as ProfesionalPresentacionRouteImport } from './routes/profesional/presentacion'
-import { Route as ProfesionalPerfilRouteImport } from './routes/profesional/perfil'
-import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
-import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
-import { Route as ProfesionalDisponibilidadRouteImport } from './routes/profesional/disponibilidad'
-import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
-import { Route as ProfesionalAudiosRouteImport } from './routes/profesional/audios'
-import { Route as CuentaSesionesRouteImport } from './routes/cuenta.sesiones'
-import { Route as AyudaEspecificaRouteImport } from './routes/ayuda/especifica'
 import { Route as AdminAnaliticaRouteImport } from './routes/admin/analitica'
-import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
-import { Route as AdminUsuariosIndexRouteImport } from './routes/admin/usuarios/index'
-import { Route as AdminProfesionalesIndexRouteImport } from './routes/admin/profesionales/index'
-import { Route as AdminCategoriasIndexRouteImport } from './routes/admin/categorias/index'
+import { Route as ApoyoIndexRouteImport } from './routes/apoyo/index'
+import { Route as AyudaIndexRouteImport } from './routes/ayuda/index'
+import { Route as AyudaEspecificaRouteImport } from './routes/ayuda/especifica'
+import { Route as CuentaSesionesRouteImport } from './routes/cuenta.sesiones'
+import { Route as ProfesionalAudiosRouteImport } from './routes/profesional/audios'
+import { Route as ProfesionalCompletarRouteImport } from './routes/profesional/completar'
+import { Route as ProfesionalDisponibilidadRouteImport } from './routes/profesional/disponibilidad'
+import { Route as ProfesionalLoginRouteImport } from './routes/profesional/login'
+import { Route as ProfesionalPanelRouteImport } from './routes/profesional/panel'
+import { Route as ProfesionalPerfilRouteImport } from './routes/profesional/perfil'
+import { Route as ProfesionalPresentacionRouteImport } from './routes/profesional/presentacion'
+import { Route as ProfesionalRegistroRouteImport } from './routes/profesional/registro'
+import { Route as ProfesionalSeguimientoRouteImport } from './routes/profesional/seguimiento'
+import { Route as ProfesionalSesionesRouteImport } from './routes/profesional/sesiones'
+import { Route as RecursosIndexRouteImport } from './routes/recursos/index'
+import { Route as RecursosAutochequeoRouteImport } from './routes/recursos/autochequeo'
+import { Route as RecursosEnraizamientoRouteImport } from './routes/recursos/enraizamiento'
+import { Route as RecursosPrimerosAuxiliosRouteImport } from './routes/recursos/primeros-auxilios'
+import { Route as RecursosReaccionesNormalesRouteImport } from './routes/recursos/reacciones-normales'
+import { Route as RecursosRespirarRouteImport } from './routes/recursos/respirar'
 import { Route as AdminAudiosIndexRouteImport } from './routes/admin/audios/index'
-import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
-import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
-import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
-import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
-import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
-import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AdminCategoriasIndexRouteImport } from './routes/admin/categorias/index'
+import { Route as AdminProfesionalesIndexRouteImport } from './routes/admin/profesionales/index'
 import { Route as AdminProfesionalesIdRouteImport } from './routes/admin/profesionales/$id'
+import { Route as AdminUsuariosIndexRouteImport } from './routes/admin/usuarios/index'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AyudaProfesionalesIndexRouteImport } from './routes/ayuda/profesionales/index'
+import { Route as AyudaProfesionalesIdRouteImport } from './routes/ayuda/profesionales/$id'
+import { Route as MediaAudioSplatRouteImport } from './routes/media/audio/$'
+import { Route as MediaAvatarSplatRouteImport } from './routes/media/avatar/$'
+import { Route as MediaCertificateSplatRouteImport } from './routes/media/certificate/$'
+import { Route as MediaDocumentSplatRouteImport } from './routes/media/document/$'
 import { Route as CuentaSesionesAgendarProIdRouteImport } from './routes/cuenta.sesiones.agendar.$proId'
 
-const YaRoute = YaRouteImport.update({
-  id: '/ya',
-  path: '/ya',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VoluntariadoRoute = VoluntariadoRouteImport.update({
-  id: '/voluntariado',
-  path: '/voluntariado',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TerminosRoute = TerminosRouteImport.update({
-  id: '/terminos',
-  path: '/terminos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SocialRoute = SocialRouteImport.update({
-  id: '/social',
-  path: '/social',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RecuperarRoute = RecuperarRouteImport.update({
-  id: '/recuperar',
-  path: '/recuperar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PsicologosRoute = PsicologosRouteImport.update({
-  id: '/psicologos',
-  path: '/psicologos',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PrivacidadRoute = PrivacidadRouteImport.update({
-  id: '/privacidad',
-  path: '/privacidad',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MediasRoute = MediasRouteImport.update({
-  id: '/medias',
-  path: '/medias',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EquipoRoute = EquipoRouteImport.update({
-  id: '/equipo',
-  path: '/equipo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EnlacesRoute = EnlacesRouteImport.update({
-  id: '/enlaces',
-  path: '/enlaces',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DemoRoute = DemoRouteImport.update({
-  id: '/demo',
-  path: '/demo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CuentaRoute = CuentaRouteImport.update({
-  id: '/cuenta',
-  path: '/cuenta',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ComoFuncionaRoute = ComoFuncionaRouteImport.update({
-  id: '/como-funciona',
-  path: '/como-funciona',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AyudameRoute = AyudameRouteImport.update({
-  id: '/ayudame',
-  path: '/ayudame',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AhoraRoute = AhoraRouteImport.update({
-  id: '/ahora',
-  path: '/ahora',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcercaDeRoute = AcercaDeRouteImport.update({
@@ -160,24 +75,94 @@ const AcercaDeRoute = AcercaDeRouteImport.update({
   path: '/acerca-de',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RecursosIndexRoute = RecursosIndexRouteImport.update({
-  id: '/recursos/',
-  path: '/recursos/',
+const AhoraRoute = AhoraRouteImport.update({
+  id: '/ahora',
+  path: '/ahora',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AyudaIndexRoute = AyudaIndexRouteImport.update({
-  id: '/ayuda/',
-  path: '/ayuda/',
+const AppRoute = AppRouteImport.update({
+  id: '/app',
+  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApoyoIndexRoute = ApoyoIndexRouteImport.update({
-  id: '/apoyo/',
-  path: '/apoyo/',
+const AyudameRoute = AyudameRouteImport.update({
+  id: '/ayudame',
+  path: '/ayudame',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComoFuncionaRoute = ComoFuncionaRouteImport.update({
+  id: '/como-funciona',
+  path: '/como-funciona',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CuentaRoute = CuentaRouteImport.update({
+  id: '/cuenta',
+  path: '/cuenta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DemoRoute = DemoRouteImport.update({
+  id: '/demo',
+  path: '/demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EnlacesRoute = EnlacesRouteImport.update({
+  id: '/enlaces',
+  path: '/enlaces',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EquipoRoute = EquipoRouteImport.update({
+  id: '/equipo',
+  path: '/equipo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediasRoute = MediasRouteImport.update({
+  id: '/medias',
+  path: '/medias',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacidadRoute = PrivacidadRouteImport.update({
+  id: '/privacidad',
+  path: '/privacidad',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PsicologosRoute = PsicologosRouteImport.update({
+  id: '/psicologos',
+  path: '/psicologos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecuperarRoute = RecuperarRouteImport.update({
+  id: '/recuperar',
+  path: '/recuperar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SocialRoute = SocialRouteImport.update({
+  id: '/social',
+  path: '/social',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TerminosRoute = TerminosRouteImport.update({
+  id: '/terminos',
+  path: '/terminos',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VoluntariadoRoute = VoluntariadoRouteImport.update({
+  id: '/voluntariado',
+  path: '/voluntariado',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YaRoute = YaRouteImport.update({
+  id: '/ya',
+  path: '/ya',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -185,66 +170,39 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
-const RecursosRespirarRoute = RecursosRespirarRouteImport.update({
-  id: '/recursos/respirar',
-  path: '/recursos/respirar',
+const AdminAnaliticaRoute = AdminAnaliticaRouteImport.update({
+  id: '/analitica',
+  path: '/analitica',
+  getParentRoute: () => AdminRoute,
+} as any)
+const ApoyoIndexRoute = ApoyoIndexRouteImport.update({
+  id: '/apoyo/',
+  path: '/apoyo/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RecursosReaccionesNormalesRoute =
-  RecursosReaccionesNormalesRouteImport.update({
-    id: '/recursos/reacciones-normales',
-    path: '/recursos/reacciones-normales',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const RecursosPrimerosAuxiliosRoute =
-  RecursosPrimerosAuxiliosRouteImport.update({
-    id: '/recursos/primeros-auxilios',
-    path: '/recursos/primeros-auxilios',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const RecursosEnraizamientoRoute = RecursosEnraizamientoRouteImport.update({
-  id: '/recursos/enraizamiento',
-  path: '/recursos/enraizamiento',
+const AyudaIndexRoute = AyudaIndexRouteImport.update({
+  id: '/ayuda/',
+  path: '/ayuda/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RecursosAutochequeoRoute = RecursosAutochequeoRouteImport.update({
-  id: '/recursos/autochequeo',
-  path: '/recursos/autochequeo',
+const AyudaEspecificaRoute = AyudaEspecificaRouteImport.update({
+  id: '/ayuda/especifica',
+  path: '/ayuda/especifica',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfesionalSesionesRoute = ProfesionalSesionesRouteImport.update({
-  id: '/profesional/sesiones',
-  path: '/profesional/sesiones',
+const CuentaSesionesRoute = CuentaSesionesRouteImport.update({
+  id: '/sesiones',
+  path: '/sesiones',
+  getParentRoute: () => CuentaRoute,
+} as any)
+const ProfesionalAudiosRoute = ProfesionalAudiosRouteImport.update({
+  id: '/profesional/audios',
+  path: '/profesional/audios',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfesionalSeguimientoRoute = ProfesionalSeguimientoRouteImport.update({
-  id: '/profesional/seguimiento',
-  path: '/profesional/seguimiento',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfesionalRegistroRoute = ProfesionalRegistroRouteImport.update({
-  id: '/profesional/registro',
-  path: '/profesional/registro',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfesionalPresentacionRoute = ProfesionalPresentacionRouteImport.update({
-  id: '/profesional/presentacion',
-  path: '/profesional/presentacion',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfesionalPerfilRoute = ProfesionalPerfilRouteImport.update({
-  id: '/profesional/perfil',
-  path: '/profesional/perfil',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfesionalPanelRoute = ProfesionalPanelRouteImport.update({
-  id: '/profesional/panel',
-  path: '/profesional/panel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfesionalLoginRoute = ProfesionalLoginRouteImport.update({
-  id: '/profesional/login',
-  path: '/profesional/login',
+const ProfesionalCompletarRoute = ProfesionalCompletarRouteImport.update({
+  id: '/profesional/completar',
+  path: '/profesional/completar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfesionalDisponibilidadRoute =
@@ -253,44 +211,76 @@ const ProfesionalDisponibilidadRoute =
     path: '/profesional/disponibilidad',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ProfesionalCompletarRoute = ProfesionalCompletarRouteImport.update({
-  id: '/profesional/completar',
-  path: '/profesional/completar',
+const ProfesionalLoginRoute = ProfesionalLoginRouteImport.update({
+  id: '/profesional/login',
+  path: '/profesional/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfesionalAudiosRoute = ProfesionalAudiosRouteImport.update({
-  id: '/profesional/audios',
-  path: '/profesional/audios',
+const ProfesionalPanelRoute = ProfesionalPanelRouteImport.update({
+  id: '/profesional/panel',
+  path: '/profesional/panel',
   getParentRoute: () => rootRouteImport,
 } as any)
-const CuentaSesionesRoute = CuentaSesionesRouteImport.update({
-  id: '/sesiones',
-  path: '/sesiones',
-  getParentRoute: () => CuentaRoute,
-} as any)
-const AyudaEspecificaRoute = AyudaEspecificaRouteImport.update({
-  id: '/ayuda/especifica',
-  path: '/ayuda/especifica',
+const ProfesionalPerfilRoute = ProfesionalPerfilRouteImport.update({
+  id: '/profesional/perfil',
+  path: '/profesional/perfil',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAnaliticaRoute = AdminAnaliticaRouteImport.update({
-  id: '/analitica',
-  path: '/analitica',
-  getParentRoute: () => AdminRoute,
-} as any)
-const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
-  id: '/ayuda/profesionales/',
-  path: '/ayuda/profesionales/',
+const ProfesionalPresentacionRoute = ProfesionalPresentacionRouteImport.update({
+  id: '/profesional/presentacion',
+  path: '/profesional/presentacion',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminUsuariosIndexRoute = AdminUsuariosIndexRouteImport.update({
-  id: '/usuarios/',
-  path: '/usuarios/',
-  getParentRoute: () => AdminRoute,
+const ProfesionalRegistroRoute = ProfesionalRegistroRouteImport.update({
+  id: '/profesional/registro',
+  path: '/profesional/registro',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminProfesionalesIndexRoute = AdminProfesionalesIndexRouteImport.update({
-  id: '/profesionales/',
-  path: '/profesionales/',
+const ProfesionalSeguimientoRoute = ProfesionalSeguimientoRouteImport.update({
+  id: '/profesional/seguimiento',
+  path: '/profesional/seguimiento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfesionalSesionesRoute = ProfesionalSesionesRouteImport.update({
+  id: '/profesional/sesiones',
+  path: '/profesional/sesiones',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecursosIndexRoute = RecursosIndexRouteImport.update({
+  id: '/recursos/',
+  path: '/recursos/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecursosAutochequeoRoute = RecursosAutochequeoRouteImport.update({
+  id: '/recursos/autochequeo',
+  path: '/recursos/autochequeo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecursosEnraizamientoRoute = RecursosEnraizamientoRouteImport.update({
+  id: '/recursos/enraizamiento',
+  path: '/recursos/enraizamiento',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RecursosPrimerosAuxiliosRoute =
+  RecursosPrimerosAuxiliosRouteImport.update({
+    id: '/recursos/primeros-auxilios',
+    path: '/recursos/primeros-auxilios',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RecursosReaccionesNormalesRoute =
+  RecursosReaccionesNormalesRouteImport.update({
+    id: '/recursos/reacciones-normales',
+    path: '/recursos/reacciones-normales',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const RecursosRespirarRoute = RecursosRespirarRouteImport.update({
+  id: '/recursos/respirar',
+  path: '/recursos/respirar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminAudiosIndexRoute = AdminAudiosIndexRouteImport.update({
+  id: '/audios/',
+  path: '/audios/',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminCategoriasIndexRoute = AdminCategoriasIndexRouteImport.update({
@@ -298,29 +288,29 @@ const AdminCategoriasIndexRoute = AdminCategoriasIndexRouteImport.update({
   path: '/categorias/',
   getParentRoute: () => AdminRoute,
 } as any)
-const AdminAudiosIndexRoute = AdminAudiosIndexRouteImport.update({
-  id: '/audios/',
-  path: '/audios/',
+const AdminProfesionalesIndexRoute = AdminProfesionalesIndexRouteImport.update({
+  id: '/profesionales/',
+  path: '/profesionales/',
   getParentRoute: () => AdminRoute,
 } as any)
-const MediaDocumentSplatRoute = MediaDocumentSplatRouteImport.update({
-  id: '/media/document/$',
-  path: '/media/document/$',
+const AdminProfesionalesIdRoute = AdminProfesionalesIdRouteImport.update({
+  id: '/profesionales/$id',
+  path: '/profesionales/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminUsuariosIndexRoute = AdminUsuariosIndexRouteImport.update({
+  id: '/usuarios/',
+  path: '/usuarios/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const MediaCertificateSplatRoute = MediaCertificateSplatRouteImport.update({
-  id: '/media/certificate/$',
-  path: '/media/certificate/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MediaAvatarSplatRoute = MediaAvatarSplatRouteImport.update({
-  id: '/media/avatar/$',
-  path: '/media/avatar/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MediaAudioSplatRoute = MediaAudioSplatRouteImport.update({
-  id: '/media/audio/$',
-  path: '/media/audio/$',
+const AyudaProfesionalesIndexRoute = AyudaProfesionalesIndexRouteImport.update({
+  id: '/ayuda/profesionales/',
+  path: '/ayuda/profesionales/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AyudaProfesionalesIdRoute = AyudaProfesionalesIdRouteImport.update({
@@ -328,15 +318,25 @@ const AyudaProfesionalesIdRoute = AyudaProfesionalesIdRouteImport.update({
   path: '/ayuda/profesionales/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
-  id: '/api/auth/$',
-  path: '/api/auth/$',
+const MediaAudioSplatRoute = MediaAudioSplatRouteImport.update({
+  id: '/media/audio/$',
+  path: '/media/audio/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminProfesionalesIdRoute = AdminProfesionalesIdRouteImport.update({
-  id: '/profesionales/$id',
-  path: '/profesionales/$id',
-  getParentRoute: () => AdminRoute,
+const MediaAvatarSplatRoute = MediaAvatarSplatRouteImport.update({
+  id: '/media/avatar/$',
+  path: '/media/avatar/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaCertificateSplatRoute = MediaCertificateSplatRouteImport.update({
+  id: '/media/certificate/$',
+  path: '/media/certificate/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MediaDocumentSplatRoute = MediaDocumentSplatRouteImport.update({
+  id: '/media/document/$',
+  path: '/media/document/$',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const CuentaSesionesAgendarProIdRoute =
   CuentaSesionesAgendarProIdRouteImport.update({
@@ -740,130 +740,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/ya': {
-      id: '/ya'
-      path: '/ya'
-      fullPath: '/ya'
-      preLoaderRoute: typeof YaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/voluntariado': {
-      id: '/voluntariado'
-      path: '/voluntariado'
-      fullPath: '/voluntariado'
-      preLoaderRoute: typeof VoluntariadoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terminos': {
-      id: '/terminos'
-      path: '/terminos'
-      fullPath: '/terminos'
-      preLoaderRoute: typeof TerminosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/social': {
-      id: '/social'
-      path: '/social'
-      fullPath: '/social'
-      preLoaderRoute: typeof SocialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recuperar': {
-      id: '/recuperar'
-      path: '/recuperar'
-      fullPath: '/recuperar'
-      preLoaderRoute: typeof RecuperarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/psicologos': {
-      id: '/psicologos'
-      path: '/psicologos'
-      fullPath: '/psicologos'
-      preLoaderRoute: typeof PsicologosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/privacidad': {
-      id: '/privacidad'
-      path: '/privacidad'
-      fullPath: '/privacidad'
-      preLoaderRoute: typeof PrivacidadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/medias': {
-      id: '/medias'
-      path: '/medias'
-      fullPath: '/medias'
-      preLoaderRoute: typeof MediasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/equipo': {
-      id: '/equipo'
-      path: '/equipo'
-      fullPath: '/equipo'
-      preLoaderRoute: typeof EquipoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/enlaces': {
-      id: '/enlaces'
-      path: '/enlaces'
-      fullPath: '/enlaces'
-      preLoaderRoute: typeof EnlacesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/demo': {
-      id: '/demo'
-      path: '/demo'
-      fullPath: '/demo'
-      preLoaderRoute: typeof DemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/cuenta': {
-      id: '/cuenta'
-      path: '/cuenta'
-      fullPath: '/cuenta'
-      preLoaderRoute: typeof CuentaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/como-funciona': {
-      id: '/como-funciona'
-      path: '/como-funciona'
-      fullPath: '/como-funciona'
-      preLoaderRoute: typeof ComoFuncionaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ayudame': {
-      id: '/ayudame'
-      path: '/ayudame'
-      fullPath: '/ayudame'
-      preLoaderRoute: typeof AyudameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ahora': {
-      id: '/ahora'
-      path: '/ahora'
-      fullPath: '/ahora'
-      preLoaderRoute: typeof AhoraRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/acerca-de': {
@@ -873,32 +754,130 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcercaDeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recursos/': {
-      id: '/recursos/'
-      path: '/recursos'
-      fullPath: '/recursos/'
-      preLoaderRoute: typeof RecursosIndexRouteImport
+    '/ahora': {
+      id: '/ahora'
+      path: '/ahora'
+      fullPath: '/ahora'
+      preLoaderRoute: typeof AhoraRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ayuda/': {
-      id: '/ayuda/'
-      path: '/ayuda'
-      fullPath: '/ayuda/'
-      preLoaderRoute: typeof AyudaIndexRouteImport
+    '/app': {
+      id: '/app'
+      path: '/app'
+      fullPath: '/app'
+      preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/apoyo/': {
-      id: '/apoyo/'
-      path: '/apoyo'
-      fullPath: '/apoyo/'
-      preLoaderRoute: typeof ApoyoIndexRouteImport
+    '/ayudame': {
+      id: '/ayudame'
+      path: '/ayudame'
+      fullPath: '/ayudame'
+      preLoaderRoute: typeof AyudameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/como-funciona': {
+      id: '/como-funciona'
+      path: '/como-funciona'
+      fullPath: '/como-funciona'
+      preLoaderRoute: typeof ComoFuncionaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cuenta': {
+      id: '/cuenta'
+      path: '/cuenta'
+      fullPath: '/cuenta'
+      preLoaderRoute: typeof CuentaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/demo': {
+      id: '/demo'
+      path: '/demo'
+      fullPath: '/demo'
+      preLoaderRoute: typeof DemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/enlaces': {
+      id: '/enlaces'
+      path: '/enlaces'
+      fullPath: '/enlaces'
+      preLoaderRoute: typeof EnlacesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/equipo': {
+      id: '/equipo'
+      path: '/equipo'
+      fullPath: '/equipo'
+      preLoaderRoute: typeof EquipoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/medias': {
+      id: '/medias'
+      path: '/medias'
+      fullPath: '/medias'
+      preLoaderRoute: typeof MediasRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacidad': {
+      id: '/privacidad'
+      path: '/privacidad'
+      fullPath: '/privacidad'
+      preLoaderRoute: typeof PrivacidadRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/psicologos': {
+      id: '/psicologos'
+      path: '/psicologos'
+      fullPath: '/psicologos'
+      preLoaderRoute: typeof PsicologosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recuperar': {
+      id: '/recuperar'
+      path: '/recuperar'
+      fullPath: '/recuperar'
+      preLoaderRoute: typeof RecuperarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/social': {
+      id: '/social'
+      path: '/social'
+      fullPath: '/social'
+      preLoaderRoute: typeof SocialRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terminos': {
+      id: '/terminos'
+      path: '/terminos'
+      fullPath: '/terminos'
+      preLoaderRoute: typeof TerminosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/voluntariado': {
+      id: '/voluntariado'
+      path: '/voluntariado'
+      fullPath: '/voluntariado'
+      preLoaderRoute: typeof VoluntariadoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ya': {
+      id: '/ya'
+      path: '/ya'
+      fullPath: '/ya'
+      preLoaderRoute: typeof YaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -908,109 +887,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/recursos/respirar': {
-      id: '/recursos/respirar'
-      path: '/recursos/respirar'
-      fullPath: '/recursos/respirar'
-      preLoaderRoute: typeof RecursosRespirarRouteImport
+    '/admin/analitica': {
+      id: '/admin/analitica'
+      path: '/analitica'
+      fullPath: '/admin/analitica'
+      preLoaderRoute: typeof AdminAnaliticaRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/apoyo/': {
+      id: '/apoyo/'
+      path: '/apoyo'
+      fullPath: '/apoyo/'
+      preLoaderRoute: typeof ApoyoIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recursos/reacciones-normales': {
-      id: '/recursos/reacciones-normales'
-      path: '/recursos/reacciones-normales'
-      fullPath: '/recursos/reacciones-normales'
-      preLoaderRoute: typeof RecursosReaccionesNormalesRouteImport
+    '/ayuda/': {
+      id: '/ayuda/'
+      path: '/ayuda'
+      fullPath: '/ayuda/'
+      preLoaderRoute: typeof AyudaIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/recursos/primeros-auxilios': {
-      id: '/recursos/primeros-auxilios'
-      path: '/recursos/primeros-auxilios'
-      fullPath: '/recursos/primeros-auxilios'
-      preLoaderRoute: typeof RecursosPrimerosAuxiliosRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recursos/enraizamiento': {
-      id: '/recursos/enraizamiento'
-      path: '/recursos/enraizamiento'
-      fullPath: '/recursos/enraizamiento'
-      preLoaderRoute: typeof RecursosEnraizamientoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/recursos/autochequeo': {
-      id: '/recursos/autochequeo'
-      path: '/recursos/autochequeo'
-      fullPath: '/recursos/autochequeo'
-      preLoaderRoute: typeof RecursosAutochequeoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/sesiones': {
-      id: '/profesional/sesiones'
-      path: '/profesional/sesiones'
-      fullPath: '/profesional/sesiones'
-      preLoaderRoute: typeof ProfesionalSesionesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/seguimiento': {
-      id: '/profesional/seguimiento'
-      path: '/profesional/seguimiento'
-      fullPath: '/profesional/seguimiento'
-      preLoaderRoute: typeof ProfesionalSeguimientoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/registro': {
-      id: '/profesional/registro'
-      path: '/profesional/registro'
-      fullPath: '/profesional/registro'
-      preLoaderRoute: typeof ProfesionalRegistroRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/presentacion': {
-      id: '/profesional/presentacion'
-      path: '/profesional/presentacion'
-      fullPath: '/profesional/presentacion'
-      preLoaderRoute: typeof ProfesionalPresentacionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/perfil': {
-      id: '/profesional/perfil'
-      path: '/profesional/perfil'
-      fullPath: '/profesional/perfil'
-      preLoaderRoute: typeof ProfesionalPerfilRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/panel': {
-      id: '/profesional/panel'
-      path: '/profesional/panel'
-      fullPath: '/profesional/panel'
-      preLoaderRoute: typeof ProfesionalPanelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/login': {
-      id: '/profesional/login'
-      path: '/profesional/login'
-      fullPath: '/profesional/login'
-      preLoaderRoute: typeof ProfesionalLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/disponibilidad': {
-      id: '/profesional/disponibilidad'
-      path: '/profesional/disponibilidad'
-      fullPath: '/profesional/disponibilidad'
-      preLoaderRoute: typeof ProfesionalDisponibilidadRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/completar': {
-      id: '/profesional/completar'
-      path: '/profesional/completar'
-      fullPath: '/profesional/completar'
-      preLoaderRoute: typeof ProfesionalCompletarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profesional/audios': {
-      id: '/profesional/audios'
-      path: '/profesional/audios'
-      fullPath: '/profesional/audios'
-      preLoaderRoute: typeof ProfesionalAudiosRouteImport
+    '/ayuda/especifica': {
+      id: '/ayuda/especifica'
+      path: '/ayuda/especifica'
+      fullPath: '/ayuda/especifica'
+      preLoaderRoute: typeof AyudaEspecificaRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/cuenta/sesiones': {
@@ -1020,39 +922,123 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CuentaSesionesRouteImport
       parentRoute: typeof CuentaRoute
     }
-    '/ayuda/especifica': {
-      id: '/ayuda/especifica'
-      path: '/ayuda/especifica'
-      fullPath: '/ayuda/especifica'
-      preLoaderRoute: typeof AyudaEspecificaRouteImport
+    '/profesional/audios': {
+      id: '/profesional/audios'
+      path: '/profesional/audios'
+      fullPath: '/profesional/audios'
+      preLoaderRoute: typeof ProfesionalAudiosRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/analitica': {
-      id: '/admin/analitica'
-      path: '/analitica'
-      fullPath: '/admin/analitica'
-      preLoaderRoute: typeof AdminAnaliticaRouteImport
-      parentRoute: typeof AdminRoute
-    }
-    '/ayuda/profesionales/': {
-      id: '/ayuda/profesionales/'
-      path: '/ayuda/profesionales'
-      fullPath: '/ayuda/profesionales/'
-      preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
+    '/profesional/completar': {
+      id: '/profesional/completar'
+      path: '/profesional/completar'
+      fullPath: '/profesional/completar'
+      preLoaderRoute: typeof ProfesionalCompletarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/usuarios/': {
-      id: '/admin/usuarios/'
-      path: '/usuarios'
-      fullPath: '/admin/usuarios/'
-      preLoaderRoute: typeof AdminUsuariosIndexRouteImport
-      parentRoute: typeof AdminRoute
+    '/profesional/disponibilidad': {
+      id: '/profesional/disponibilidad'
+      path: '/profesional/disponibilidad'
+      fullPath: '/profesional/disponibilidad'
+      preLoaderRoute: typeof ProfesionalDisponibilidadRouteImport
+      parentRoute: typeof rootRouteImport
     }
-    '/admin/profesionales/': {
-      id: '/admin/profesionales/'
-      path: '/profesionales'
-      fullPath: '/admin/profesionales/'
-      preLoaderRoute: typeof AdminProfesionalesIndexRouteImport
+    '/profesional/login': {
+      id: '/profesional/login'
+      path: '/profesional/login'
+      fullPath: '/profesional/login'
+      preLoaderRoute: typeof ProfesionalLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/panel': {
+      id: '/profesional/panel'
+      path: '/profesional/panel'
+      fullPath: '/profesional/panel'
+      preLoaderRoute: typeof ProfesionalPanelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/perfil': {
+      id: '/profesional/perfil'
+      path: '/profesional/perfil'
+      fullPath: '/profesional/perfil'
+      preLoaderRoute: typeof ProfesionalPerfilRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/presentacion': {
+      id: '/profesional/presentacion'
+      path: '/profesional/presentacion'
+      fullPath: '/profesional/presentacion'
+      preLoaderRoute: typeof ProfesionalPresentacionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/registro': {
+      id: '/profesional/registro'
+      path: '/profesional/registro'
+      fullPath: '/profesional/registro'
+      preLoaderRoute: typeof ProfesionalRegistroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/seguimiento': {
+      id: '/profesional/seguimiento'
+      path: '/profesional/seguimiento'
+      fullPath: '/profesional/seguimiento'
+      preLoaderRoute: typeof ProfesionalSeguimientoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profesional/sesiones': {
+      id: '/profesional/sesiones'
+      path: '/profesional/sesiones'
+      fullPath: '/profesional/sesiones'
+      preLoaderRoute: typeof ProfesionalSesionesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/': {
+      id: '/recursos/'
+      path: '/recursos'
+      fullPath: '/recursos/'
+      preLoaderRoute: typeof RecursosIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/autochequeo': {
+      id: '/recursos/autochequeo'
+      path: '/recursos/autochequeo'
+      fullPath: '/recursos/autochequeo'
+      preLoaderRoute: typeof RecursosAutochequeoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/enraizamiento': {
+      id: '/recursos/enraizamiento'
+      path: '/recursos/enraizamiento'
+      fullPath: '/recursos/enraizamiento'
+      preLoaderRoute: typeof RecursosEnraizamientoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/primeros-auxilios': {
+      id: '/recursos/primeros-auxilios'
+      path: '/recursos/primeros-auxilios'
+      fullPath: '/recursos/primeros-auxilios'
+      preLoaderRoute: typeof RecursosPrimerosAuxiliosRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/reacciones-normales': {
+      id: '/recursos/reacciones-normales'
+      path: '/recursos/reacciones-normales'
+      fullPath: '/recursos/reacciones-normales'
+      preLoaderRoute: typeof RecursosReaccionesNormalesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/recursos/respirar': {
+      id: '/recursos/respirar'
+      path: '/recursos/respirar'
+      fullPath: '/recursos/respirar'
+      preLoaderRoute: typeof RecursosRespirarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/audios/': {
+      id: '/admin/audios/'
+      path: '/audios'
+      fullPath: '/admin/audios/'
+      preLoaderRoute: typeof AdminAudiosIndexRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/categorias/': {
@@ -1062,39 +1048,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminCategoriasIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/admin/audios/': {
-      id: '/admin/audios/'
-      path: '/audios'
-      fullPath: '/admin/audios/'
-      preLoaderRoute: typeof AdminAudiosIndexRouteImport
+    '/admin/profesionales/': {
+      id: '/admin/profesionales/'
+      path: '/profesionales'
+      fullPath: '/admin/profesionales/'
+      preLoaderRoute: typeof AdminProfesionalesIndexRouteImport
       parentRoute: typeof AdminRoute
     }
-    '/media/document/$': {
-      id: '/media/document/$'
-      path: '/media/document/$'
-      fullPath: '/media/document/$'
-      preLoaderRoute: typeof MediaDocumentSplatRouteImport
+    '/admin/profesionales/$id': {
+      id: '/admin/profesionales/$id'
+      path: '/profesionales/$id'
+      fullPath: '/admin/profesionales/$id'
+      preLoaderRoute: typeof AdminProfesionalesIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/usuarios/': {
+      id: '/admin/usuarios/'
+      path: '/usuarios'
+      fullPath: '/admin/usuarios/'
+      preLoaderRoute: typeof AdminUsuariosIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/media/certificate/$': {
-      id: '/media/certificate/$'
-      path: '/media/certificate/$'
-      fullPath: '/media/certificate/$'
-      preLoaderRoute: typeof MediaCertificateSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/media/avatar/$': {
-      id: '/media/avatar/$'
-      path: '/media/avatar/$'
-      fullPath: '/media/avatar/$'
-      preLoaderRoute: typeof MediaAvatarSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/media/audio/$': {
-      id: '/media/audio/$'
-      path: '/media/audio/$'
-      fullPath: '/media/audio/$'
-      preLoaderRoute: typeof MediaAudioSplatRouteImport
+    '/ayuda/profesionales/': {
+      id: '/ayuda/profesionales/'
+      path: '/ayuda/profesionales'
+      fullPath: '/ayuda/profesionales/'
+      preLoaderRoute: typeof AyudaProfesionalesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ayuda/profesionales/$id': {
@@ -1104,19 +1090,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AyudaProfesionalesIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/auth/$': {
-      id: '/api/auth/$'
-      path: '/api/auth/$'
-      fullPath: '/api/auth/$'
-      preLoaderRoute: typeof ApiAuthSplatRouteImport
+    '/media/audio/$': {
+      id: '/media/audio/$'
+      path: '/media/audio/$'
+      fullPath: '/media/audio/$'
+      preLoaderRoute: typeof MediaAudioSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/profesionales/$id': {
-      id: '/admin/profesionales/$id'
-      path: '/profesionales/$id'
-      fullPath: '/admin/profesionales/$id'
-      preLoaderRoute: typeof AdminProfesionalesIdRouteImport
-      parentRoute: typeof AdminRoute
+    '/media/avatar/$': {
+      id: '/media/avatar/$'
+      path: '/media/avatar/$'
+      fullPath: '/media/avatar/$'
+      preLoaderRoute: typeof MediaAvatarSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/certificate/$': {
+      id: '/media/certificate/$'
+      path: '/media/certificate/$'
+      fullPath: '/media/certificate/$'
+      preLoaderRoute: typeof MediaCertificateSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/media/document/$': {
+      id: '/media/document/$'
+      path: '/media/document/$'
+      fullPath: '/media/document/$'
+      preLoaderRoute: typeof MediaDocumentSplatRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/cuenta/sesiones/agendar/$proId': {
       id: '/cuenta/sesiones/agendar/$proId'

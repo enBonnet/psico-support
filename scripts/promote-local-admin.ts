@@ -6,13 +6,13 @@
 // `wrangler dev` serves. This is NOT the drizzle-kit `dev.db` (which is an
 // empty introspection target — see scripts/db-check.mjs), and it never touches
 // remote/prod. For prod use:
-//   npx wrangler d1 execute psico-support-db --remote \
+//   pnpm exec wrangler d1 execute psico-support-db --remote \
 //     --command "UPDATE user SET role='admin' WHERE email='...';"
 //
 // Usage:
-//   npm run db:promote-admin                            # admin@enbonnet.com
-//   npm run db:promote-admin -- --email foo@x.com       # another user
-//   npm run db:promote-admin -- --dry-run               # preview, no write
+//   pnpm run db:promote-admin                            # admin@enbonnet.com
+//   pnpm run db:promote-admin -- --email foo@x.com       # another user
+//   pnpm run db:promote-admin -- --dry-run               # preview, no write
 //
 // Idempotent: re-running on an already-admin user reports "already admin" and
 // writes nothing. Promote-only by design — there is intentionally no demote
@@ -20,7 +20,7 @@
 // src/server/professionals.ts (promote-only means an admin can never
 // accidentally lock themselves — or the last admin — out of the panel).
 // ponytail: ceiling — to test the non-admin state locally, re-seed with
-// `npm run db:seed -- --reset`, or edit the row directly via
+// `pnpm run db:seed -- --reset`, or edit the row directly via
 // `wrangler d1 execute psico-support-db --local`.
 //
 // Opens the runtime .sqlite directly with better-sqlite3 (same approach as
@@ -59,7 +59,7 @@ function parseArgs(argv: string[]): Args {
 		else if (a === '--help' || a === '-h') {
 			console.log(
 				[
-					'Usage: npm run db:promote-admin -- [options]',
+					'Usage: pnpm run db:promote-admin -- [options]',
 					'',
 					'Options:',
 					'  --email, -e <email>   user to promote (default: admin@enbonnet.com)',
@@ -92,13 +92,13 @@ function findLocalDb(): string {
 	} catch {
 		throw new Error(
 			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first to create it.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first to create it.',
 		)
 	}
 	if (files.length === 0) {
 		throw new Error(
 			`No D1 sqlite files in ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
 		)
 	}
 	files.sort((a, b) => statSync(b).size - statSync(a).size)
@@ -128,7 +128,7 @@ async function main() {
 	if (!row) {
 		console.log(
 			`✗ No user with email ${email} on the local D1.\n` +
-				'  Create it first via the /signup flow, or `npm run db:seed` for fixtures.',
+				'  Create it first via the /signup flow, or `pnpm run db:seed` for fixtures.',
 		)
 		db.close()
 		process.exit(1)

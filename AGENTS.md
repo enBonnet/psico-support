@@ -22,22 +22,27 @@ time on this project.
 ## Commands
 
 ```bash
-npm run dev          # http://localhost:3000 (reads .env.local) — NO service worker (dev)
-npm run build        # vite production build (SSR + client) then prerenders /_shell
+pnpm dev             # http://localhost:3000 (reads .env.local) — NO service worker (dev)
+pnpm build           # vite production build (SSR + client) then prerenders /_shell
                      #   (prerender needs miniflare; CI sets CLOUDFLARE_VITE_FORCE_LOCAL=true)
-npm run lint         # eslint
-npm test             # vitest run
-npm run db:generate  # create a new migration SQL from src/db/schema.ts edits
-npm run deploy       # build + wrangler deploy (DOES NOT apply D1 migrations — see below)
+pnpm lint            # eslint
+pnpm test            # vitest run (node env; config in vitest.config.ts)
+pnpm db:generate     # create a new migration SQL from src/db/schema.ts edits
+pnpm deploy          # build + wrangler deploy (DOES NOT apply D1 migrations — see below)
 
 # Test the PWA locally (the SW + shell are PROD-only — dev has no SW):
-npm run build && npx wrangler dev --port 3000
+pnpm build && pnpm exec wrangler dev --port 3000
 ```
 
-Typecheck (no script defined): `npx tsc --noEmit`.
+**pnpm is the only package manager** (pinned via `packageManager` in
+package.json; build-script approvals live in `pnpm-workspace.yaml`
+`allowBuilds`). There is no `package-lock.json` — never run `npm install` /
+`npm ci` here. For one-off binaries use `pnpm exec <bin>` (local) or
+`pnpm dlx <pkg>` (remote).
+
+Typecheck (no script defined): `pnpm exec tsc --noEmit`.
 A pre-existing `drizzle.config.ts` env-typing error is expected and unrelated
-to app code. `npm test` also has a pre-existing Vitest/Cloudflare-plugin
-startup failure (no test files exist); verify against `wrangler dev` instead.
+to app code.
 
 ### Build-time env vars
 
@@ -67,9 +72,9 @@ There are **two** local SQLite databases with different purposes — do not conf
 After editing `src/db/schema.ts`:
 
 ```bash
-npm run db:generate                                         # writes drizzle/000N_*.sql
-npx wrangler d1 migrations apply psico-support-db --local   # local runtime DB
-npm run db:status                                           # sanity-check the runtime schema
+pnpm db:generate                                         # writes drizzle/000N_*.sql
+pnpm exec wrangler d1 migrations apply psico-support-db --local   # local runtime DB
+pnpm db:status                                           # sanity-check the runtime schema
 ```
 
 **Symptom of a missing local runtime schema:** every query 500s with
@@ -80,10 +85,10 @@ npm run db:status                                           # sanity-check the r
 
 **`migrations list --local` is NOT a reliable check** — it lists the files in
 `drizzle/`, and when the runtime DB is blank the `d1_migrations` table doesn't
-exist so the comparison is misleading. The reliable check is `npm run db:status`,
+exist so the comparison is misleading. The reliable check is `pnpm db:status`,
 which opens the real runtime `.sqlite` with `better-sqlite3` (WAL-consistent
 read) and confirms `d1_migrations` has ≥1 applied row **and** the `user` table
-exists. `npm run dev` runs this same check as a preflight and warns loudly when
+exists. `pnpm dev` runs this same check as a preflight and warns loudly when
 the schema is missing so the blank-DB failure mode is caught early.
 
 ### Versioning
@@ -96,17 +101,17 @@ account page footer). `CHANGELOG.md` tracks human-readable history.
 **Bump the version after any deployable/user-facing change.** Release flow:
 
 ```bash
-npm version patch|minor|major     # bumps package.json, commits, tags (git must be clean)
+pnpm version patch|minor|major  # bumps package.json, commits, tags (git must be clean)
 # 1. move [Unreleased] items into a new [X.Y.Z] - YYYY-MM-DD entry in CHANGELOG.md
-npm run deploy
-npx wrangler d1 migrations apply psico-support-db --remote   # if schema changed
+pnpm deploy
+pnpm exec wrangler d1 migrations apply psico-support-db --remote   # if schema changed
 ```
 
 Semver: **patch** = bugfix, **minor** = backwards-compatible feature, **major**
 = breaking change. The SW cache key in `public/sw.js` is auto-baked from
 `package.json` `version` at build time by `swVersionPlugin`
 (vite.config.ts `generateBundle` hook — `__SW_VERSION__` placeholder). Every
-`npm version ...` invalidates installed PWA clients at once; no separate
+`pnpm version ...` invalidates installed PWA clients at once; no separate
 hand-edit. For backwards-compatible releases, SWR + `skipWaiting` still
 refreshes content within one reload without needing a cache-name change.
 
@@ -114,15 +119,15 @@ refreshes content within one reload without needing a cache-name change.
 
 These have each caused prod incidents. Read twice.
 
-### 1. `npm run deploy` does NOT apply D1 migrations
+### 1. `pnpm deploy` does NOT apply D1 migrations
 
 `deploy` = `vite build && wrangler deploy` (code only). Migrations are a
 **separate, manual step**. After every schema change, in addition to deploying:
 
 ```bash
-npx wrangler d1 migrations apply psico-support-db --remote   # prod
-npx wrangler d1 migrations apply psico-support-db --local    # dev
-npx wrangler d1 migrations list psico-support-db --remote    # sanity check (should be empty)
+pnpm exec wrangler d1 migrations apply psico-support-db --remote   # prod
+pnpm exec wrangler d1 migrations apply psico-support-db --local    # dev
+pnpm exec wrangler d1 migrations list psico-support-db --remote    # sanity check (should be empty)
 ```
 
 Symptom of a missing migration: inserts/queries fail on prod
@@ -257,7 +262,7 @@ manifest). It does three things:
 The `<link rel="manifest">` must be in `__root.tsx` `head()` (it was missing;
 browsers only found the manifest by auto-probing). The SW registers only in
 PROD (`import.meta.env.PROD` in `__root.tsx`) — **test the PWA with
-`npm run build && npx wrangler dev`, never `npm run dev`** (no SW, dev HMR
+`pnpm build && pnpm exec wrangler dev`, never `pnpm dev`** (no SW, dev HMR
 fights the cache).
 
 ### 8. HTTP→HTTPS redirect lives in the Worker

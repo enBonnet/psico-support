@@ -273,7 +273,7 @@ export async function bumpContactCount(proId: number): Promise<void> {
  * binding is absent (dev without `wrangler dev`, tests) so analytics never
  * breaks app functionality. Failed writes are invisible by design (see
  * Analytics Engine gotchas: writeDataPoint can fail silently — check
- * `npx wrangler tail` for sampling/error signals).
+ * `pnpm exec wrangler tail` for sampling/error signals).
  *
  * Keep this function synchronous and never throw — a broken analytics write
  * must not break the feature it's instrumenting.

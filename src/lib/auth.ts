@@ -76,7 +76,7 @@ function buildAuth() {
     // Safe unconditionally: a browser's Origin reflects the real initiating
     // context, and localhost/127.0.0.1 are hardcoded to loopback, so a remote
     // attacker cannot forge a loopback Origin against a public domain. Works
-    // under both `npm run dev` and `wrangler dev` (no build-time DEV gate,
+    // under both `ppnpm run dev` and `wrangler dev` (no build-time DEV gate,
     // which would mis-fire under the prod-bundle PWA test path).
     //
     // The two prod domains are listed explicitly even though Better Auth

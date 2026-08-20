@@ -41,7 +41,7 @@ import { writeEvent } from '#/server/analytics'
 // ── Feature flag ────────────────────────────────────────────────────────────
 // ponytail: server-side gate for the whole scheduling feature. A wrangler
 // secret (APPOINTMENTS_ENABLED), off by default — flipping it via
-// `npx wrangler secret put APPOINTMENTS_ENABLED` takes effect without redeploy.
+// `pnpm exec wrangler secret put APPOINTMENTS_ENABLED` takes effect without redeploy.
 // Truthy: 'true' / '1' (case-insensitive). Every server fn below calls this
 // first and throws a Spanish 'feature disabled' error when off. Mirror with
 // VITE_APPOINTMENTS_ENABLED (client, build-time) so the UI hides too — the two

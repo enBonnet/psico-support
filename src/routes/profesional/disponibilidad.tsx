@@ -160,7 +160,7 @@ function AvailabilitySection({
       mode: AvailabilityMode
       schedule: ScheduleSlot[]
       timezone: string
-      durations: string[]
+      durations: Array<'15' | '30' | '45' | '60'>
     }) => setAvailabilityMode({ data: vars }),
     onSuccess: () => {
       if (actorId) {
@@ -192,13 +192,18 @@ function AvailabilitySection({
   function submit() {
     // ponytail: never send an empty durations array — the schema refine
     // rejects it, and a pro who cleared all toggles should keep the default
-    // rather than fail the save.
+    // rather than fail the save. The filter narrows state strings to the
+    // schema's literal union (state is only ever fed from the option list or
+    // the server-parsed column, both already constrained).
     const safeDurations = durations.length ? durations : ['45']
     save.mutate({
       mode,
       schedule: mode === 'scheduled' ? slots : [],
       timezone,
-      durations: mode === 'scheduled' ? safeDurations : ['45'],
+      durations: (mode === 'scheduled' ? safeDurations : ['45']).filter(
+        (d): d is '15' | '30' | '45' | '60' =>
+          ['15', '30', '45', '60'].includes(d),
+      ),
     })
   }
 

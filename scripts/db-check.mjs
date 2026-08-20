@@ -25,7 +25,7 @@
 // Modes:
 //   node scripts/db-check.mjs            # default: warn + exit 0 (non-blocking)
 //   node scripts/db-check.mjs --strict   # exit 1 on missing schema (CI)
-//   npm run db:status                    # human-readable status report
+//   pnpm run db:status                    # human-readable status report
 //
 // Read-only: opens the plain path with { readonly: true } — never writes, never
 // boots wrangler, never checkpoints. (The `file:...?mode=ro` URI form fails on
@@ -65,7 +65,7 @@ function findLocalDb() {
   return files[0];
 }
 
-const FIX = cyan("npx wrangler d1 migrations apply psico-support-db --local");
+const FIX = cyan("pnpm exec wrangler d1 migrations apply psico-support-db --local");
 
 const dbPath = findLocalDb();
 

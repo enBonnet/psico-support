@@ -5,9 +5,9 @@
 // across all verifiedStatus/modality states, real audio categories) — no PII,
 // no daily hand-rebuild. Use after `git clean -fdx` or any .wrangler/ wipe.
 //
-//   npm run db:pull-prod                    # default password: password123
-//   npm run db:pull-prod -- --password foo
-//   npm run db:pull-prod -- --dry-run       # export + report, write nothing
+//   pnpm run db:pull-prod                    # default password: password123
+//   pnpm run db:pull-prod -- --password foo
+//   pnpm run db:pull-prod -- --dry-run       # export + report, write nothing
 //
 // What it does (4 phases):
 //   1. Export prod D1 via `wrangler d1 export --remote` to a gitignored file.
@@ -144,7 +144,8 @@ async function main() {
   console.log(c.bold("  Phase 1/4 — exporting prod D1…"));
   mkdirSync(TMP_DIR, { recursive: true });
   try {
-    run("npx", [
+    run("pnpm", [
+      "exec",
       "wrangler",
       "d1",
       "export",
@@ -156,7 +157,7 @@ async function main() {
     ]);
   } catch (err) {
     throw new Error(
-      "Export failed. Check wrangler auth (`npx wrangler whoami`).\n" + String(err?.message ?? err),
+      "Export failed. Check wrangler auth (`pnpm exec wrangler whoami`).\n" + String(err?.message ?? err),
     );
   }
   if (!existsSync(RAW_SQL) || statSync(RAW_SQL).size === 0) {
@@ -172,7 +173,7 @@ async function main() {
   // schema exists before we load prod data into it.
   if (!dbPath) {
     console.log(c.dim("  local DB missing — applying migrations first…"));
-    run("npx", ["wrangler", "d1", "migrations", "apply", DB_NAME, "--local"]);
+    run("pnpm", ["exec", "wrangler", "d1", "migrations", "apply", DB_NAME, "--local"]);
     dbPath = findLocalDb();
   }
   if (!dbPath) throw new Error("Could not locate runtime DB even after migrations.");

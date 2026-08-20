@@ -5,15 +5,15 @@
 // clicks this week?" without leaving the terminal.
 //
 // Usage:
-//   npm run analytics -- <query> [--days N] [--event NAME] [--sql "..."]
+//   ppnpm run analytics -- <query> [--days N] [--event NAME] [--sql "..."]
 //
 // Examples:
-//   npm run analytics -- funnel                   # full funnel, 7d
-//   npm run analytics -- whatsapp --days 30       # WhatsApp clicks, 30d
-//   npm run analytics -- whatsapp-by-pro          # top pros by WhatsApp clicks
-//   npm run analytics -- trends --event pro_contact --days 30
-//   npm run analytics -- top-events               # all events ranked
-//   npm run analytics -- sql "SELECT blob1, COUNT() FROM psico_events GROUP BY 1"
+//   ppnpm run analytics -- funnel                   # full funnel, 7d
+//   ppnpm run analytics -- whatsapp --days 30       # WhatsApp clicks, 30d
+//   ppnpm run analytics -- whatsapp-by-pro          # top pros by WhatsApp clicks
+//   ppnpm run analytics -- trends --event pro_contact --days 30
+//   ppnpm run analytics -- top-events               # all events ranked
+//   ppnpm run analytics -- sql "SELECT blob1, COUNT() FROM psico_events GROUP BY 1"
 // =============================================================================
 
 import {
@@ -68,7 +68,7 @@ function printTable(columns: string[], rows: Record<string, unknown>[]): void {
 
 function printHelp(): void {
 	console.log('')
-	console.log('Usage: npm run analytics -- <query> [--days N] [--event NAME] [--sql "<raw>"]')
+	console.log('Usage: ppnpm run analytics -- <query> [--days N] [--event NAME] [--sql "<raw>"]')
 	console.log('')
 	console.log('Queries:')
 	for (const q of QUERIES) {

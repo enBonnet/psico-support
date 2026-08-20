@@ -22,7 +22,7 @@ import { cloudflare } from '@cloudflare/vite-plugin'
 //
 // To release: bump package.json `version`, update CHANGELOG.md, redeploy.
 // The SW cache key in public/sw.js follows the package version
-// automatically — every `npm version ...` bumps it, force-invalidating
+// automatically — every `pnpm version ...` bumps it, force-invalidating
 // installed PWA clients without a separate hand-edit. Backwards-compatible
 // releases still rely on SWR + skipWaiting (one reload) for incremental
 // content refresh.
@@ -40,7 +40,7 @@ const APP_VERSION = JSON.parse(
 // assets) is on disk, to read dist/client/sw.js, replace `__SW_VERSION__`
 // with `JSON.stringify(version)`, and write it back. We pick closeBundle
 // over a post-build script so the SW is always in sync with the package
-// version a single `npm run build` produces.
+// version a single `pnpm build` produces.
 // Ceiling: if SW moves out of public/ (e.g. into src/ as a TS module),
 // a plain `transform()` hook on the module id replaces this whole plugin.
 function swVersionPlugin(version: string): Plugin {

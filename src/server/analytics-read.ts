@@ -155,7 +155,7 @@ export const runAnalyticsQuery = createServerFn({ method: 'GET' })
           elapsedMs: 0,
           cached: false,
           warning:
-            'Analítica no configurada. Faltan los secrets CF_ACCOUNT_ID y CF_ANALYTICS_TOKEN en el worker (wrangler secret put …). Mientras tanto, usa `npm run analytics:dashboard` para el dashboard local.',
+            'Analítica no configurada. Faltan los secrets CF_ACCOUNT_ID y CF_ANALYTICS_TOKEN en el worker (wrangler secret put …). Mientras tanto, usa `ppnpm run analytics:dashboard` para el dashboard local.',
         }
         // Don't cache the "not configured" sentinel — once the operator adds
         // the secrets we want the next request to actually try.
