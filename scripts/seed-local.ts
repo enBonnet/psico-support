@@ -282,7 +282,7 @@ const PROS: ProSeed[] = [
 		// pending — lands in the admin review queue
 		name: 'Dra. Carmen Díaz',
 		email: 'carmen.diaz@example.com',
-		certificationNumber: 'VP-00007',
+		certificationNumber: '00007',
 		certifyingSchool: 'Colegio de Psicólogos de Venezuela',
 		population: ['Niños'],
 		focusGroups: [],

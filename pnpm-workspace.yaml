@@ -1,0 +1,7 @@
+allowBuilds:
+  '@sentry/cli': false
+  better-sqlite3: true
+  esbuild: false
+  puppeteer: false
+  unrs-resolver: false
+  workerd: false

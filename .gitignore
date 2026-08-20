@@ -5,6 +5,7 @@ dist-ssr
 *.local
 .env.sentry-build-plugin
 .env
+.env.local
 .nitro
 .tanstack
 .wrangler
@@ -29,3 +30,6 @@ dev.db.bak
 
 # ZCode agent session plans (internal scratchpad)
 .zcode/
+
+#opencode agent and config
+.opencode

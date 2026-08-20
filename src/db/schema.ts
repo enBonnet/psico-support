@@ -532,6 +532,70 @@ export const appointments = sqliteTable(
   ],
 )
 
+// ponytail: FPV verification audit trail. Every search the scraping script
+// runs against the FPV public API is logged here, regardless of outcome.
+// This gives us full traceability: what was searched, when, with what criteria,
+// and what the API returned. The script reads professionals with
+// verifiedStatus='pending' and creates a row here before hitting the API.
+export const fpvSearchRequests = sqliteTable(
+  'fpv_search_requests',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    // 'name' or 'fpv' — matches the normalizer output type
+    searchType: text('search_type', { enum: ['name', 'fpv'] }).notNull(),
+    // The raw input from the user/registration (e.g. "FPV-5338" or "díaz rivera")
+    searchValue: text('search_value').notNull(),
+    // The normalized input (e.g. "5338" or "Díaz Rivera | Jusagnny América")
+    normalizedValue: text('normalized_value').notNull(),
+    // The comparison key (no accents, lowercase) for deduplication
+    normalizedKey: text('normalized_key').notNull(),
+    // 'pending' = created but not executed; 'success' = exact match found;
+    // 'ambiguous' = multiple matches (homónimos); 'empty' = no match;
+    // 'error' = API or network failure
+    status: text('status', {
+      enum: ['pending', 'success', 'ambiguous', 'empty', 'error'],
+    })
+      .notNull()
+      .default('pending'),
+    // If status='success', link to the verified professional
+    professionalId: integer('professional_id').references(() => professionals.id, {
+      onDelete: 'set null',
+    }),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+    executedAt: integer('executed_at', { mode: 'timestamp' }),
+    errorMessage: text('error_message'),
+  },
+  (table) => [
+    index('fpv_search_requests_status_idx').on(table.status),
+    index('fpv_search_requests_professionalId_idx').on(table.professionalId),
+  ],
+)
+
+// ponytail: Raw API response storage. Stores the redacted JSON returned by
+// the FPV API for each search request. Cédula/tipoDocumento/id are already
+// null-ed out by the client (redactSensitive) BEFORE reaching this table, so
+// no sensitive data is ever persisted. Kept as text (JSON string) because
+// SQLite has no native JSON type and we only need it for audit/debugging.
+export const fpvRawResults = sqliteTable(
+  'fpv_raw_results',
+  {
+    id: integer('id', { mode: 'number' }).primaryKey({ autoIncrement: true }),
+    requestId: integer('request_id')
+      .notNull()
+      .references(() => fpvSearchRequests.id, { onDelete: 'cascade' }),
+    sourceUrl: text('source_url').notNull(),
+    // The redacted JSON response, stringified
+    rawJson: text('raw_json'),
+    itemCount: integer('item_count').notNull().default(0),
+    fetchedAt: integer('fetched_at', { mode: 'timestamp' })
+      .default(sql`(unixepoch())`)
+      .notNull(),
+  },
+  (table) => [index('fpv_raw_results_requestId_idx').on(table.requestId)],
+)
+
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
@@ -569,3 +633,22 @@ export const appointmentsRelations = relations(appointments, ({ one }) => ({
     references: [user.id],
   }),
 }))
+
+export const fpvSearchRequestsRelations = relations(
+  fpvSearchRequests,
+  ({ one, many }) => ({
+    professional: one(professionals, {
+      fields: [fpvSearchRequests.professionalId],
+      references: [professionals.id],
+    }),
+    rawResults: many(fpvRawResults),
+  }),
+)
+
+export const fpvRawResultsRelations = relations(fpvRawResults, ({ one }) => ({
+  request: one(fpvSearchRequests, {
+    fields: [fpvRawResults.requestId],
+    references: [fpvSearchRequests.id],
+  }),
+}))
+
