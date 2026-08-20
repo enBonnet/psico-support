@@ -48,23 +48,29 @@ function buildUrl(search: Search): string {
 
   if (search.type === 'fpv') {
     params.set('fpv', search.fpv.normalized)
-  } else if (search.type === 'name') {
+  } else {
+    // Discriminated union: not 'fpv' means SearchByName — the type system
+    // guarantees it, so no runtime branch (or throw) is needed here.
     params.set('apellido', search.surname.normalized)
     params.set('nombre', search.name.normalized)
-  } else {
-    throw new Error(`Unsupported search type: ${search['type']}`)
   }
 
   return `${base}?${params.toString()}`
 }
 
-function redactSensitive(rawJson: FpvApiResponse): FpvApiResponse {
-  if (!rawJson?.data?.items) return rawJson
+function redactSensitive(
+  rawJson: FpvApiResponse | null,
+): FpvApiResponse | null {
+  const items = rawJson?.data?.items
+  if (!items) return rawJson
 
   const redacted = structuredClone(rawJson)
 
-  for (const item of redacted.data.items!) {
-    if (item && typeof item === 'object') {
+  // The response is untrusted JSON: array slots can be null/garbage even when
+  // the type says FpvApiItem, so keep a runtime guard before writing to it.
+  for (const raw of redacted.data?.items ?? []) {
+    const item = raw as FpvApiItem | null
+    if (item) {
       item.cedula = null
       item.tipoDocumento = null
       item.id = null
@@ -80,7 +86,9 @@ function classifyStatus(itemCount: number): FetchStatus {
   return 'ambiguous'
 }
 
-export async function fetchFpvSearch(search: Search): Promise<FetchFpvResult> {
+export async function fetchFpvSearch(
+  search: Search | undefined,
+): Promise<FetchFpvResult> {
   if (!search?.isValid) {
     return {
       ok: false,
@@ -93,10 +101,11 @@ export async function fetchFpvSearch(search: Search): Promise<FetchFpvResult> {
   }
 
   const sourceUrl = buildUrl(search)
+  // Hoisted out of the try block so the catch handler can reference it.
+  const timeoutMs = fpvConfig.FPV_TIMEOUT_MS
 
   try {
     const controller = new AbortController()
-    const timeoutMs = fpvConfig.FPV_TIMEOUT_MS
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
 
     const response = await fetch(sourceUrl, {
@@ -121,7 +130,9 @@ export async function fetchFpvSearch(search: Search): Promise<FetchFpvResult> {
       }
     }
 
-    const json = (await response.json()) as FpvApiResponse
+    // Annotated (not asserted) as nullable: response.json() can produce
+    // anything for a 200 with a malformed body, so the guards below must stay.
+    const json: FpvApiResponse | null = await response.json()
 
     const itemCount = json?.data?.count ?? json?.data?.items?.length ?? 0
     const redacted = redactSensitive(json)

@@ -81,7 +81,7 @@ export async function verifyProfessional(
     return {
       professionalId: professional.id,
       status: 'error',
-      error: errorResult.error,
+      error: errorResult.error ?? undefined,
     }
   }
 
@@ -127,10 +127,13 @@ export async function verifyProfessional(
       error: `FPV mismatch: searched for ${search.normalizedValue}, API returned ${returnedFpv}`,
     }
   }
-  // 7. Not an exact match — return the status for the script to log
+  // 7. Not an exact match — return the status for the script to log.
+  // 'ok' is unreachable here (classifyStatus maps ok ⟺ itemCount === 1, which
+  // isExactMatch already handled); the mapping is belt-and-suspenders so an
+  // API contract drift surfaces as 'error', never as a bogus 'ok' leak.
   return {
     professionalId: professional.id,
-    status: fetchResult.status,
+    status: fetchResult.status === 'ok' ? 'error' : fetchResult.status,
     error: fetchResult.error ?? undefined,
   }
 }
