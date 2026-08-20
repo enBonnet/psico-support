@@ -10,7 +10,7 @@ export type CloudflareEnv = {
   // ponytail: wrangler secrets (not bindings) for the Analytics Engine SQL
   // REST API read path (src/server/analytics-read.ts). Optional — the admin
   // analytics route shows a "no configurada" banner when absent. Set with
-  // `npx wrangler secret put CF_ACCOUNT_ID` / `CF_ANALYTICS_TOKEN`.
+  // `pnpm exec wrangler secret put CF_ACCOUNT_ID` / `CF_ANALYTICS_TOKEN`.
   CF_ACCOUNT_ID?: string
   CF_ANALYTICS_TOKEN?: string
   // ponytail: server-side feature flag for video-call scheduling (1.25.0).
@@ -44,7 +44,7 @@ export function getDb(): Db {
   const env = getCloudflareEnv()
   if (!env?.DB) {
     throw new Error(
-      'D1 binding (DB) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+      'D1 binding (DB) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
     )
   }
   cached = drizzle(env.DB, { schema })
@@ -122,7 +122,7 @@ export function getR2(): R2Bucket {
   const env = getCloudflareEnv()
   if (!env?.MEDIA) {
     throw new Error(
-      'R2 binding (MEDIA) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+      'R2 binding (MEDIA) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
     )
   }
   return env.MEDIA
@@ -138,7 +138,7 @@ export function getEmailBinding(): SendEmail {
   const env = getCloudflareEnv()
   if (!env?.EMAIL) {
     throw new Error(
-      'Email binding (EMAIL) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+      'Email binding (EMAIL) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
     )
   }
   return env.EMAIL
@@ -154,7 +154,7 @@ export function getAnalytics(): AnalyticsEngineDataset {
   const env = getCloudflareEnv()
   if (!env?.ANALYTICS) {
     throw new Error(
-      'Analytics binding (ANALYTICS) not available. Run via `npm run dev` (wrangler) or deploy to Cloudflare.',
+      'Analytics binding (ANALYTICS) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
     )
   }
   return env.ANALYTICS

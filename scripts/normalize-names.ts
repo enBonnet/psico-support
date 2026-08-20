@@ -17,23 +17,23 @@
 // re-running finds nothing left to change.
 //
 // Usage:
-//   npx tsx scripts/normalize-names.ts --local             # wrangler D1 state
-//   npx tsx scripts/normalize-names.ts --local --db <path> # explicit file
-//   npx tsx scripts/normalize-names.ts --sql --table professionals --from pros.json
-//   npx tsx scripts/normalize-names.ts --sql --table user --from users.json
+//   pnpm exec tsx scripts/normalize-names.ts --local             # wrangler D1 state
+//   pnpm exec tsx scripts/normalize-names.ts --local --db <path> # explicit file
+//   pnpm exec tsx scripts/normalize-names.ts --sql --table professionals --from pros.json
+//   pnpm exec tsx scripts/normalize-names.ts --sql --table user --from users.json
 //
 // The --remote path (follows the manual-migration rule of AGENTS.md gotcha
 // #1 — the script never invokes wrangler against remote itself):
 //   1) export each table's current names:
-//        npx wrangler d1 execute psico-support-db --remote --json \
+//        pnpm exec wrangler d1 execute psico-support-db --remote --json \
 //          --command "SELECT id, name FROM professionals" > pros.json
-//        npx wrangler d1 execute psico-support-db --remote --json \
+//        pnpm exec wrangler d1 execute psico-support-db --remote --json \
 //          --command "SELECT id, name FROM user" > users.json
 //   2) generate reviewable SQL:
-//        npx tsx scripts/normalize-names.ts --sql --table professionals --from pros.json > name-case.sql
-//        npx tsx scripts/normalize-names.ts --sql --table user --from users.json >> name-case.sql
+//        pnpm exec tsx scripts/normalize-names.ts --sql --table professionals --from pros.json > name-case.sql
+//        pnpm exec tsx scripts/normalize-names.ts --sql --table user --from users.json >> name-case.sql
 //   3) review the file, then apply:
-//        npx wrangler d1 execute psico-support-db --remote --file=name-case.sql
+//        pnpm exec wrangler d1 execute psico-support-db --remote --file=name-case.sql
 // =============================================================================
 
 import Database from 'better-sqlite3'
@@ -71,13 +71,13 @@ function findLocalDb(): string {
   } catch {
     throw new Error(
       `No wrangler D1 state found at ${dir}.\n` +
-        'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+        'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
     )
   }
   if (files.length === 0)
     throw new Error(
       `No D1 sqlite files in ${dir}.\n` +
-        'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+        'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
     )
   files.sort((a, b) => statSync(b).size - statSync(a).size)
   return files[0]
@@ -169,7 +169,7 @@ function main() {
     const from = fromIdx !== -1 ? args[fromIdx + 1] : undefined
     if (!table || !isTable(table) || !from) {
       console.error(
-        'Usage: npx tsx scripts/normalize-names.ts --sql --table <professionals|user> --from <export.json>',
+        'Usage: pnpm exec tsx scripts/normalize-names.ts --sql --table <professionals|user> --from <export.json>',
       )
       process.exit(1)
     }
@@ -178,12 +178,12 @@ function main() {
     console.error(
       [
         'Usage:',
-        '  npx tsx scripts/normalize-names.ts --local             # write to wrangler local D1',
-        '  npx tsx scripts/normalize-names.ts --sql --table <t> --from <export.json>',
+        '  pnpm exec tsx scripts/normalize-names.ts --local             # write to wrangler local D1',
+        '  pnpm exec tsx scripts/normalize-names.ts --sql --table <t> --from <export.json>',
         '',
         'Remote apply: export names via wrangler --json (see file header),',
         'generate SQL with --sql, review it, then',
-        '  npx wrangler d1 execute psico-support-db --remote --file=<path>',
+        '  pnpm exec wrangler d1 execute psico-support-db --remote --file=<path>',
       ].join('\n'),
     )
     process.exit(1)

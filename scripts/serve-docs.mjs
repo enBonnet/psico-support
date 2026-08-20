@@ -4,7 +4,7 @@
 //   node scripts/serve-docs.mjs              # default port 4173
 //   node scripts/serve-docs.mjs --port 8080  # custom port
 //   node scripts/serve-docs.mjs --no-open    # don't auto-open the browser
-//   npm run docs                             # via package.json
+//   pnpm run docs                             # via package.json
 
 import http from "node:http";
 import fs from "node:fs";

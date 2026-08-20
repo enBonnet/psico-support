@@ -20,7 +20,7 @@
 // run finds nothing to move). Safe to run repeatedly during rollout.
 //
 // IMPORTANT: run this against PROD data once, after deploying the schema
-// migration. It is NOT needed for local dev — `npm run db:seed` writes
+// migration. It is NOT needed for local dev — `pnpm run db:seed` writes
 // post-migration fixtures directly (specialized_areas + mode already set).
 // Running it locally is harmless (it'll move any old-axis tags the seed left
 // in place, e.g. María González's focus_groups=['Oncológica']) but it will
@@ -29,12 +29,12 @@
 // path locally, seed and DON'T run this script.
 //
 // Usage:
-//   npx tsx scripts/migrate-specialized-areas.ts --local            # wrangler D1
-//   npx tsx scripts/migrate-specialized-areas.ts --local --db <path> # explicit file
-//   npx tsx scripts/migrate-specialized-areas.ts --sql               # print SQL for --remote
+//   pnpm exec tsx scripts/migrate-specialized-areas.ts --local            # wrangler D1
+//   pnpm exec tsx scripts/migrate-specialized-areas.ts --local --db <path> # explicit file
+//   pnpm exec tsx scripts/migrate-specialized-areas.ts --sql               # print SQL for --remote
 //
 // The --remote path: run --sql, save to a file, review it, then
-//   npx wrangler d1 execute psico-support-db --remote --file=<path>
+//   pnpm exec wrangler d1 execute psico-support-db --remote --file=<path>
 // (the script does not invoke wrangler itself — keeping that step manual per
 // AGENTS.md gotcha #1: never auto-apply migrations/SQL against remote D1).
 // =============================================================================
@@ -126,13 +126,13 @@ function findLocalDb(): string {
 	} catch {
 		throw new Error(
 			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
 		)
 	}
 	if (files.length === 0)
 		throw new Error(
 			`No D1 sqlite files in ${dir}.\n` +
-				'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
 		)
 	files.sort((a, b) => statSync(b).size - statSync(a).size)
 	return files[0]
@@ -225,7 +225,7 @@ function emitSql() {
 	}
 	console.log(stmts.join('\n'))
 	console.log(
-		`-- review the above, then run: npx wrangler d1 execute psico-support-db --remote --file=<this file>`,
+		`-- review the above, then run: pnpm exec wrangler d1 execute psico-support-db --remote --file=<this file>`,
 	)
 }
 
@@ -246,11 +246,11 @@ function main() {
 		console.error(
 			[
 				'Usage:',
-				'  npx tsx scripts/migrate-specialized-areas.ts --local   # write to local dev.db',
-				'  npx tsx scripts/migrate-specialized-areas.ts --sql      # print SQL for remote review',
+				'  pnpm exec tsx scripts/migrate-specialized-areas.ts --local   # write to local dev.db',
+				'  pnpm exec tsx scripts/migrate-specialized-areas.ts --sql      # print SQL for remote review',
 				'',
 				'Remote apply: save the --sql output to a file, review it, then',
-				'  npx wrangler d1 execute psico-support-db --remote --file=<path>',
+				'  pnpm exec wrangler d1 execute psico-support-db --remote --file=<path>',
 			].join('\n'),
 		)
 		process.exit(1)

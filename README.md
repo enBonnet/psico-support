@@ -107,10 +107,10 @@ y gestionar su disponibilidad.
 ## Desarrollo local
 
 ```bash
-npm install
+pnpm install
 cp .env.example .env.local           # completa los valores
-npx wrangler d1 migrations apply psico-support-db --local
-npm run dev                          # http://localhost:3000
+pnpm exec wrangler d1 migrations apply psico-support-db --local
+pnpm dev                          # http://localhost:3000
 ```
 
 La BD local se guarda en `dev.db` (ignorado por git).
@@ -118,11 +118,11 @@ La BD local se guarda en `dev.db` (ignorado por git).
 ### Probar la PWA localmente
 
 El service worker y el _shell_ offline solo se activan en build de producción
-(en `npm run dev` no hay SW, a propósito). Para probar la PWA (instalabilidad,
+(en `pnpm dev` no hay SW, a propósito). Para probar la PWA (instalabilidad,
 modo offline, _cold open_ sin conexión):
 
 ```bash
-npm run build && npx wrangler dev --port 3000
+pnpm build && pnpm exec wrangler dev --port 3000
 ```
 
 Abre `http://localhost:3000`, recarga fuerte y revisa DevTools → Application
@@ -135,7 +135,7 @@ Copia `.env.example` a `.env.local` y completa:
 
 | Variable             | Requerida | Descripción                                                               |
 | -------------------- | --------- | ------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | sí        | Secreto para firmar sesiones. Genera con `npx -y @better-auth/cli secret` |
+| `BETTER_AUTH_SECRET` | sí        | Secreto para firmar sesiones. Genera con `pnpm dlx @better-auth/cli secret` |
 | `BETTER_AUTH_URL`    | sí        | URL base pública (local: `http://localhost:3000`)                         |
 | `DATABASE_URL`       | sí        | Ruta a la BD SQLite local (p. ej. `file:./dev.db`)                        |
 | `VITE_SENTRY_DSN`    | no        | DSN de Sentry para el cliente y el worker (sin él, Sentry queda inactivo) |
@@ -150,8 +150,8 @@ Copia `.env.example` a `.env.local` y completa:
 Las migraciones viven en `drizzle/`. Tras editar `src/db/schema.ts`:
 
 ```bash
-npm run db:generate                                         # crea el SQL en drizzle/
-npx wrangler d1 migrations apply psico-support-db --local   # aplica en local
+pnpm db:generate                                         # crea el SQL en drizzle/
+pnpm exec wrangler d1 migrations apply psico-support-db --local   # aplica en local
 ```
 
 ### Dar permisos de administrador
@@ -160,7 +160,7 @@ El admin se define en la BD (`user.role`), no por variable de entorno. Para
 promover en la BD runtime local hay un script dedicado:
 
 ```bash
-npm run db:promote-admin -- --email tu@correo.com   # --dry-run para ver sin escribir
+pnpm db:promote-admin -- --email tu@correo.com   # --dry-run para ver sin escribir
 ```
 
 O directamente con SQL contra la runtime:
@@ -196,14 +196,14 @@ Referencia completa de `package.json`. Los que tocan la BD de **runtime**
 | `check`  | `prettier --check .`                 | Verifica formato sin escribir (CI / git hook).                     |
 | `test`   | `vitest run`                         | Suite de tests. (Actualmente no hay archivos de test; ver AGENTS.) |
 
-> No hay script de typecheck. Usa `npx tsc --noEmit`. Existe un error de
+> No hay script de typecheck. Usa `pnpm exec tsc --noEmit`. Existe un error de
 > tipado preexistente en `drizzle.config.ts` ajeno al código de la app.
 
 ### Despliegue
 
 | Script   | Comando                            | Descripción                                            |
 | -------- | ---------------------------------- | ------------------------------------------------------ |
-| `deploy` | `npm run build && wrangler deploy` | Sube código a Cloudflare. **No aplica migraciones D1** |
+| `deploy` | `pnpm build && wrangler deploy` | Sube código a Cloudflare. **No aplica migraciones D1** |
 |          |                                    | (ver paso 5 del despliegue más abajo).                 |
 
 ### Base de datos — esquema y migraciones (drizzle-kit, BD `dev.db`)
@@ -222,8 +222,8 @@ drizzle-kit, **no** la BD runtime que sirve `wrangler dev`.
 Para aplicar migraciones a la BD runtime de verdad, usa wrangler:
 
 ```bash
-npx wrangler d1 migrations apply psico-support-db --local   # local runtime
-npx wrangler d1 migrations apply psico-support-db --remote  # producción
+pnpm exec wrangler d1 migrations apply psico-support-db --local   # local runtime
+pnpm exec wrangler d1 migrations apply psico-support-db --remote  # producción
 ```
 
 ### Base de datos — runtime (wrangler)
@@ -231,7 +231,7 @@ npx wrangler d1 migrations apply psico-support-db --remote  # producción
 | Script               | Descripción                                                                                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `db:status`          | Comprueba que la BD runtime (`scripts/db-check.mjs`) tenga esquema aplicado. Solo lectura. No arranca                                                                                       |
-|                      | wrangler. Lo corre `npm run dev` como preflight.                                                                                                                                            |
+|                      | wrangler. Lo corre `pnpm dev` como preflight.                                                                                                                                            |
 | `db:seed`            | Puebla la BD runtime local con fixtures (`scripts/seed-local.ts`): un admin + profesionales en todos                                                                                        |
 |                      | los estados. Idempotente por email; `--reset` limpia todo primero; contraseña por defecto                                                                                                   |
 |                      | `password123`. Requiere migraciones aplicadas antes.                                                                                                                                        |
@@ -250,7 +250,7 @@ npx wrangler d1 migrations apply psico-support-db --remote  # producción
 | Script                | Descripción                                                                                 |
 | --------------------- | ------------------------------------------------------------------------------------------- |
 | `analytics`           | Consulta Analytics Engine desde la terminal (`scripts/analytics.ts`). Requiere              |
-|                       | `CF_ACCOUNT_ID` + `CF_ANALYTICS_TOKEN` en `.env.local`. Ej.: `npm run analytics -- funnel`. |
+|                       | `CF_ACCOUNT_ID` + `CF_ANALYTICS_TOKEN` en `.env.local`. Ej.: `pnpm analytics -- funnel`. |
 | `analytics:dashboard` | Dashboard HTML local en `:8788` (`scripts/analytics-dashboard.ts`) con las mismas           |
 |                       | consultas que el CLI. El token nunca llega al navegador (SQL corre server-side).            |
 | `docs`                | Sirve la carpeta `docs/` (incluido el diagrama `app-map.html`) en `:4173` y la abre en      |
@@ -263,13 +263,13 @@ Los bindings de D1, R2, Analytics Engine y Email, y el dominio, están en
 
 ```bash
 # 1. Recursos (una sola vez); copia los IDs devueltos a wrangler.jsonc
-npx wrangler d1 create psico-support-db
-npx wrangler r2 bucket create psico-support-media
+pnpm exec wrangler d1 create psico-support-db
+pnpm exec wrangler r2 bucket create psico-support-media
 
 # 2. Secretos
-npx wrangler secret put BETTER_AUTH_SECRET
-npx wrangler secret put BETTER_AUTH_URL        # https://tu-dominio.com
-npx wrangler secret put VITE_SENTRY_DSN        # opcional
+pnpm exec wrangler secret put BETTER_AUTH_SECRET
+pnpm exec wrangler secret put BETTER_AUTH_URL        # https://tu-dominio.com
+pnpm exec wrangler secret put VITE_SENTRY_DSN        # opcional
 
 # 3. Onboarding del Email Service (una sola vez, por dashboard)
 #    Compute > Email Service > Email Sending > Onboard Domain para
@@ -277,14 +277,14 @@ npx wrangler secret put VITE_SENTRY_DSN        # opcional
 #    complete, env.EMAIL.send() rechaza en runtime (dominio no verificado).
 
 # 4. Desplegar
-npm run deploy
+pnpm deploy
 
-# 5. Migraciones a remoto  ⚠️ paso separado, NO incluido en `npm run deploy`
-npx wrangler d1 migrations apply psico-support-db --remote
-npx wrangler d1 migrations list psico-support-db --remote   # debe quedar vacío
+# 5. Migraciones a remoto  ⚠️ paso separado, NO incluido en `pnpm deploy`
+pnpm exec wrangler d1 migrations apply psico-support-db --remote
+pnpm exec wrangler d1 migrations list psico-support-db --remote   # debe quedar vacío
 ```
 
-> **Importante:** `npm run deploy` solo sube código; **no** aplica migraciones
+> **Importante:** `pnpm deploy` solo sube código; **no** aplica migraciones
 > de D1. Tras cualquier cambio en `src/db/schema.ts`, aplica las migraciones a
 > remoto con el paso 5 o la app fallará en producción (`no such column` /
 > `NOT NULL`) aunque funcione en local.

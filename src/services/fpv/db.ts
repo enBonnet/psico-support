@@ -10,7 +10,7 @@ const STATE_DIR = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
 
 // Finds the wrangler-managed local D1 SQLite file (same pattern as
 // scripts/seed-local.ts findLocalDb). This is NOT dev.db — it's the
-// runtime DB that `npm run dev` serves requests against.
+// runtime DB that `ppnpm run dev` serves requests against.
 function findLocalD1(): string {
   let files: string[]
   try {
@@ -20,13 +20,13 @@ function findLocalD1(): string {
   } catch {
     throw new Error(
       `No wrangler D1 state found at ${STATE_DIR}.\n` +
-        'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+        'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
     )
   }
   if (files.length === 0) {
     throw new Error(
       `No D1 sqlite files in ${STATE_DIR}.\n` +
-        'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+        'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
     )
   }
   // Largest file = the real DB; miniflare can leave stray small files.

@@ -6,7 +6,7 @@
 // server-side and results are returned as JSON via /api/query.
 //
 // Usage:
-//   npm run analytics:dashboard
+//   pnpm run analytics:dashboard
 //
 // Then open http://localhost:8788 in a browser. Ctrl+C to stop.
 //

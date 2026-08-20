@@ -26,7 +26,7 @@
 //
 // CACHE mirrors the app version in package.json. `__SW_VERSION__` is a
 // placeholder rewritten at build time by `swVersionPlugin` in vite.config.ts
-// (generateBundle hook) — every `npm version ...` automatically bumps the SW
+// (generateBundle hook) — every `pnpm version ...` automatically bumps the SW
 // cache key, force-invalidating installed PWA clients. No hand-edit needed.
 // For backward-compatible releases, SWR + skipWaiting still refreshes
 // content within one reload without a cache-name change.
