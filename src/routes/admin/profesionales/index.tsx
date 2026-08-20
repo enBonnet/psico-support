@@ -240,8 +240,13 @@ function ProfessionalsAuditSection() {
         Profesionales
       </h2>
 
-      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="sm:flex-1">
+      {/* ponytail: search + status filters stack below lg. At sm–lg the admin
+          wide layout gives ~668–868px, and the five filter pills alone measure
+          ~450px — a row there starved the search input to a sliver (basis 0
+          vs. the pills' content width). lg matches the card grid's 2-col
+          breakpoint, where the row has ≥992px to breathe. */}
+      <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center">
+        <div className="lg:flex-1">
           <SectionSearch
             value={q}
             onChange={(v) => {
