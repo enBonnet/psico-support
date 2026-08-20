@@ -29,7 +29,6 @@
     "analytics": "tsx scripts/analytics.ts",
     "analytics:dashboard": "tsx scripts/analytics-dashboard.ts",
     "docs": "node scripts/serve-docs.mjs",
-    "fpv:verify": "tsx scripts/run-fpv-verification.ts"
   },
   "dependencies": {
     "@cloudflare/vite-plugin": "^1.26.0",
