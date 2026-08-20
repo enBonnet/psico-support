@@ -22,6 +22,7 @@ import {
   user as userTable,
 } from '#/db/schema'
 import { getAuth, isAdminEmail } from '#/lib/auth'
+import { normalizeName } from '#/lib/name'
 import {
   PAIS_OPTIONS,
   VENEZUELA,
@@ -1018,12 +1019,23 @@ export const pickRandomProfessional = createServerFn({ method: 'GET' })
     return { id: picked.id, name: picked.name, whatsapp: picked.whatsapp }
   })
 
+// ponytail: canonical person-name casing ("Ender Bonnet Borrero") — see
+// src/lib/name.ts. Transform runs at the validation boundary (client-safe:
+// registro.tsx also safeParses these schemas in the browser), so every
+// downstream write — proEditableFields, the user.name mirrors in
+// updateMyProfile/adminUpdateProfessional, signUpEmail in registerProfessional
+// — stores the normalized form and no read path needs per-callsite casing.
+const nameField = z
+  .string()
+  .min(2, 'Tu nombre es obligatorio')
+  .transform(normalizeName)
+
 // ponytail: location is conditional. When country=Venezuela, estado and
 // ciudad must come from the fixed maps. Abroad, only country is required
 // (estado/ciudad are optional free text, but we keep them nullable and
 // don't collect them in the form).
 export const registerStep1Schema = z.object({
-  name: z.string().min(2, 'Tu nombre es obligatorio'),
+  name: nameField,
   email: z.string().email('Correo inválido'),
   password: z.string().min(8, 'Mínimo 8 caracteres'),
 })
@@ -1130,14 +1142,14 @@ export const registerStep2Schema =
 // omitted — credential-file changes aren't part of profile edit (the pro can
 // re-upload via a separate flow if ever needed).
 export const profileEditSchema = registerStep2Object
-  .extend({ name: z.string().min(2, 'Tu nombre es obligatorio') })
+  .extend({ name: nameField })
   .omit({ certificate: true })
   .superRefine(refineProfessional)
 export type ProfileEditInput = z.infer<typeof profileEditSchema>
 
 export const registerSchema = z
   .object({
-    name: z.string().min(2, 'Tu nombre es obligatorio'),
+    name: nameField,
     email: z.string().email('Correo inválido'),
     password: z.string().min(8, 'Mínimo 8 caracteres'),
     certificationNumber: z.string().min(2, 'Ingresa tu número de colegiación'),
@@ -1213,7 +1225,10 @@ function proEditableFields(data: ProInsertData) {
       ? 'inclusive'
       : data.specializationMode
   return {
-    name: data.name,
+    // normalizeName guards the one path that bypasses the Zod boundary:
+    // createProfessionalProfile copies session.user.name (which may predate
+    // the auth-layer normalization). Idempotent for already-normalized input.
+    name: normalizeName(data.name),
     certificationNumber: data.certificationNumber.trim(),
     certifyingSchool: data.certifyingSchool?.trim() || null,
     population: JSON.stringify(data.population),

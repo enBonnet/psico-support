@@ -1,0 +1,193 @@
+// =============================================================================
+// scripts/normalize-names.ts — one-off name-casing backfill
+// =============================================================================
+// Re-cases existing person names to the canonical form ("Ender Bonnet
+// Borrero") using the SAME helper the write paths now run (src/lib/name.ts,
+// applied in the Zod schemas of src/server/professionals.ts + the Better
+// Auth user-creation hook in src/lib/auth.ts). Rows created after those
+// landed are already normalized; this fixes everything stored before.
+//
+// Touches both tables that hold person names:
+//   professionals.name  — the directory/profile name (public surface)
+//   user.name           — the auth-account mirror (panel, admin, emails, .ics)
+// Names are normalized IN PLACE per table; the script never forces the two
+// tables to agree with each other (casing only, no cross-table sync).
+//
+// Idempotent: normalizeName(normalizeName(x)) === normalizeName(x), so
+// re-running finds nothing left to change.
+//
+// Usage:
+//   npx tsx scripts/normalize-names.ts --local             # wrangler D1 state
+//   npx tsx scripts/normalize-names.ts --local --db <path> # explicit file
+//   npx tsx scripts/normalize-names.ts --sql --table professionals --from pros.json
+//   npx tsx scripts/normalize-names.ts --sql --table user --from users.json
+//
+// The --remote path (follows the manual-migration rule of AGENTS.md gotcha
+// #1 — the script never invokes wrangler against remote itself):
+//   1) export each table's current names:
+//        npx wrangler d1 execute psico-support-db --remote --json \
+//          --command "SELECT id, name FROM professionals" > pros.json
+//        npx wrangler d1 execute psico-support-db --remote --json \
+//          --command "SELECT id, name FROM user" > users.json
+//   2) generate reviewable SQL:
+//        npx tsx scripts/normalize-names.ts --sql --table professionals --from pros.json > name-case.sql
+//        npx tsx scripts/normalize-names.ts --sql --table user --from users.json >> name-case.sql
+//   3) review the file, then apply:
+//        npx wrangler d1 execute psico-support-db --remote --file=name-case.sql
+// =============================================================================
+
+import Database from 'better-sqlite3'
+import { readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+
+import { normalizeName } from '../src/lib/name'
+
+type Row = { id: number | string; name: string }
+
+const TABLES = ['professionals', 'user'] as const
+type Table = (typeof TABLES)[number]
+
+function isTable(v: string): v is Table {
+  return (TABLES as readonly string[]).includes(v)
+}
+
+function sqlStr(v: string): string {
+  return `'${v.replace(/'/g, "''")}'`
+}
+
+function findLocalDb(): string {
+  // ponytail: mirror scripts/migrate-specialized-areas.ts's findLocalDb —
+  // wrangler's local D1 lives under
+  // .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite, not at a fixed
+  // dev.db path. Sort by size desc to pick the real DB if miniflare ever
+  // leaves stray files. Throws with a helpful hint if the state dir is
+  // missing — that means `wrangler d1 migrations apply --local` hasn't run.
+  const dir = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
+  let files: string[]
+  try {
+    files = readdirSync(dir)
+      .filter((f) => f.endsWith('.sqlite') && !f.startsWith('metadata'))
+      .map((f) => join(dir, f))
+  } catch {
+    throw new Error(
+      `No wrangler D1 state found at ${dir}.\n` +
+        'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+    )
+  }
+  if (files.length === 0)
+    throw new Error(
+      `No D1 sqlite files in ${dir}.\n` +
+        'Run `npx wrangler d1 migrations apply psico-support-db --local` first.',
+    )
+  files.sort((a, b) => statSync(b).size - statSync(a).size)
+  return files[0]
+}
+
+function runLocal(dbPathOverride?: string) {
+  const dbPath = dbPathOverride ?? findLocalDb()
+  const db = new Database(dbPath, { readonly: false })
+  for (const table of TABLES) {
+    const rows = db
+      .prepare(`SELECT id, name FROM ${table}`)
+      .all() as unknown as Row[]
+    const update = db.prepare(`UPDATE ${table} SET name = ? WHERE id = ?`)
+    let touched = 0
+    const tx = db.transaction((toUpdate: Row[]) => {
+      for (const r of toUpdate) {
+        update.run(normalizeName(r.name), String(r.id))
+        touched++
+        console.log(
+          `[${table}] ${r.id}: "${r.name}" -> "${normalizeName(r.name)}"`,
+        )
+      }
+    })
+    tx(rows.filter((r) => normalizeName(r.name) !== r.name))
+    console.log(`${table}: normalized ${touched} of ${rows.length} rows`)
+  }
+  console.log(`(local: ${dbPath})`)
+  db.close()
+}
+
+// wrangler d1 execute --json emits a JSON array whose [0] holds {results: [...]}.
+// Tolerate a plain object or a bare results array too, so hand-edited exports work.
+function parseExport(raw: string): Row[] {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    throw new Error(
+      'Export file is not valid JSON — expected the output of `wrangler d1 execute --json`.',
+    )
+  }
+  const first = Array.isArray(parsed) ? parsed[0] : parsed
+  const results = (first as { results?: unknown } | undefined)?.results
+  if (!Array.isArray(results))
+    throw new Error(
+      'Export JSON has no .results array — re-run the wrangler export command.',
+    )
+  return results as Row[]
+}
+
+function emitSql(table: Table, from: string) {
+  const rows = parseExport(readFileSync(from, 'utf8'))
+  const stmts: string[] = [
+    `-- canonical name casing backfill (${table}) — generated by scripts/normalize-names.ts`,
+    `-- source: ${from}`,
+    `-- each UPDATE keys on id AND the exact old name (no-op if the row already changed)`,
+    ``,
+  ]
+  let changes = 0
+  for (const r of rows) {
+    const next = normalizeName(r.name)
+    if (next === r.name) continue
+    changes++
+    stmts.push(
+      `UPDATE ${table} SET name = ${sqlStr(next)} WHERE id = ${Number(r.id)} AND name = ${sqlStr(r.name)};`,
+    )
+  }
+  if (changes === 0)
+    stmts.push(`-- nothing to normalize (${rows.length} rows checked)`)
+  console.log(stmts.join('\n'))
+  console.error(`${table}: ${changes} of ${rows.length} rows would change`)
+}
+
+function main() {
+  const args = process.argv.slice(2)
+  const mode = args[0]
+  if (mode === '--local') {
+    // ponytail: --db <path> overrides the auto-discovered wrangler state path
+    // (operators normally omit it and let findLocalDb resolve the
+    // wrangler-managed D1 file under .wrangler/state/v3/d1/…).
+    const dbArgIdx = args.indexOf('--db')
+    const dbPathOverride =
+      dbArgIdx !== -1 && args[dbArgIdx + 1] ? args[dbArgIdx + 1] : undefined
+    runLocal(dbPathOverride)
+  } else if (mode === '--sql') {
+    const tableIdx = args.indexOf('--table')
+    const fromIdx = args.indexOf('--from')
+    const table = tableIdx !== -1 ? args[tableIdx + 1] : undefined
+    const from = fromIdx !== -1 ? args[fromIdx + 1] : undefined
+    if (!table || !isTable(table) || !from) {
+      console.error(
+        'Usage: npx tsx scripts/normalize-names.ts --sql --table <professionals|user> --from <export.json>',
+      )
+      process.exit(1)
+    }
+    emitSql(table, from)
+  } else {
+    console.error(
+      [
+        'Usage:',
+        '  npx tsx scripts/normalize-names.ts --local             # write to wrangler local D1',
+        '  npx tsx scripts/normalize-names.ts --sql --table <t> --from <export.json>',
+        '',
+        'Remote apply: export names via wrangler --json (see file header),',
+        'generate SQL with --sql, review it, then',
+        '  npx wrangler d1 execute psico-support-db --remote --file=<path>',
+      ].join('\n'),
+    )
+    process.exit(1)
+  }
+}
+
+main()
