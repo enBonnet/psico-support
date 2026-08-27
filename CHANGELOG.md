@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Correo transaccional vía Mailgun REST API, sin binding de Cloudflare** ([src/server/email.ts](src/server/email.ts), [src/db/index.ts](src/db/index.ts), [wrangler.jsonc](wrangler.jsonc)): `sendEmail()` ahora hace `POST https://api.mailgun.net/v3/{domain}/messages` con credenciales de entorno (`MAILGUN_SENDING_KEY`/`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_FROM_EMAIL` — en `.env.local` para dev, `wrangler secret put` para prod) en lugar del binding `send_email` con `remote: true`. Ese binding era lo único que obligaba a `wrangler dev` a abrir una sesión proxy remota (auth de Cloudflare + subdominio `workers.dev`), así que **cualquiera puede correr la app localmente sin cuenta de Cloudflare**. El remitente pasa a `noreply@mg.psicoayudaven.com` (dominio verificado en Mailgun); los adjuntos `.ics` se adaptan al formato multipart de Mailgun. Verificación: `pnpm dev` arranca sin «Establishing remote connection», `pnpm lint`/`pnpm test` (21/21) limpios, build de producción OK. **Pendiente post-deploy**: `pnpm exec wrangler secret put MAILGUN_SENDING_KEY MAILGUN_DOMAIN MAILGUN_FROM_EMAIL` (y `MAILGUN_API_KEY` si se prefiere esa clave) en prod.
+
 ## [1.35.0] - 2026-08-19
 
 ### Added

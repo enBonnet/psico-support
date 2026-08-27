@@ -22,7 +22,7 @@
 // the .ics calendar identity (UID + organizer in email.ts /
 // cuenta.sesiones.tsx) are LITERAL '@psicoayudaven.com' strings, deliberately
 // NOT derived from PRIMARY_SITE_URL — psicoayudaven.com is the only domain
-// onboarded as a verified Email Service sender, and the UID must stay stable
+// verified as a Mailgun sender, and the UID must stay stable
 // or previously-imported appointments duplicate on re-import. Changing
 // PRIMARY_SITE_URL does NOT flip them.
 export const PRIMARY_SITE_URL = 'https://psicoayudas.com'

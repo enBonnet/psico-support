@@ -52,9 +52,16 @@ to app code.
 | `SENTRY_AUTH_TOKEN` | no | Uploads source maps on `vite build`. Absent = maps won't upload, build still works. |
 | `CLOUDFLARE_VITE_FORCE_LOCAL` | no | Forces local miniflare for the prerender step. CI sets this (`true`) so the build doesn't try to reach the Cloudflare remote proxy during `_shell.html` generation. |
 
-The `ANALYTICS` (Analytics Engine), `MEDIA` (R2), and `EMAIL` (Email Service)
-bindings are declared in `wrangler.jsonc` and exist automatically in
-`wrangler dev`/deploy — no env var needed.
+The `ANALYTICS` (Analytics Engine) and `MEDIA` (R2) bindings are declared in
+`wrangler.jsonc` and exist automatically in `wrangler dev`/deploy — no env var
+needed. Transactional mail goes through **Mailgun** (REST API, not a binding):
+`MAILGUN_SENDING_KEY`/`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_FROM_EMAIL`
+come from `.env.local` in dev and must be set as wrangler secrets in prod
+(`pnpm exec wrangler secret put MAILGUN_*`). There is deliberately **no
+`send_email` binding** — the old `remote: true` binding forced `wrangler dev`
+to open a remote proxy session, which required Cloudflare auth + a workers.dev
+subdomain and blocked anyone without account access from running the app
+locally.
 
 ### Database (D1)
 
@@ -367,8 +374,8 @@ context, which resolve per-request from the inbound `Host` header.
   host: visible brand text (`demo.tsx`, `app.tsx`), and `.ics` calendar identity
   (`uid`/organizer/filename in `email.ts` + `cuenta.sesiones.tsx`) — calendar
   UIDs must NOT flip per host or re-imports duplicate entries.
-- **Email sender stays `noreply@psicoayudaven.com`.** Only that domain is
-  onboarded as a verified Email Service sender; the From address does not follow
+- **Email sender stays `noreply@mg.psicoayudaven.com`.** Only that domain is
+  verified as a Mailgun sender; the From address does not follow
   the request host. Email **action links** (logo, footer, cancel/reset/book) DO
   follow the host via `resolveSiteUrl()` — session cookies are per-domain, so a
   cancel link that crossed domains would land the user logged-out.

@@ -5,8 +5,16 @@ import * as schema from './schema.ts'
 export type CloudflareEnv = {
   DB: D1Database
   MEDIA: R2Bucket
-  EMAIL: SendEmail
   ANALYTICS: AnalyticsEngineDataset
+  // ponytail: Mailgun REST API credentials (transactional mail — see
+  // src/server/email.ts). Plain env vars, NOT a Cloudflare binding, so local
+  // dev needs zero Cloudflare auth (the old send_email binding with
+  // `remote: true` forced a remote proxy session + workers.dev subdomain).
+  // Set in .env.local for dev; `wrangler secret put` for prod.
+  MAILGUN_API_KEY?: string
+  MAILGUN_SENDING_KEY?: string
+  MAILGUN_DOMAIN?: string
+  MAILGUN_FROM_EMAIL?: string
   // ponytail: wrangler secrets (not bindings) for the Analytics Engine SQL
   // REST API read path (src/server/analytics-read.ts). Optional — the admin
   // analytics route shows a "no configurada" banner when absent. Set with
@@ -128,24 +136,8 @@ export function getR2(): R2Bucket {
   return env.MEDIA
 }
 
-// ponytail: Cloudflare Email Service binding for transactional mail. Like
-// getR2(), not cached — the binding is a stateless handle. Throws a dev-facing
-// error when missing so the failure is obvious in local dev. Sender domain
-// must be onboarded in the dashboard (Compute > Email Service > Email Sending
-// > Onboard Domain) — NOT via `wrangler email sending enable`, which 403s
-// even with the right scope. See wrangler.jsonc send_email ponytail.
-export function getEmailBinding(): SendEmail {
-  const env = getCloudflareEnv()
-  if (!env?.EMAIL) {
-    throw new Error(
-      'Email binding (EMAIL) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
-    )
-  }
-  return env.EMAIL
-}
-
-// ponytail: Analytics Engine binding for product analytics. Like getR2()/
-// getEmailBinding(): a stateless handle, not cached. Returns void on
+// ponytail: Analytics Engine binding for product analytics. Like getR2():
+// a stateless handle, not cached. Returns void on
 // writeDataPoint() (fire-and-forget — never await). In dev, the binding is
 // absent and writes silently no-op via the track() server fn guard; this
 // throws only when called directly (e.g. SSR funnel events) to make a missing

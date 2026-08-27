@@ -1,23 +1,33 @@
 import { createEvent as buildIcs } from 'ics'
 
-import { getEmailBinding } from '#/db'
+import { getCloudflareEnv } from '#/db'
 import { SITE_NAME } from '#/lib/seo'
 // ponytail: resolveSiteUrl (server-only) so email action links + logo match
 // the host the triggering request landed on (psicoayudaven.com OR
 // psicoayudas.com). Cookie/session scope is per-domain, so a cancel/reset
 // link must NOT cross domains or the user lands logged-out. The SENDER
 // address (FROM_ADDRESS below) intentionally stays on psicoayudaven.com —
-// only that domain is onboarded as a verified Email Service sender.
+// only that domain is onboarded as a verified Mailgun sender.
 import { resolveSiteUrl } from '#/lib/seo-server'
 
-// ponytail: from-address is a constant — better-auth sendResetPassword and any
-// future transactional mail all share it. The local part is arbitrary once the
-// domain is onboarded (see wrangler.jsonc send_email ponytail for the one-time
-// `wrangler email sending enable` step + DNS records). Kept on psicoayudaven.com
-// even when the request came through psicoayudas.com: only psicoayudaven.com is
-// onboarded as a verified sender domain, so env.EMAIL.send() would reject any
-// other From. Swap for env only if a second sender domain is ever onboarded.
-const FROM_ADDRESS = 'noreply@psicoayudaven.com'
+// ponytail: transactional mail goes through Mailgun's REST API (v3 messages
+// endpoint) instead of a Cloudflare binding. Why: the old `send_email`
+// binding with `remote: true` forced `wrangler dev` to open a remote proxy
+// session, which required Cloudflare auth + a workers.dev subdomain — nobody
+// could run the app locally without account access. Mailgun is a plain HTTPS
+// API, so local dev works with zero Cloudflare dependency. Credentials come
+// from env vars (MAILGUN_*), set in .env.local for dev and via
+// `wrangler secret put` for prod.
+// Ceiling: if volume grows, switch to Mailgun's batch API or a queue.
+const MAILGUN_API_BASE = 'https://api.mailgun.net/v3'
+
+// ponytail: from-address comes from MAILGUN_FROM_EMAIL (env) with a constant
+// fallback — better-auth sendResetPassword and any future transactional mail
+// all share it. The local part is arbitrary once the domain is verified
+// (SPF/DKIM DNS records on mg.psicoayudaven.com). Kept on psicoayudaven.com
+// even when the request came through psicoayudas.com: only psicoayudaven.com
+// is verified as a Mailgun sender, so Mailgun would reject any other From.
+const FROM_ADDRESS = 'noreply@mg.psicoayudaven.com'
 const FROM_NAME = 'PsicoAyudas'
 
 // Mirrors Medicall tokens in src/styles.css — inline only (no CSS vars in mail).
@@ -42,11 +52,21 @@ type SendEmailInput = {
   subject: string
   html: string
   text: string
-  // ponytail: optional calendar/extra attachments. The Cloudflare Email Service
-  // binding's `send()` builder accepts an `attachments` array (each with
-  // disposition, filename, type, content). Kept optional so existing callers
-  // (password reset) are unchanged.
+  // ponytail: optional calendar/extra attachments. Mailgun accepts one
+  // `attachment` form field per file (filename + content). Kept optional so
+  // existing callers (password reset) are unchanged.
   attachments?: EmailAttachment[]
+}
+
+// ponytail: Mailgun attachment shape — filename + MIME type + content. The
+// content is a string (the .ics builder produces one); Mailgun's multipart
+// form-data accepts it directly. This replaced the Cloudflare-binding
+// EmailAttachment type (which had disposition/contentId fields Mailgun
+// doesn't use).
+export type EmailAttachment = {
+  filename: string
+  type: string
+  content: string
 }
 
 type EmailLayoutInput = {
@@ -55,12 +75,12 @@ type EmailLayoutInput = {
   body: string
 }
 
-// Thin wrapper over the Cloudflare Email Service binding. Both html + text are
-// required: some clients render text only and it improves spam scoring. Always
-// awaited inline (better-auth has no backgroundTasks.handler configured, so its
+// Thin wrapper over the Mailgun REST API. Both html + text are required: some
+// clients render text only and it improves spam scoring. Always awaited inline
+// (better-auth has no backgroundTasks.handler configured, so its
 // runInBackgroundOrAwait falls back to `await`), which keeps sends reliable at
 // the cost of a little request latency — acceptable for low-volume
-// transactional mail. No retry/backoff here; the binding queues on its side.
+// transactional mail. No retry/backoff here; Mailgun queues on its side.
 // Ceiling: if volume grows or latency matters, configure
 // `advanced.backgroundTasks.handler` (ctx.waitUntil) in auth.ts.
 export async function sendEmail({
@@ -70,15 +90,44 @@ export async function sendEmail({
   text,
   attachments,
 }: SendEmailInput) {
-  const email = getEmailBinding()
-  await email.send({
-    from: { email: FROM_ADDRESS, name: FROM_NAME },
-    to,
-    subject,
-    html,
-    text,
-    ...(attachments && attachments.length > 0 ? { attachments } : {}),
+  const env = getCloudflareEnv()
+  const apiKey = env?.MAILGUN_SENDING_KEY ?? env?.MAILGUN_API_KEY
+  const domain = env?.MAILGUN_DOMAIN
+  if (!apiKey || !domain) {
+    throw new Error(
+      'Mailgun credentials (MAILGUN_SENDING_KEY/MAILGUN_API_KEY + MAILGUN_DOMAIN) not available. Set them in .env.local for dev or as wrangler secrets for prod.',
+    )
+  }
+  const fromAddress = env.MAILGUN_FROM_EMAIL ?? FROM_ADDRESS
+
+  const form = new FormData()
+  form.set('from', `${FROM_NAME} <${fromAddress}>`)
+  form.set('to', to)
+  form.set('subject', subject)
+  form.set('html', html)
+  form.set('text', text)
+  for (const attachment of attachments ?? []) {
+    form.append(
+      'attachment',
+      new File([attachment.content], attachment.filename, {
+        type: attachment.type,
+      }),
+    )
+  }
+
+  const response = await fetch(`${MAILGUN_API_BASE}/${domain}/messages`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${btoa(`api:${apiKey}`)}`,
+    },
+    body: form,
   })
+  if (!response.ok) {
+    const body = await response.text().catch(() => '')
+    throw new Error(
+      `Mailgun send failed (${response.status}): ${body.slice(0, 500)}`,
+    )
+  }
 }
 
 function escapeAttr(value: string): string {
@@ -281,10 +330,10 @@ export function meetingCancellationHtml(input: {
 // the `ics` npm package. UID is stable per appointment id so re-importing
 // updates the same calendar entry instead of duplicating. The METHOD:REQUEST +
 // STATUS:CONFIRMED pair is what makes most clients (Google/Apple/Outlook) treat
-// it as an invite. Returns the EmailAttachment shape the Cloudflare Email
-// binding expects, OR null if serialization fails — callers should send the
-// email WITHOUT the attachment in that case (the email itself must never fail
-// just because the calendar blob couldn't be built).
+// it as an invite. Returns the Mailgun attachment shape, OR null if
+// serialization fails — callers should send the email WITHOUT the attachment
+// in that case (the email itself must never fail just because the calendar
+// blob couldn't be built).
 export type IcsInput = {
   appointmentId: number | string
   title: string
@@ -332,7 +381,7 @@ export function buildIcsAttachment(input: IcsInput): EmailAttachment | null {
     uid: `appointment-${input.appointmentId}@psicoayudaven.com`,
     method: 'REQUEST',
     status: 'CONFIRMED',
-    organizer: { name: input.organizerName, email: 'noreply@psicoayudaven.com' },
+    organizer: { name: input.organizerName, email: FROM_ADDRESS },
     attendees: [
       {
         name: input.attendeeName,
@@ -350,10 +399,9 @@ export function buildIcsAttachment(input: IcsInput): EmailAttachment | null {
     // upstream via the caller's Sentry capture.
     return null
   }
-  // ponytail: the `ics` lib returns a string; wrap as a UTF-8 attachment (the
-  // binding accepts raw string content).
+  // ponytail: the `ics` lib returns a string; wrap as a Mailgun attachment
+  // (the API accepts raw string content in multipart form-data).
   return {
-    disposition: 'attachment',
     filename: 'cita-psicoayudaven.ics',
     type: 'text/calendar; charset=utf-8; method=REQUEST',
     content: result.value,
