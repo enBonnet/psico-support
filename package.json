@@ -8,7 +8,7 @@
     "#/*": "./src/*"
   },
   "scripts": {
-    "dev": "node scripts/db-check.mjs && dotenv -e .env.local -- vite dev --port 3000",
+    "dev": "node scripts/db-check.mjs --fix && dotenv -e .env.local -- vite dev --port 3000",
     "generate-routes": "tsr generate",
     "build": "vite build",
     "preview": "vite preview",

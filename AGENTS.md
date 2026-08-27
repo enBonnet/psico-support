@@ -99,8 +99,11 @@ pnpm db:status                                           # sanity-check the runt
 exist so the comparison is misleading. The reliable check is `pnpm db:status`,
 which opens the real runtime `.sqlite` with `better-sqlite3` (WAL-consistent
 read) and confirms `d1_migrations` has ≥1 applied row **and** the `user` table
-exists. `pnpm dev` runs this same check as a preflight and warns loudly when
-the schema is missing so the blank-DB failure mode is caught early.
+exists. `pnpm dev` runs this same check as a preflight with `--fix`: when the
+schema is missing it **auto-applies the migrations** (`wrangler d1 migrations
+apply --local`) and re-checks, so a wiped `.wrangler/` self-heals on the next
+`pnpm dev` instead of booting a blank DB. Run the script without `--fix` (or
+`pnpm db:status`) for a read-only report.
 
 ### Versioning
 

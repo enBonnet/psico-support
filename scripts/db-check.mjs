@@ -25,7 +25,14 @@
 // Modes:
 //   node scripts/db-check.mjs            # default: warn + exit 0 (non-blocking)
 //   node scripts/db-check.mjs --strict   # exit 1 on missing schema (CI)
+//   node scripts/db-check.mjs --fix      # auto-apply migrations, then re-check
 //   pnpm run db:status                    # human-readable status report
+//
+// --fix is what `pnpm dev` uses: instead of warning and letting the dev server
+// boot against a blank DB (every query 500s), it runs
+// `wrangler d1 migrations apply --local` (which creates the runtime .sqlite
+// if missing AND applies the schema) and re-checks. Fails loudly if the apply
+// didn't fix it.
 //
 // Read-only: opens the plain path with { readonly: true } — never writes, never
 // boots wrangler, never checkpoints. (The `file:...?mode=ro` URI form fails on
@@ -33,10 +40,13 @@
 
 import { readdirSync, statSync, existsSync } from "node:fs";
 import { join } from "node:path";
+import { spawnSync } from "node:child_process";
 import Database from "better-sqlite3";
 
 const STATE_DIR = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
-const STRICT = process.argv.slice(2).includes("--strict");
+const ARGS = new Set(process.argv.slice(2));
+const STRICT = ARGS.has("--strict");
+const AUTO_FIX = ARGS.has("--fix");
 
 // ANSI helpers (plain text if piped — GitHub Actions logs strip these anyway,
 // but they aid local terminal scanning).
@@ -52,6 +62,57 @@ const FAIL = (msg) => {
   if (STRICT) process.exit(1);
   process.exit(0);
 };
+
+// --- auto-apply migrations (--fix, used by `pnpm dev`) ---
+// Runs `wrangler d1 migrations apply --local`, which creates the runtime
+// .sqlite if missing AND applies every pending migration from drizzle/. This
+// is the same command the docs tell you to run by hand — the preflight just
+// does it for you so `pnpm dev` always boots against a real schema.
+function applyMigrations() {
+  console.log(
+    `${cyan("→")} Applying local D1 migrations (${dim("wrangler d1 migrations apply --local")})...`,
+  );
+  const result = spawnSync(
+    "pnpm",
+    ["exec", "wrangler", "d1", "migrations", "apply", "psico-support-db", "--local"],
+    { stdio: "inherit" },
+  );
+  if (result.status !== 0) {
+    console.log(
+      `${red("✗  Migration apply failed")} ${dim(`(exit ${result.status ?? "signal"})`)}\n` +
+        `   Run ${FIX} manually and check the error.`,
+    );
+    process.exit(1);
+  }
+}
+
+// Re-check after a fix attempt: re-locate the DB (apply may have created it)
+// and re-run the schema checks. Returns true when healthy.
+function recheck() {
+  const path = findLocalDb();
+  if (!path) return false;
+  let db;
+  try {
+    db = new Database(path, { readonly: true });
+    const tables = new Set(
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+        )
+        .all()
+        .map((r) => r.name),
+    );
+    const hasUser = tables.has("user");
+    const count = tables.has("d1_migrations")
+      ? db.prepare("SELECT COUNT(*) AS n FROM d1_migrations").get()?.n ?? 0
+      : 0;
+    return hasUser && count > 0;
+  } catch {
+    return false;
+  } finally {
+    db?.close();
+  }
+}
 
 // --- locate the runtime D1 file (mirror scripts/seed-local.ts findLocalDb) ---
 function findLocalDb() {
@@ -71,6 +132,18 @@ const dbPath = findLocalDb();
 
 // --- no runtime DB at all (wrangler dev never run, or .wrangler wiped) ---
 if (!dbPath) {
+  if (AUTO_FIX) {
+    applyMigrations();
+    if (recheck()) {
+      console.log(`${green("✓")} Local D1 schema applied.`);
+      process.exit(0);
+    }
+    console.log(
+      `${red("✗  Local D1 still missing after applying migrations")}\n` +
+        `   Run ${FIX} manually and check the error.`,
+    );
+    process.exit(1);
+  }
   FAIL(
     `${yellow("⚠  Local D1 runtime DB not found")} ${dim(`(no .sqlite in ${STATE_DIR})`)}\n` +
       `   ${bold("The dev server will start against a BLANK database")} — every query will 500.\n` +
@@ -117,6 +190,18 @@ try {
 // --- diagnose against the real applied state ---
 if (appliedCount === 0 && !hasUserTable) {
   // File exists but no schema at all — the "silent reset" failure mode.
+  if (AUTO_FIX) {
+    applyMigrations();
+    if (recheck()) {
+      console.log(`${green("✓")} Local D1 schema applied.`);
+      process.exit(0);
+    }
+    console.log(
+      `${red("✗  Local D1 still missing after applying migrations")}\n` +
+        `   Run ${FIX} manually and check the error.`,
+    );
+    process.exit(1);
+  }
   FAIL(
     `${red("✗  Local D1 runtime schema is MISSING")} ${dim(`(${dbPath} exists but has no tables)`)}\n` +
       `   ${bold('Every query will 500 with "no such table".')}\n` +
@@ -128,6 +213,18 @@ if (appliedCount === 0 && !hasUserTable) {
 if (appliedCount === 0) {
   // d1_migrations empty/absent but user table somehow exists — partially applied
   // or hand-edited. The runtime contract is "migrations were applied", so flag it.
+  if (AUTO_FIX) {
+    applyMigrations();
+    if (recheck()) {
+      console.log(`${green("✓")} Local D1 migrations applied.`);
+      process.exit(0);
+    }
+    console.log(
+      `${red("✗  Local D1 still missing after applying migrations")}\n` +
+        `   Run ${FIX} manually and check the error.`,
+    );
+    process.exit(1);
+  }
   FAIL(
     `${red("✗  Local D1 migrations not applied")} ${dim(`(user table present but d1_migrations has 0 rows)`)}\n` +
       `   The schema looks hand-built. Apply migrations so the runtime matches drizzle/:\n` +

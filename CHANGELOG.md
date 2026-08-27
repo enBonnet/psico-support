@@ -8,6 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- **`pnpm dev` auto-aplica las migraciones D1 locales** ([scripts/db-check.mjs](scripts/db-check.mjs), [package.json](package.json)): el preflight de arranque ahora corre con `--fix` — si el schema del runtime D1 local falta (`.wrangler/` borrado, upgrade de wrangler), ejecuta `wrangler d1 migrations apply --local` y re-verifica en vez de arrancar contra una base vacía (que 500eaba cada query con «no such table»). `pnpm db:status` sigue siendo el reporte read-only; `--strict` sigue para CI.
+
+### Changed
 - **Correo transaccional vía Mailgun REST API, sin binding de Cloudflare** ([src/server/email.ts](src/server/email.ts), [src/db/index.ts](src/db/index.ts), [wrangler.jsonc](wrangler.jsonc)): `sendEmail()` ahora hace `POST https://api.mailgun.net/v3/{domain}/messages` con credenciales de entorno (`MAILGUN_SENDING_KEY`/`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_FROM_EMAIL` — en `.env.local` para dev, `wrangler secret put` para prod) en lugar del binding `send_email` con `remote: true`. Ese binding era lo único que obligaba a `wrangler dev` a abrir una sesión proxy remota (auth de Cloudflare + subdominio `workers.dev`), así que **cualquiera puede correr la app localmente sin cuenta de Cloudflare**. El remitente pasa a `noreply@mg.psicoayudaven.com` (dominio verificado en Mailgun); los adjuntos `.ics` se adaptan al formato multipart de Mailgun. Verificación: `pnpm dev` arranca sin «Establishing remote connection», `pnpm lint`/`pnpm test` (21/21) limpios, build de producción OK. **Pendiente post-deploy**: `pnpm exec wrangler secret put MAILGUN_SENDING_KEY`, luego `MAILGUN_DOMAIN` y `MAILGUN_FROM_EMAIL` (y `MAILGUN_REGION` si el dominio es EU) en prod.
 
 ## [1.35.0] - 2026-08-19
