@@ -1,17 +1,18 @@
 // =============================================================================
 // scripts/pull-prod-sanitized.mjs — pull prod D1 into local dev, PII-scrubbed
 // =============================================================================
-// Recovers a wiped .wrangler/ in one command with REALISTIC data (real pros
+// Rebuilds the local dev.db in one command with REALISTIC data (real pros
 // across all verifiedStatus/modality states, real audio categories) — no PII,
-// no daily hand-rebuild. Use after `git clean -fdx` or any .wrangler/ wipe.
+// no daily hand-rebuild. Use after deleting dev.db or any local wipe.
 //
 //   pnpm run db:pull-prod                    # default password: password123
 //   pnpm run db:pull-prod -- --password foo
 //   pnpm run db:pull-prod -- --dry-run       # export + report, write nothing
 //
 // What it does (4 phases):
-//   1. Export prod D1 via `wrangler d1 export --remote` to a gitignored file.
-//   2. Reset the local runtime DB (DROP all tables) and load the prod dump.
+//   1. Export prod D1 via `wrangler d1 export --remote` to a gitignored file
+//      (prod tooling — wrangler is still the deploy/prod CLI).
+//   2. Reset the local dev.db (DROP all tables) and load the prod dump.
 //      (wrangler's export has no BEGIN/COMMIT and no DELETE, so it is NOT
 //      idempotent — we wipe first to avoid UNIQUE violations on re-run.)
 //   3. Sanitize PII via targeted UPDATEs (load-then-update, not regex on SQL —
@@ -60,7 +61,7 @@ import Database from "better-sqlite3";
 
 // --- config ---
 const DB_NAME = "psico-support-db";
-const STATE_DIR = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
+const DB_PATH = "dev.db";
 const TMP_DIR = ".tmp";
 const RAW_SQL = join(TMP_DIR, "prod-raw.sql");
 
@@ -92,13 +93,7 @@ const c = {
 
 // --- helpers ---
 function findLocalDb() {
-  if (!existsSync(STATE_DIR)) return null;
-  const files = readdirSync(STATE_DIR)
-    .filter((f) => f.endsWith(".sqlite") && !f.startsWith("metadata"))
-    .map((f) => join(STATE_DIR, f));
-  if (files.length === 0) return null;
-  files.sort((a, b) => statSync(b).size - statSync(a).size);
-  return files[0];
+  return existsSync(DB_PATH) ? DB_PATH : null;
 }
 
 function run(cmd, cmdArgs, opts = {}) {
@@ -166,17 +161,18 @@ async function main() {
   console.log(c.green("  ✓ exported") + c.dim(` (${(statSync(RAW_SQL).size / 1024).toFixed(1)} KB)\n`));
 
   // ---- Phase 2: reset + load local runtime DB ----
-  console.log(c.bold("  Phase 2/4 — loading into local runtime DB…"));
+  console.log(c.bold("  Phase 2/4 — loading into local dev.db…"));
   let dbPath = findLocalDb();
 
-  // If the runtime DB is missing or has no schema, apply migrations so the
-  // schema exists before we load prod data into it.
+  // If dev.db is missing or has no schema, apply migrations so the schema
+  // exists before we load prod data into it. Plain-Node migrator (same as the
+  // `pnpm dev` preflight) — no wrangler/miniflare in local dev.
   if (!dbPath) {
     console.log(c.dim("  local DB missing — applying migrations first…"));
-    run("pnpm", ["exec", "wrangler", "d1", "migrations", "apply", DB_NAME, "--local"]);
+    run("pnpm", ["run", "db:apply:local"]);
     dbPath = findLocalDb();
   }
-  if (!dbPath) throw new Error("Could not locate runtime DB even after migrations.");
+  if (!dbPath) throw new Error("Could not locate dev.db even after migrations.");
 
   const db = new Database(dbPath);
   try {
@@ -202,6 +198,29 @@ async function main() {
     const load = db.transaction(() => db.exec(sql));
     load();
     db.exec("PRAGMA foreign_keys = ON");
+
+    // The wipe above dropped the LOCAL migration-tracking table (prod tracks
+    // in `d1_migrations`, which the dump may have re-created — drop it, it
+    // means nothing locally). Rebuild `local_migrations` from the drizzle/
+    // listing: prod is fully migrated (CI applies everything), so every file
+    // counts as applied. Without this, the next `pnpm dev` preflight would
+    // re-run every migration against the freshly loaded schema and fail.
+    db.exec("DROP TABLE IF EXISTS d1_migrations");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS local_migrations (
+        name TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    const insertMigration = db.prepare(
+      "INSERT OR IGNORE INTO local_migrations (name) VALUES (?)",
+    );
+    const track = db.transaction(() => {
+      for (const f of readdirSync("drizzle").filter((f) => f.endsWith(".sql")).sort()) {
+        insertMigration.run(f);
+      }
+    });
+    track();
 
     const userCount = db.prepare("SELECT count(*) AS n FROM user").get()?.n ?? 0;
     if (userCount === 0) {

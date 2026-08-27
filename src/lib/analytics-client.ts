@@ -1,5 +1,5 @@
 import { track as trackServerFn } from '#/server/analytics'
-import type { TrackedEvent } from '#/server/analytics'
+import type { TrackedEvent } from '#/lib/analytics-events'
 
 // ============================================================================
 // Client analytics helper — anonId + typed track()

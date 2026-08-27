@@ -1,52 +1,36 @@
-// Preflight check: is the local miniflare D1 runtime schema applied?
+// Preflight check: is the local dev SQLite (dev.db) schema applied?
 //
-// There are TWO local SQLite databases — don't confuse them:
-//   1. dev.db (DATABASE_URL) — drizzle-kit tooling only (db:generate/push/pull/
-//      studio). Introspection target for schema diffs; NOT the runtime DB.
-//   2. .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite — the runtime
-//      D1 that `wrangler dev` actually serves requests against. THIS is what we
-//      check, because a missing runtime schema is what makes every query 500
-//      with "no such table".
+// Local dev runs on plain Node (no wrangler/miniflare). There is ONE local
+// database — dev.db at the repo root (gitignored):
+//   - the dev RUNTIME DB (src/db/driver.ts opens it with better-sqlite3)
+//   - AND the drizzle-kit tooling DB (DATABASE_URL=file:./dev.db)
+// The old two-databases split (dev.db + .wrangler miniflare state) is gone;
+// prod still runs D1, unaffected.
 //
-// The runtime D1 file can silently lose its schema when .wrangler/ is wiped
-// (git clean, wrangler upgrade, manual delete) — wrangler dev then recreates a
-// BLANK database. `wrangler d1 migrations list --local` is unreliable here: it
-// reads the files in drizzle/, not the applied set on the real .sqlite, and when
-// the DB is blank the d1_migrations table doesn't exist so the comparison is
-// misleading.
-//
-// This script opens the real runtime .sqlite with better-sqlite3 (already a
-// dependency — same as scripts/seed-local.ts) and queries the actual state:
-//   - the `d1_migrations` table exists AND has ≥1 row (a migration was applied)
-//   - the `user` table exists
-// A WAL-consistent read handles committed-but-uncheckpointed pages (the previous
-// raw byte-grep approach missed CREATE TABLE IF NOT EXISTS and WAL-held pages).
+// Migrations are applied by scripts/db-apply-local.mjs (wrangler-style
+// file-listing semantics over drizzle/*.sql, tracked in `local_migrations`).
 //
 // Modes:
 //   node scripts/db-check.mjs            # default: warn + exit 0 (non-blocking)
 //   node scripts/db-check.mjs --strict   # exit 1 on missing schema (CI)
 //   node scripts/db-check.mjs --fix      # auto-apply migrations, then re-check
-//   pnpm run db:status                    # human-readable status report
+//   pnpm run db:status                   # human-readable status report
 //
-// --fix is what `pnpm dev` uses: instead of warning and letting the dev server
-// boot against a blank DB (every query 500s), it runs
-// `wrangler d1 migrations apply --local` (which creates the runtime .sqlite
-// if missing AND applies the schema) and re-checks. Fails loudly if the apply
-// didn't fix it.
-//
-// Read-only: opens the plain path with { readonly: true } — never writes, never
-// boots wrangler, never checkpoints. (The `file:...?mode=ro` URI form fails on
-// WAL DBs in better-sqlite3; the options form is the working path.)
+// --fix is what `pnpm dev` uses: instead of warning and letting the dev
+// server boot against a blank DB (every query 500s with "no such table"),
+// it runs db-apply-local.mjs (which creates dev.db if missing AND applies
+// the schema) and re-checks. Fails loudly if the apply didn't fix it.
 
-import { readdirSync, statSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import Database from "better-sqlite3";
 
-const STATE_DIR = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
 const ARGS = new Set(process.argv.slice(2));
 const STRICT = ARGS.has("--strict");
 const AUTO_FIX = ARGS.has("--fix");
+
+const DB_PATH = "dev.db";
+const FIX = "pnpm db:apply:local";
 
 // ANSI helpers (plain text if piped — GitHub Actions logs strip these anyway,
 // but they aid local terminal scanning).
@@ -64,36 +48,34 @@ const FAIL = (msg) => {
 };
 
 // --- auto-apply migrations (--fix, used by `pnpm dev`) ---
-// Runs `wrangler d1 migrations apply --local`, which creates the runtime
-// .sqlite if missing AND applies every pending migration from drizzle/. This
-// is the same command the docs tell you to run by hand — the preflight just
-// does it for you so `pnpm dev` always boots against a real schema.
+// Runs scripts/db-apply-local.mjs, which creates dev.db if missing AND
+// applies every pending migration from drizzle/ (plain Node — no wrangler).
 function applyMigrations() {
-  console.log(
-    `${cyan("→")} Applying local D1 migrations (${dim("wrangler d1 migrations apply --local")})...`,
-  );
-  const result = spawnSync(
-    "pnpm",
-    ["exec", "wrangler", "d1", "migrations", "apply", "psico-support-db", "--local"],
-    { stdio: "inherit" },
-  );
+  console.log(`${cyan("→")} Applying local migrations ${dim("(db-apply-local.mjs)")}...`);
+  const result = spawnSync("pnpm", ["run", "db:apply:local"], {
+    stdio: "inherit",
+  });
   if (result.status !== 0) {
     console.log(
       `${red("✗  Migration apply failed")} ${dim(`(exit ${result.status ?? "signal"})`)}\n` +
-        `   Run ${FIX} manually and check the error.`,
+        `   Run ${cyan(FIX)} manually and check the error.`,
     );
     process.exit(1);
   }
 }
 
-// Re-check after a fix attempt: re-locate the DB (apply may have created it)
-// and re-run the schema checks. Returns true when healthy.
-function recheck() {
-  const path = findLocalDb();
-  if (!path) return false;
+// Open dev.db read-only and inspect the real schema state. db-check never
+// writes — db-apply-local.mjs (spawned by --fix) owns all writing. Plain path
+// + { readonly: true } is the WAL-consistent form (the `file:...?mode=ro`
+// URI form fails on WAL DBs in better-sqlite3).
+function checkSchema() {
   let db;
   try {
-    db = new Database(path, { readonly: true });
+    db = new Database(DB_PATH, { readonly: true });
+  } catch (err) {
+    return { ok: false, error: String(err.message) };
+  }
+  try {
     const tables = new Set(
       db
         .prepare(
@@ -103,145 +85,74 @@ function recheck() {
         .map((r) => r.name),
     );
     const hasUser = tables.has("user");
-    const count = tables.has("d1_migrations")
-      ? db.prepare("SELECT COUNT(*) AS n FROM d1_migrations").get()?.n ?? 0
+    const count = tables.has("local_migrations")
+      ? db.prepare("SELECT COUNT(*) AS n FROM local_migrations").get()?.n ?? 0
       : 0;
-    return hasUser && count > 0;
-  } catch {
-    return false;
+    return { ok: hasUser && count > 0, hasUser, count };
+  } catch (err) {
+    return { ok: false, error: String(err.message) };
   } finally {
     db?.close();
   }
 }
 
-// --- locate the runtime D1 file (mirror scripts/seed-local.ts findLocalDb) ---
-function findLocalDb() {
-  if (!existsSync(STATE_DIR)) return null;
-  const files = readdirSync(STATE_DIR)
-    .filter((f) => f.endsWith(".sqlite") && !f.startsWith("metadata"))
-    .map((f) => join(STATE_DIR, f));
-  if (files.length === 0) return null;
-  // Largest file = the real DB; miniflare can leave stray small files.
-  files.sort((a, b) => statSync(b).size - statSync(a).size);
-  return files[0];
-}
+const existed = existsSync(DB_PATH);
 
-const FIX = cyan("pnpm exec wrangler d1 migrations apply psico-support-db --local");
-
-const dbPath = findLocalDb();
-
-// --- no runtime DB at all (wrangler dev never run, or .wrangler wiped) ---
-if (!dbPath) {
+// --- missing dev.db (fresh clone, or deleted) ---
+if (!existed) {
   if (AUTO_FIX) {
     applyMigrations();
-    if (recheck()) {
-      console.log(`${green("✓")} Local D1 schema applied.`);
+    const after = checkSchema();
+    if (after.ok) {
+      console.log(`${green("✓")} Local dev.db created + schema applied.`);
       process.exit(0);
     }
     console.log(
-      `${red("✗  Local D1 still missing after applying migrations")}\n` +
-        `   Run ${FIX} manually and check the error.`,
+      `${red("✗  dev.db still unhealthy after applying migrations")}\n` +
+        `   Run ${cyan(FIX)} manually and check the error.`,
     );
     process.exit(1);
   }
   FAIL(
-    `${yellow("⚠  Local D1 runtime DB not found")} ${dim(`(no .sqlite in ${STATE_DIR})`)}\n` +
-      `   ${bold("The dev server will start against a BLANK database")} — every query will 500.\n` +
-      `   Run ${FIX} first.`,
+    `${yellow("⚠  dev.db not found")} ${dim(`(no ${DB_PATH} at repo root)`)}\n` +
+      `   ${bold("The dev server preflight will create it on the next `pnpm dev`")},\n` +
+      `   or create it now with ${cyan(FIX)}.`,
   );
-}
-
-// --- open read-only (WAL-consistent: better-sqlite3 applies the -wal on read) ---
-let db;
-let appliedCount = 0;
-let hasUserTable = false;
-try {
-  // Plain path + { readonly: true }. The preflight must never write the runtime
-  // DB. NOTE: better-sqlite3's `file:...?mode=ro` URI form FAILS on WAL-mode DBs
-  // (unable to open database file) — only the plain-path + options form works.
-  // readonly opens the WAL shared-memory (-shm) for a consistent read without
-  // checkpointing or taking a write lock; a concurrent wrangler dev is fine.
-  db = new Database(dbPath, { readonly: true });
-  // sqlite_master holds every CREATE TABLE/INDEX row regardless of quoting or
-  // IF NOT EXISTS — no regex fragility. Returns ["user", "d1_migrations", ...].
-  const tables = new Set(
-    db
-      .prepare(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
-      )
-      .all()
-      .map((r) => r.name),
-  );
-  hasUserTable = tables.has("user");
-  if (tables.has("d1_migrations")) {
-    appliedCount =
-      db.prepare("SELECT COUNT(*) AS n FROM d1_migrations").get()?.n ?? 0;
-  }
-} catch (err) {
-  FAIL(
-    `${red("✗  Could not read local D1")} ${dim(`(${dbPath})`)}\n` +
-      `   ${bold(String(err.message))}\n` +
-      `   If wrangler dev is running it may hold a lock; otherwise run ${FIX}.`,
-  );
-} finally {
-  db?.close();
 }
 
 // --- diagnose against the real applied state ---
-if (appliedCount === 0 && !hasUserTable) {
-  // File exists but no schema at all — the "silent reset" failure mode.
+const state = checkSchema();
+if (state.error) {
+  FAIL(
+    `${red("✗  Could not read dev.db")} ${dim(`(${DB_PATH}: ${state.error})`)}\n` +
+      `   If the dev server is running it may hold a lock; otherwise run ${cyan(FIX)}.`,
+  );
+}
+
+if (!state.ok) {
+  // File exists but schema is missing/partial — the failure mode that 500s
+  // every query with "no such table".
   if (AUTO_FIX) {
     applyMigrations();
-    if (recheck()) {
-      console.log(`${green("✓")} Local D1 schema applied.`);
+    const after = checkSchema();
+    if (after.ok) {
+      console.log(`${green("✓")} Local dev.db schema applied.`);
       process.exit(0);
     }
     console.log(
-      `${red("✗  Local D1 still missing after applying migrations")}\n` +
-        `   Run ${FIX} manually and check the error.`,
+      `${red("✗  dev.db still unhealthy after applying migrations")}\n` +
+        `   Run ${cyan(FIX)} manually and check the error.`,
     );
     process.exit(1);
   }
   FAIL(
-    `${red("✗  Local D1 runtime schema is MISSING")} ${dim(`(${dbPath} exists but has no tables)`)}\n` +
+    `${red("✗  Local dev.db schema is MISSING or PARTIAL")} ${dim(`(user table: ${state.hasUser ? "yes" : "no"}, migrations recorded: ${state.count})`)}\n` +
       `   ${bold('Every query will 500 with "no such table".')}\n` +
-      `   This happens when .wrangler/ is wiped — wrangler dev recreated a blank DB.\n` +
-      `   Fix: ${FIX}`,
-  );
-}
-
-if (appliedCount === 0) {
-  // d1_migrations empty/absent but user table somehow exists — partially applied
-  // or hand-edited. The runtime contract is "migrations were applied", so flag it.
-  if (AUTO_FIX) {
-    applyMigrations();
-    if (recheck()) {
-      console.log(`${green("✓")} Local D1 migrations applied.`);
-      process.exit(0);
-    }
-    console.log(
-      `${red("✗  Local D1 still missing after applying migrations")}\n` +
-        `   Run ${FIX} manually and check the error.`,
-    );
-    process.exit(1);
-  }
-  FAIL(
-    `${red("✗  Local D1 migrations not applied")} ${dim(`(user table present but d1_migrations has 0 rows)`)}\n` +
-      `   The schema looks hand-built. Apply migrations so the runtime matches drizzle/:\n` +
-      `   ${FIX}`,
-  );
-}
-
-if (!hasUserTable) {
-  // d1_migrations populated but no user table — shouldn't happen normally but
-  // would mean a migration failed mid-apply. Flag loudly.
-  FAIL(
-    `${red("✗  Local D1 schema is PARTIAL")} ${dim(`(${appliedCount} migrations recorded but no user table)`)}\n` +
-      `   A migration may have failed mid-apply. Re-run ${FIX}.`,
+      `   Fix: ${cyan(FIX)}`,
   );
 }
 
 // --- healthy ---
 console.log(
-  `${green("✓")} Local D1 schema OK ${dim(`(${appliedCount} migrations applied, ${dbPath})`)}`,
+  `${green("✓")} Local dev.db schema OK ${dim(`(${state.count} migrations applied, ${DB_PATH})`)}`,
 );

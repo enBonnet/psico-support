@@ -11,7 +11,7 @@ time on this project.
 ## Stack
 
 - **TanStack Start** (React 19, selective SSR — most routes CSR, profile SSR) + TanStack Router / Query / Form
-- **Cloudflare Workers** + **D1** (SQLite) via `@cloudflare/vite-plugin`, **R2** (binary uploads), **Analytics Engine** (product analytics), **Email Service** (transactional mail)
+- **Two runtimes, one codebase**: local dev runs **plain Node** (better-sqlite3 `dev.db` + a filesystem media bucket — no wrangler/workerd/miniflare); production deploys to **Cloudflare Workers** + **D1** + **R2** + **Analytics Engine** via `@cloudflare/vite-plugin` (build-only — see gotcha #12)
 - **Better Auth** (email/password; admin via DB `user.role`, not env)
 - **Drizzle ORM** + drizzle-kit (migrations in `drizzle/`)
 - **Tailwind CSS v4** + custom glass components (no shadcn registry pulls)
@@ -22,7 +22,8 @@ time on this project.
 ## Commands
 
 ```bash
-pnpm dev             # http://localhost:3000 (reads .env.local) — NO service worker (dev)
+pnpm dev             # http://localhost:3000 (reads .env.local) — plain Node SSR, NO wrangler/
+                     #   (the db-check preflight auto-creates + migrates dev.db). NO SW in dev.
 pnpm build           # vite production build (SSR + client) then prerenders /_shell
                      #   (prerender needs miniflare; CI sets CLOUDFLARE_VITE_FORCE_LOCAL=true)
 pnpm lint            # eslint
@@ -65,45 +66,44 @@ wrangler secrets in prod — one command per secret:
 There is deliberately **no `send_email` binding** — the old `remote: true`
 binding forced `wrangler dev` to open a remote proxy session, which required
 Cloudflare auth + a workers.dev subdomain and blocked anyone without account
-access from running the app locally.
+access from running the app locally. (Local dev no longer runs `wrangler` at
+all — see gotcha #12 — but the binding stays gone.)
 
-### Database (D1)
+### Database (local dev.db / prod D1)
 
-There are **two** local SQLite databases with different purposes — do not confuse them:
-
-- **`dev.db`** (`DATABASE_URL=file:./dev.db` in `.env`) — the **drizzle-kit
-  tooling** DB. Used only by `db:generate` / `db:push` / `db:pull` / `db:studio`
-  as the introspection target for schema diffs. Drizzle creates it on demand; it
-  is gitignored and not the runtime DB.
-- **`.wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite`** — the
-  **runtime** D1 that `wrangler dev` actually serves requests against (the
-  filename hash is derived from `database_id` in `wrangler.jsonc`, so it's
-  deterministic across runs). **This** is where query failures originate.
+**One** local SQLite database: **`dev.db`** at the repo root (gitignored,
+WAL mode). It is BOTH the drizzle-kit tooling DB (`DATABASE_URL=file:./dev.db`
+for `db:generate`/`db:push`/`db:studio`) AND the dev runtime DB that `pnpm dev`
+serves requests against (opened by `src/db/driver.ts` with better-sqlite3).
+Production runs D1 — unchanged. The old two-DB split (`dev.db` +
+`.wrangler/state/.../miniflare-*.sqlite`) is gone; `.wrangler/` state only
+exists for prod builds (`vite build` prerender + `wrangler dev` smoke tests)
+and CI.
 
 After editing `src/db/schema.ts`:
 
 ```bash
-pnpm db:generate                                         # writes drizzle/000N_*.sql
-pnpm exec wrangler d1 migrations apply psico-support-db --local   # local runtime DB
-pnpm db:status                                           # sanity-check the runtime schema
+pnpm db:generate          # writes drizzle/000N_*.sql
+pnpm db:apply:local       # applies ALL drizzle/*.sql to dev.db (wrangler-style
+                          #   file listing — NOT the drizzle journal, which
+                          #   would skip hand-written 0018–0022)
+pnpm db:status            # read-only sanity-check of dev.db
 ```
 
-**Symptom of a missing local runtime schema:** every query 500s with
-`Failed query: ... no such table`. This happens when `.wrangler/` is wiped
-(git clean, wrangler upgrade, manual delete) — `wrangler dev` then recreates a
-**blank** runtime D1 with no tables and no `d1_migrations`. Re-running
-`migrations apply --local` fixes it.
+`pnpm dev` runs `scripts/db-check.mjs --fix` as a preflight: when `dev.db` is
+missing or schema-less it runs `db:apply:local` (creating the file if needed)
+and re-checks, so a fresh clone or a deleted `dev.db` self-heals on the next
+`pnpm dev`. `db:status` gives the read-only report; `--strict` is for CI.
 
-**`migrations list --local` is NOT a reliable check** — it lists the files in
-`drizzle/`, and when the runtime DB is blank the `d1_migrations` table doesn't
-exist so the comparison is misleading. The reliable check is `pnpm db:status`,
-which opens the real runtime `.sqlite` with `better-sqlite3` (WAL-consistent
-read) and confirms `d1_migrations` has ≥1 applied row **and** the `user` table
-exists. `pnpm dev` runs this same check as a preflight with `--fix`: when the
-schema is missing it **auto-applies the migrations** (`wrangler d1 migrations
-apply --local`) and re-checks, so a wiped `.wrangler/` self-heals on the next
-`pnpm dev` instead of booting a blank DB. Run the script without `--fix` (or
-`pnpm db:status`) for a read-only report.
+Migration tracking locally is the `local_migrations` table (file names, same
+semantics as wrangler's `d1_migrations` on prod). `pnpm db:pull-prod` rebuilds
+that table after loading a prod dump (the dump carries prod's `d1_migrations`,
+which means nothing locally). Seed fixtures with `pnpm db:seed`; promote a
+local admin with `pnpm db:promote-admin`.
+
+`wrangler d1 migrations apply psico-support-db --local` is now only needed
+before **prod builds** (the prerender crawls against miniflare D1 — CI does
+this automatically). It no longer affects `pnpm dev`.
 
 ### Versioning
 
@@ -227,12 +227,18 @@ absent from server HTML (renders on hydrate). Verify with `view-source`.
 
 ### 7. PWA: app shell + service worker
 
-`tanstackStart({ spa: { enabled: true } })` (`vite.config.ts`) is **not** for
-CSR — it's a build-time shell generator. It prerenders `/` with the
+`tanstackStart({ spa: { enabled: <build only> } })` (`vite.config.ts`) is
+**not** for CSR — it's a build-time shell generator. It prerenders `/` with the
 `X-TSS_SHELL` header, the SSR handler renders an **empty shell** (no route
 loaders), and writes it to `dist/client/_shell.html`. This gives the service
 worker a cacheable static shell for offline cold-open. It does **not** conflict
 with selective SSR (gotcha #6) — the shell and runtime route SSR are independent.
+
+**`spa.enabled` must stay OFF in dev** (it's gated to `isProdBuild` — gotcha
+#12). If it's on during `vite dev`, TanStack serves every route as a client
+shell: SSR loaders silently stop running server-side (only `__root__` shows in
+the dehydrated matches), the SSR profile page renders its notFound head, and
+nothing errors. Symptom: dev HTML has full `<head>` meta but no route content.
 
 `public/sw.js` is **hand-rolled** (vite-plugin-pwa's Workbox generation does
 not fire under Vite 8 + the named `ssr` env; VitePWA is kept only to emit the
@@ -399,6 +405,82 @@ context, which resolve per-request from the inbound `Host` header.
   once only one KNOWN_HOST remains in practice) or be collapsed back to a
   constant.
 
+### 12. Two runtimes: Node dev / Workers prod, split by `#/db/driver` alias
+
+Local dev runs **plain Node** — no wrangler, no workerd, no miniflare, no
+`.wrangler/` state. Production deploys to Cloudflare Workers. The split lives
+in `vite.config.ts`:
+
+- `command === 'build' || process.env.TSS_PRERENDERING === 'true'` → include
+  `cloudflare({ viteEnvironment: { name: 'ssr' } })` + alias
+  `#/db/driver` → `src/db/driver.worker.ts` (D1 + real R2 binding).
+- Otherwise (`vite dev`) → no cloudflare plugin; `#/db/driver` resolves
+  naturally (tsconfig `#/*` paths) to `src/db/driver.ts`: better-sqlite3 on
+  `dev.db` (WAL), a filesystem R2 shim under `.local/media/`, and a
+  module-load `setCloudflareEnv(devEnvFromProcess())` so server fns keep
+  reading `MAILGUN_*` / `APPOINTMENTS_ENABLED` / `CF_*` through
+  `getCloudflareEnv()` unchanged. `ANALYTICS` is deliberately absent in dev —
+  the existing guards no-op analytics.
+
+**Why `TSS_PRERENDERING`:** the post-build prerender boots an internal
+`vite preview` server, which re-resolves `vite.config.ts` with
+`command === 'serve'`. Without the env check the preview would drop the
+cloudflare plugin, fall back to its Node middleware, and 500 the crawl
+(`Failed to fetch /: Internal Server Error` — it imports a `server.js` the
+worker build never emits). TanStack sets `TSS_PRERENDERING=true` before
+starting that preview server; it's the reliable build-context signal.
+
+**Rules:**
+
+- **The browser must never resolve `#/db/driver` to a real driver.** Server-fn
+  modules (e.g. `src/server/analytics.ts`, `src/server/professionals.ts`) keep
+  their module-level `#/db` imports in the client variants TanStack compiles,
+  so every route's client graph contains `#/db` → `#/db/driver`. The
+  `driver-select` plugin in `vite.config.ts` maps that specifier per
+  environment: client → `src/db/driver.client.ts` (a stub that throws if ever
+  CALLED, but is inert to LOAD); ssr → `driver.worker.ts` in prod/prerender
+  builds; plain dev SSR → natural resolution (`driver.ts`). Why it matters:
+  without the stub, dev handed the browser `better-sqlite3`, whose module
+  scope crashed hydration ("promisify is not a function") and every CSR route
+  hung on the pending spinner. This Vite version has no per-environment
+  `resolve.alias`, hence the plugin — don't "simplify" it into a build alias;
+  client exports that must stay client-safe as VALUES (constants, pure URL
+  builders like `TRACKED_EVENTS` / `SPECIALIZED_AREA_OPTIONS` /
+  `publicAvatarUrl`) live in `src/lib/*`, not under `src/server/`.
+- **Never import `better-sqlite3` outside `src/db/driver.ts` and `scripts/`**
+  (tsx-run Node scripts). The native addon cannot run on workerd; the alias
+  only protects the graph if better-sqlite3 has exactly one app-code entry
+  point. Verified post-build: `dist/server` contains only inert
+  better-sqlite3 *strings* (comments, dialect maps), never module code, and
+  `dist/client` contains no driver at all.
+- `Db` stays the **D1-derived async type** even though dev runs the sync
+  better-sqlite3 driver underneath — the async type forces `await` at every
+  call site, which works on both. Don't drop awaits "because dev is sync".
+- **`src/server.ts` is the SSR entry in BOTH runtimes.** TanStack resolves
+  `src/server.ts` by filename convention for the dev server (it doesn't read
+  `wrangler.jsonc`), so `/sitemap.xml`, the vanity `/psicologos` `/ayudame`
+  `/ya` 301s, the HTTP→HTTPS redirect, and immutable `/assets/*` headers run
+  in `pnpm dev` too. The one prod-only piece is the `@sentry/cloudflare`
+  wrapper: it's a dynamic import behind an `import.meta.env.PROD` branch
+  (that SDK needs the Workers runtime); Node dev inits the tanstackstart Node
+  SDK with the same shared options instead, and the start.ts middlewares
+  instrument requests in both runtimes.
+- **Dev is verifiably Cloudflare-free.** `pnpm dev` boots and serves the full
+  app (SSR, auth, media, sitemap) with `wrangler.jsonc` renamed away AND
+  `node_modules/@cloudflare`, `node_modules/wrangler`, and
+  `node_modules/@sentry/cloudflare` physically hidden — no workerd process is
+  spawned, `.wrangler/` is never written. Keep it that way: any new
+  `@cloudflare/*` or `@sentry/cloudflare` import must be either build-gated
+  (dynamic import behind `isProdBuild`/`import.meta.env.PROD`) or live in
+  files outside the dev graph. `@cloudflare/workers-types` is types-only
+  (tsc) and stays a normal dependency.
+- Plain `vite preview` (`pnpm preview`) can't serve the worker bundle (Node
+  middleware + worker-format output mismatch) — also fine with
+  build + `wrangler dev`.
+- R2 surface is intentionally narrow (`put/get/delete` + `httpMetadata`).
+  If R2 features beyond that are adopted (ranges, listings), extend the
+  `.local/media` shim or test via the prod build.
+
 ## Outbound communications
 
 `docs/professional-communications.md` is the log of every broadcast message
@@ -483,7 +565,11 @@ src/
     whatsapp.ts          # centralized WhatsApp deep-link + message builder
     hooks/use-debounced.ts
     version.ts           # APP_VERSION (re-export of build-time __APP_VERSION__)
-  db/                    # Drizzle schema + D1 client (setCloudflareEnv per-request)
+   db/                    # Drizzle schema + client split by runtime:
+                          #   index.ts (shared Db type + retry helpers), env.ts (per-request env holder),
+                          #   driver.ts (Node dev: better-sqlite3 + .local/media R2 shim),
+                          #   driver.worker.ts (D1/R2 bindings — selected at build),
+                          #   driver.client.ts (browser stub — see gotcha #12 rules)
   styles.css             # design tokens + glass + nav + notifications
 drizzle/                 # migration SQL (applied via wrangler, not drizzle-kit)
 public/

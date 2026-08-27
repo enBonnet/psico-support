@@ -1,11 +1,10 @@
 // =============================================================================
-// scripts/promote-local-admin.ts — set a user's role to 'admin' on the local D1
+// scripts/promote-local-admin.ts — set a user's role to 'admin' on the local DB
 // =============================================================================
 // For local dev only. Promotes a user (default: admin@enbonnet.com) to
-// role='admin' on the LOCAL wrangler-managed runtime D1 — the same DB that
-// `wrangler dev` serves. This is NOT the drizzle-kit `dev.db` (which is an
-// empty introspection target — see scripts/db-check.mjs), and it never touches
-// remote/prod. For prod use:
+// role='admin' on the LOCAL dev.db (the single local SQLite that `pnpm dev`
+// serves — see scripts/db-check.mjs). It never touches remote/prod. For prod
+// use:
 //   pnpm exec wrangler d1 execute psico-support-db --remote \
 //     --command "UPDATE user SET role='admin' WHERE email='...';"
 //
@@ -20,18 +19,16 @@
 // src/server/professionals.ts (promote-only means an admin can never
 // accidentally lock themselves — or the last admin — out of the panel).
 // ponytail: ceiling — to test the non-admin state locally, re-seed with
-// `pnpm run db:seed -- --reset`, or edit the row directly via
-// `wrangler d1 execute psico-support-db --local`.
+// `pnpm run db:seed -- --reset`, or edit the row directly with better-sqlite3.
 //
-// Opens the runtime .sqlite directly with better-sqlite3 (same approach as
+// Opens dev.db directly with better-sqlite3 (same approach as
 // scripts/seed-local.ts / reset-local-passwords.ts). One handle; readonly only
 // in --dry-run so a missing user / table is reported without taking a write
-// lock. Safe alongside a running `wrangler dev` — SQLite serializes writers,
+// lock. Safe alongside a running `pnpm dev` — SQLite serializes writers,
 // and this writes one row by primary key.
 // =============================================================================
 
-import { readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import Database from 'better-sqlite3'
 
 type Args = { email: string; dryRun: boolean }
@@ -76,33 +73,17 @@ function parseArgs(argv: string[]): Args {
 	return { email, dryRun }
 }
 
-// Mirrors findLocalDb() in scripts/seed-local.ts + reset-local-passwords.ts.
-// ponytail: hardcoded path under .wrangler/state — the filename hash is derived
-// from database_id in wrangler.jsonc so it's stable across runs; auto-detect
-// by glob + largest-file heuristic so we don't drift if miniflare changes its
-// scheme. Ceiling: if multiple D1 bindings ever exist, this picks the largest
-// file (heuristic for "the one with data").
+// Mirrors findLocalDb() in scripts/seed-local.ts + reset-local-passwords.ts:
+// the single local dev.db at the repo root. Throws with a helpful hint if
+// it's missing — that means migrations haven't been applied yet.
 function findLocalDb(): string {
-	const dir = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
-	let files: string[]
-	try {
-		files = readdirSync(dir)
-			.filter((f) => f.endsWith('.sqlite') && !f.startsWith('metadata'))
-			.map((f) => join(dir, f))
-	} catch {
+	if (!existsSync('dev.db')) {
 		throw new Error(
-			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first to create it.',
+			'dev.db not found at the repo root.\n' +
+				'Run `pnpm db:apply:local` (or just `pnpm dev`) to create it first.',
 		)
 	}
-	if (files.length === 0) {
-		throw new Error(
-			`No D1 sqlite files in ${dir}.\n` +
-				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
-		)
-	}
-	files.sort((a, b) => statSync(b).size - statSync(a).size)
-	return files[0]
+	return 'dev.db'
 }
 
 // async so `main().catch(...)` below always receives a Promise — matches the
@@ -118,7 +99,7 @@ async function main() {
 
 	// One handle; readonly in dry-run so a missing user is reported without a
 	// write lock. better-sqlite3 applies the WAL on read for a consistent view
-	// even while wrangler dev holds the DB (see scripts/db-check.mjs).
+	// even while pnpm dev holds the DB (see scripts/db-check.mjs).
 	const db = new Database(dbPath, { readonly: dryRun })
 
 	const row = db

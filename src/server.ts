@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/cloudflare'
 import { wrapFetchWithSentry } from '@sentry/tanstackstart-react'
 import {
   createStartHandler,
@@ -153,13 +152,16 @@ function immutableAssetHeaders(request: Request, response: Response): Response {
   })
 }
 
-// ponytail: @sentry/cloudflare owns worker-runtime Sentry init + per-request
-// isolation. @sentry/node (what @sentry/tanstackstart-react uses server-side)
-// can't run on the Workers runtime, so the outer withSentry is the one that
-// actually initializes Sentry here; the inner wrapFetchWithSentry still
-// instruments TanStack server-fns (per the TanStack-Start-on-Cloudflare guide).
-// When no DSN is configured we export the bare handler so CI/dev without a DSN
-// still build and run.
+// ponytail: Sentry init is runtime-split (gotcha #12). @sentry/node — what
+// @sentry/tanstackstart-react uses server-side — can't run on the Workers
+// runtime, so the PROD build wraps the entry with @sentry/cloudflare's
+// withSentry (imported dynamically, only in this branch, so Node dev never
+// loads the package). In Node dev the tanstackstart SDK inits directly with
+// the same shared options; the start.ts middlewares
+// (sentryGlobal{Request,Function}Middleware) instrument requests either way,
+// and wrapFetchWithSentry below still instruments TanStack server-fns.
+// When no DSN is configured we export the bare handler so CI/dev without a
+// DSN still build and run.
 const entry = createServerEntry(
   wrapFetchWithSentry({
     async fetch(request: Request, opts?: unknown): Promise<Response> {
@@ -197,6 +199,16 @@ const entry = createServerEntry(
 
 const sentryOptions = getSentryInitOptions()
 
-export default sentryOptions
-  ? Sentry.withSentry(() => sentryOptions, entry)
-  : entry
+let exported = entry
+if (sentryOptions) {
+  if (import.meta.env.PROD) {
+    const { withSentry } = await import('@sentry/cloudflare')
+    exported = withSentry(() => sentryOptions, entry)
+  } else {
+    // Node dev: init the tanstackstart (Node) server SDK directly. The
+    // Workers-only cloudflare SDK must not be imported in dev.
+    const { init } = await import('@sentry/tanstackstart-react')
+    init(sentryOptions)
+  }
+}
+export default exported

@@ -109,11 +109,14 @@ y gestionar su disponibilidad.
 ```bash
 pnpm install
 cp .env.example .env.local           # completa los valores
-pnpm exec wrangler d1 migrations apply psico-support-db --local
 pnpm dev                          # http://localhost:3000
 ```
 
-La BD local se guarda en `dev.db` (ignorado por git).
+El desarrollo local corre en **Node puro** — sin wrangler, workerd ni
+miniflare. `pnpm dev` crea y migra `dev.db` automáticamente en el preflight
+(primera vez: BD vacía; puebla con `pnpm db:seed`). La BD local es un único
+`dev.db` (ignorado por git) que sirve tanto a drizzle-kit como al runtime de
+dev; producción usa D1 en Cloudflare, sin cambios.
 
 ### Probar la PWA localmente
 
@@ -141,29 +144,30 @@ Copia `.env.example` a `.env.local` y completa:
 | `VITE_SENTRY_DSN`    | no        | DSN de Sentry para el cliente y el worker (sin él, Sentry queda inactivo) |
 | `SENTRY_AUTH_TOKEN`  | no        | Token para subir source maps en build/deploy                              |
 
-> Los bindings `DB`, `MEDIA`, `ANALYTICS` y `EMAIL` se declaran en
-> `wrangler.jsonc` y existen automáticamente en `wrangler dev`/deploy — no
-> requieren variables de entorno.
+> Los bindings `DB`, `MEDIA` y `ANALYTICS` se declaran en `wrangler.jsonc` y
+> existen automáticamente en builds de producción y deploy. En `pnpm dev` no
+> hay bindings: la BD es `dev.db` (better-sqlite3), los medios van a
+> `.local/media/` (shim de R2 en disco) y la analítica no-op (a propósito).
 
 ### Base de datos
 
 Las migraciones viven en `drizzle/`. Tras editar `src/db/schema.ts`:
 
 ```bash
-pnpm db:generate                                         # crea el SQL en drizzle/
-pnpm exec wrangler d1 migrations apply psico-support-db --local   # aplica en local
+pnpm db:generate      # crea el SQL en drizzle/
+pnpm db:apply:local   # aplica TODOS los drizzle/*.sql a dev.db
 ```
 
 ### Dar permisos de administrador
 
 El admin se define en la BD (`user.role`), no por variable de entorno. Para
-promover en la BD runtime local hay un script dedicado:
+promover en la BD local hay un script dedicado:
 
 ```bash
 pnpm db:promote-admin -- --email tu@correo.com   # --dry-run para ver sin escribir
 ```
 
-O directamente con SQL contra la runtime:
+O directamente con SQL contra `dev.db`:
 
 ```sql
 UPDATE user SET role = 'admin' WHERE email = 'tu@correo.com';
@@ -171,21 +175,21 @@ UPDATE user SET role = 'admin' WHERE email = 'tu@correo.com';
 
 ## Scripts
 
-Referencia completa de `package.json`. Los que tocan la BD de **runtime**
-(`.wrangler/state/...`) se distinguen de los que solo tocan `dev.db`
-(herramienta de drizzle-kit).
+Referencia completa de `package.json`. La BD local es un único `dev.db`
+(herramienta drizzle-kit **y** runtime de `pnpm dev`); producción corre D1.
 
 ### Desarrollo y build
 
-| Script            | Comando                                                                     | Descripción                                                                       |
-| ----------------- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| `dev`             | `node scripts/db-check.mjs && dotenv -e .env.local -- vite dev --port 3000` | Servidor de desarrollo en `:3000`. Antes arranca `db-check` (avisa si falta el    |
-|                   |                                                                             | esquema runtime) y carga `.env.local` vía `dotenv-cli`. **No activa el SW.**      |
-| `build`           | `vite build`                                                                | Build de producción (SSR + cliente) y prerenderiza `/_shell` (necesita miniflare; |
-|                   |                                                                             | CI usa `CLOUDFLARE_VITE_FORCE_LOCAL=true`).                                       |
-| `preview`         | `vite preview`                                                              | Sirve el build de producción localmente.                                          |
-| `generate-routes` | `tsr generate`                                                              | Regenera `routeTree.gen.ts` desde `src/routes/` (normalmente corre automático en  |
-|                   |                                                                             | dev/build; útil para forzarlo).                                                   |
+| Script            | Comando                                                                      | Descripción                                                                       |
+| ----------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| `dev`             | `node scripts/db-check.mjs --fix && dotenv -e .env.local -- vite dev --port 3000` | Servidor de desarrollo en `:3000` sobre **Node puro** (sin wrangler). El        |
+|                   |                                                                              | preflight crea/migra `dev.db` si falta y carga `.env.local` vía `dotenv-cli`.    |
+|                   |                                                                              | **No activa el SW.**                                                              |
+| `build`           | `vite build`                                                                 | Build de producción (SSR + cliente) y prerenderiza `/_shell` (necesita miniflare; |
+|                   |                                                                              | CI usa `CLOUDFLARE_VITE_FORCE_LOCAL=true`).                                       |
+| `preview`         | `vite preview`                                                               | No sirve el build de Workers (usa `wrangler dev`, ver PWA más arriba).            |
+| `generate-routes` | `tsr generate`                                                               | Regenera `routeTree.gen.ts` desde `src/routes/` (normalmente corre automático en  |
+|                   |                                                                              | dev/build; útil para forzarlo).                                                   |
 
 ### Calidad de código
 
@@ -208,42 +212,42 @@ Referencia completa de `package.json`. Los que tocan la BD de **runtime**
 
 ### Base de datos — esquema y migraciones (drizzle-kit, BD `dev.db`)
 
-Estos operan sobre `dev.db` (`DATABASE_URL`), el objetivo de introspección de
-drizzle-kit, **no** la BD runtime que sirve `wrangler dev`.
+Estos operan sobre `dev.db` (`DATABASE_URL`) — el mismo archivo que sirve el
+runtime de `pnpm dev` desde la unificación de la BD local.
 
-| Script        | Comando                | Descripción                                                          |
-| ------------- | ---------------------- | -------------------------------------------------------------------- |
-| `db:generate` | `drizzle-kit generate` | Crea `drizzle/000N_*.sql` a partir de cambios en `src/db/schema.ts`. |
-| `db:migrate`  | `drizzle-kit migrate`  | Aplica migraciones con el migrador de drizzle-kit (sobre `dev.db`).  |
-| `db:push`     | `drizzle-kit push`     | Empuja el esquema directamente, sin generar archivos de migración.   |
-| `db:pull`     | `drizzle-kit pull`     | Introspecta la BD y regenera el esquema (útil para sincronizar).     |
-| `db:studio`   | `drizzle-kit studio`   | Abre Drizzle Studio (GUI contra `dev.db`).                           |
+| Script          | Comando                | Descripción                                                          |
+| --------------- | ---------------------- | -------------------------------------------------------------------- |
+| `db:generate`   | `drizzle-kit generate` | Crea `drizzle/000N_*.sql` a partir de cambios en `src/db/schema.ts`. |
+| `db:migrate`    | `drizzle-kit migrate`  | Migrador de drizzle-kit. **Preferido: `db:apply:local`** (ver abajo). |
+| `db:push`       | `drizzle-kit push`     | Empuja el esquema directamente, sin generar archivos de migración.   |
+| `db:pull`       | `drizzle-kit pull`     | Introspecta la BD y regenera el esquema (útil para sincronizar).     |
+| `db:studio`     | `drizzle-kit studio`   | Abre Drizzle Studio (GUI contra `dev.db`).                           |
 
-Para aplicar migraciones a la BD runtime de verdad, usa wrangler:
+Para aplicar migraciones a **producción** (D1 remoto), usa wrangler:
 
 ```bash
-pnpm exec wrangler d1 migrations apply psico-support-db --local   # local runtime
 pnpm exec wrangler d1 migrations apply psico-support-db --remote  # producción
 ```
 
-### Base de datos — runtime (wrangler)
+### Base de datos — runtime local (dev.db)
 
 | Script               | Descripción                                                                                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `db:status`          | Comprueba que la BD runtime (`scripts/db-check.mjs`) tenga esquema aplicado. Solo lectura. No arranca                                                                                       |
-|                      | wrangler. Lo corre `pnpm dev` como preflight.                                                                                                                                            |
-| `db:seed`            | Puebla la BD runtime local con fixtures (`scripts/seed-local.ts`): un admin + profesionales en todos                                                                                        |
+| `db:apply:local`     | Aplica TODOS los `drizzle/*.sql` a `dev.db` (`scripts/db-apply-local.mjs`) con semántica de listado de archivos (como wrangler), NO el journal de drizzle — que se saltaría las migraciones |
+|                      | escritas a mano (0018–0022). Trackea en la tabla `local_migrations`.                                                                                                                        |
+| `db:status`          | Comprueba que `dev.db` tenga esquema aplicado (`scripts/db-check.mjs`). Solo lectura. Lo corre `pnpm dev` como preflight con `--fix` (auto-aplica si falta).                                 |
+| `db:seed`            | Puebla la BD local con fixtures (`scripts/seed-local.ts`): un admin + profesionales en todos                                                                                                |
 |                      | los estados. Idempotente por email; `--reset` limpia todo primero; contraseña por defecto                                                                                                   |
 |                      | `password123`. Requiere migraciones aplicadas antes.                                                                                                                                        |
-| `db:pull-prod`       | Vuelca la BD D1 de **producción** en la runtime local, **con PII anonimizada**                                                                                                              |
+| `db:pull-prod`       | Vuelca la BD D1 de **producción** en `dev.db`, **con PII anonimizada**                                                                                                                      |
 |                      | (`scripts/pull-prod-sanitized.mjs`): emails anonimizados (salvo admins), contraseñas/tokens reset,                                                                                          |
-|                      | WhatsApp falseados, PII clínico borrado. Útil cuando `.wrangler/` se borró y la BD runtime quedó en blanco. `--dry-run` imprime el reporte pero igualmente sobrescribe la BD runtime local. |
+|                      | WhatsApp falseados, PII clínico borrado. Útil para reconstruir la BD local con datos realistas. `--dry-run` imprime el reporte pero igualmente sobrescribe la BD local.                     |
 |                      | El SQL crudo de prod se borra siempre al terminar (nunca persiste en disco).                                                                                                                |
 | `db:reset-passwords` | Pone una contraseña única en todas las cuentas `credential` locales                                                                                                                         |
 |                      | (`scripts/reset-local-passwords.ts`) para poder iniciar sesión como cualquier usuario sin saber su clave.                                                                                   |
 |                      | `--email` para uno solo, `--dry-run` para ver sin escribir. Hash scrypt compatible con Better Auth.                                                                                         |
-| `db:promote-admin`   | Promueve un usuario a `role='admin'` en la runtime local (`scripts/promote-local-admin.ts`). Promote-only (sin demote),                                                                     |
-|                      | idempotente. `--email` para uno solo, `--dry-run` para ver sin escribir. Reutiliza el patrón de los otros scripts de runtime local.                                                         |
+| `db:promote-admin`   | Promueve un usuario a `role='admin'` en la BD local (`scripts/promote-local-admin.ts`). Promote-only (sin demote),                                                                          |
+|                      | idempotente. `--email` para uno solo, `--dry-run` para ver sin escribir. Reutiliza el patrón de los otros scripts de BD local.                                                              |
 
 ### Analítica y docs
 
@@ -258,7 +262,7 @@ pnpm exec wrangler d1 migrations apply psico-support-db --remote  # producción
 
 ## Despliegue (Cloudflare)
 
-Los bindings de D1, R2, Analytics Engine y Email, y el dominio, están en
+Los bindings de D1, R2 y Analytics Engine, y el dominio, están en
 `wrangler.jsonc`.
 
 ```bash

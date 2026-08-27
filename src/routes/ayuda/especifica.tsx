@@ -12,11 +12,12 @@ import {
 } from 'lucide-react'
 import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'
-import { SPECIALIZED_AREA_OPTIONS } from '#/server/professionals'
+import { SPECIALIZED_AREA_OPTIONS } from '#/lib/professional-shared'
 
 // ponytail: per-category icon + one-line description shown under the label.
-// Kept inline (not in the server const) because this is presentation, not data
-// — the server's SPECIALIZED_AREA_OPTIONS stays the single source of truth for
+// Kept inline (not in the shared const) because this is presentation, not data
+// — #/lib/professional-shared's SPECIALIZED_AREA_OPTIONS stays the single
+// source of truth for
 // valid tags; this map only chooses how to render each. Keys must stay in sync
 // with SPECIALIZED_AREA_OPTIONS (tsc doesn't enforce it across files; a typo
 // would silently fall through to the Sparkles default — keep them aligned).

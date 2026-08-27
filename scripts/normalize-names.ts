@@ -37,8 +37,7 @@
 // =============================================================================
 
 import Database from 'better-sqlite3'
-import { readFileSync, readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync, readFileSync } from 'node:fs'
 
 import { normalizeName } from '../src/lib/name'
 
@@ -56,31 +55,16 @@ function sqlStr(v: string): string {
 }
 
 function findLocalDb(): string {
-  // ponytail: mirror scripts/migrate-specialized-areas.ts's findLocalDb —
-  // wrangler's local D1 lives under
-  // .wrangler/state/v3/d1/miniflare-D1DatabaseObject/*.sqlite, not at a fixed
-  // dev.db path. Sort by size desc to pick the real DB if miniflare ever
-  // leaves stray files. Throws with a helpful hint if the state dir is
-  // missing — that means `wrangler d1 migrations apply --local` hasn't run.
-  const dir = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
-  let files: string[]
-  try {
-    files = readdirSync(dir)
-      .filter((f) => f.endsWith('.sqlite') && !f.startsWith('metadata'))
-      .map((f) => join(dir, f))
-  } catch {
+  // Local dev runs on plain Node with a single dev.db at the repo root (see
+  // scripts/db-check.mjs). Throws with a helpful hint if it's missing — that
+  // means migrations haven't been applied yet.
+  if (!existsSync('dev.db')) {
     throw new Error(
-      `No wrangler D1 state found at ${dir}.\n` +
-        'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
+      'dev.db not found at the repo root.\n' +
+        'Run `pnpm db:apply:local` (or just `pnpm dev`) to create it first.',
     )
   }
-  if (files.length === 0)
-    throw new Error(
-      `No D1 sqlite files in ${dir}.\n` +
-        'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
-    )
-  files.sort((a, b) => statSync(b).size - statSync(a).size)
-  return files[0]
+  return 'dev.db'
 }
 
 function runLocal(dbPathOverride?: string) {

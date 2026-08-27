@@ -18,10 +18,10 @@ import {
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
-  SPECIALIZED_AREA_OPTIONS,
   PAIS_OPTIONS,
   VENEZUELA_ESTADOS,
 } from '#/server/professionals'
+import { SPECIALIZED_AREA_OPTIONS } from '#/lib/professional-shared'
 import type {
   ProfileEditInput,
   CertificateMime,

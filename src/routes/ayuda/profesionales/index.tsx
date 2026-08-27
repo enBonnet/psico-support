@@ -21,9 +21,9 @@ import {
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
-  SPECIALIZED_AREA_OPTIONS,
   PAGE_SIZE_DEFAULT,
 } from '#/server/professionals'
+import { SPECIALIZED_AREA_OPTIONS } from '#/lib/professional-shared'
 import type {
   PublicProfessional,
   AvailabilityMode,

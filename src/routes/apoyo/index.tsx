@@ -5,7 +5,7 @@ import { Headphones, Play } from 'lucide-react'
 
 import { listStoryTray } from '#/server/audio-stories'
 import type { StoryTrayPro, StoryClipCategory } from '#/server/audio-stories'
-import { publicAvatarUrl } from '#/server/professionals'
+import { publicAvatarUrl } from '#/lib/professional-shared'
 import { AudioStoryViewer } from '#/components/audio-story-viewer'
 import { track } from '#/lib/analytics-client'
 import { seoHead } from '#/lib/seo'

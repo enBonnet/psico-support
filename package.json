@@ -23,6 +23,7 @@
     "db:pull": "drizzle-kit pull",
     "db:studio": "drizzle-kit studio",
     "db:status": "node scripts/db-check.mjs",
+    "db:apply:local": "node scripts/db-apply-local.mjs",
     "db:pull-prod": "node scripts/pull-prod-sanitized.mjs",
     "db:reset-passwords": "tsx scripts/reset-local-passwords.ts",
     "db:seed": "tsx scripts/seed-local.ts",

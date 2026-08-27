@@ -22,8 +22,7 @@
 // =============================================================================
 
 import { scrypt, randomBytes } from 'node:crypto'
-import { readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import Database from 'better-sqlite3'
 
 type Args = { password: string; reset: boolean }
@@ -65,26 +64,17 @@ function parseArgs(argv: string[]): Args {
 	return { password, reset }
 }
 
+// Local dev runs on plain Node with a single dev.db at the repo root (see
+// scripts/db-check.mjs). Throws with a helpful hint if it's missing — that
+// means migrations haven't been applied yet.
 function findLocalDb(): string {
-	const dir = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
-	let files: string[]
-	try {
-		files = readdirSync(dir)
-			.filter((f) => f.endsWith('.sqlite') && !f.startsWith('metadata'))
-			.map((f) => join(dir, f))
-	} catch {
+	if (!existsSync('dev.db')) {
 		throw new Error(
-			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
+			'dev.db not found at the repo root.\n' +
+				'Run `pnpm db:apply:local` (or just `pnpm dev`) to create it first.',
 		)
 	}
-	if (files.length === 0)
-		throw new Error(
-			`No D1 sqlite files in ${dir}.\n` +
-				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
-		)
-	files.sort((a, b) => statSync(b).size - statSync(a).size)
-	return files[0]
+	return 'dev.db'
 }
 
 function generateKey(password: string, salt: string): Promise<Buffer> {

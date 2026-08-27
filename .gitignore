@@ -16,6 +16,13 @@ todos.json
 dev.db
 dev.db-bak
 dev.db.bak
+# WAL sidecars of the local runtime DB (dev.db runs in WAL mode)
+dev.db-wal
+dev.db-shm
+# Local dev services (R2 filesystem bucket under .local/media)
+.local/
+# Playwright CLI session artifacts (console logs, page snapshots)
+.playwright-cli/
 .claude/
 .agents/
 .cursor/
