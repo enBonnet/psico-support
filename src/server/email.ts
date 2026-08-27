@@ -1,6 +1,7 @@
 import { createEvent as buildIcs } from 'ics'
 
 import { getCloudflareEnv } from '#/db'
+import type { CloudflareEnv } from '#/db'
 import { SITE_NAME } from '#/lib/seo'
 // ponytail: resolveSiteUrl (server-only) so email action links + logo match
 // the host the triggering request landed on (psicoayudaven.com OR
@@ -19,7 +20,13 @@ import { resolveSiteUrl } from '#/lib/seo-server'
 // from env vars (MAILGUN_*), set in .env.local for dev and via
 // `wrangler secret put` for prod.
 // Ceiling: if volume grows, switch to Mailgun's batch API or a queue.
+//
+// ponytail: region selection — Mailgun runs US (api.mailgun.net) and EU
+// (api.eu.mailgun.net) API bases. MAILGUN_REGION ('us' | 'eu', default 'us')
+// picks the base; the endpoint is always /v3/{domain}/messages. The domain
+// itself must live in the matching region (a US-domain on the EU base 404s).
 const MAILGUN_API_BASE = 'https://api.mailgun.net/v3'
+const MAILGUN_EU_API_BASE = 'https://api.eu.mailgun.net/v3'
 
 // ponytail: from-address comes from MAILGUN_FROM_EMAIL (env) with a constant
 // fallback — better-auth sendResetPassword and any future transactional mail
@@ -29,6 +36,14 @@ const MAILGUN_API_BASE = 'https://api.mailgun.net/v3'
 // is verified as a Mailgun sender, so Mailgun would reject any other From.
 const FROM_ADDRESS = 'noreply@mg.psicoayudaven.com'
 const FROM_NAME = 'PsicoAyudas'
+
+// ponytail: single source of truth for the sender address — sendEmail() uses
+// it for the From field and buildIcsAttachment() for organizer.email, so a
+// configured MAILGUN_FROM_EMAIL (or the fallback) is always consistent across
+// the email and its calendar invite.
+function resolveFromAddress(env: CloudflareEnv | null): string {
+  return env?.MAILGUN_FROM_EMAIL ?? FROM_ADDRESS
+}
 
 // Mirrors Medicall tokens in src/styles.css — inline only (no CSS vars in mail).
 // ponytail: logoUrl is intentionally NOT here — it's per-request (resolved in
@@ -98,7 +113,9 @@ export async function sendEmail({
       'Mailgun credentials (MAILGUN_SENDING_KEY/MAILGUN_API_KEY + MAILGUN_DOMAIN) not available. Set them in .env.local for dev or as wrangler secrets for prod.',
     )
   }
-  const fromAddress = env.MAILGUN_FROM_EMAIL ?? FROM_ADDRESS
+  const fromAddress = resolveFromAddress(env)
+  const apiBase =
+    env.MAILGUN_REGION === 'eu' ? MAILGUN_EU_API_BASE : MAILGUN_API_BASE
 
   const form = new FormData()
   form.set('from', `${FROM_NAME} <${fromAddress}>`)
@@ -115,7 +132,7 @@ export async function sendEmail({
     )
   }
 
-  const response = await fetch(`${MAILGUN_API_BASE}/${domain}/messages`, {
+  const response = await fetch(`${apiBase}/${domain}/messages`, {
     method: 'POST',
     headers: {
       Authorization: `Basic ${btoa(`api:${apiKey}`)}`,
@@ -381,7 +398,10 @@ export function buildIcsAttachment(input: IcsInput): EmailAttachment | null {
     uid: `appointment-${input.appointmentId}@psicoayudaven.com`,
     method: 'REQUEST',
     status: 'CONFIRMED',
-    organizer: { name: input.organizerName, email: FROM_ADDRESS },
+    organizer: {
+      name: input.organizerName,
+      email: resolveFromAddress(getCloudflareEnv()),
+    },
     attendees: [
       {
         name: input.attendeeName,

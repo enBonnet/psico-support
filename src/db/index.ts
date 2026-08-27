@@ -15,6 +15,9 @@ export type CloudflareEnv = {
   MAILGUN_SENDING_KEY?: string
   MAILGUN_DOMAIN?: string
   MAILGUN_FROM_EMAIL?: string
+  // ponytail: Mailgun API region — 'us' (default) or 'eu'. Picks the API base
+  // in sendEmail(); the domain must live in the matching region.
+  MAILGUN_REGION?: string
   // ponytail: wrangler secrets (not bindings) for the Analytics Engine SQL
   // REST API read path (src/server/analytics-read.ts). Optional — the admin
   // analytics route shows a "no configurada" banner when absent. Set with

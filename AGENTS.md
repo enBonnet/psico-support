@@ -55,13 +55,17 @@ to app code.
 The `ANALYTICS` (Analytics Engine) and `MEDIA` (R2) bindings are declared in
 `wrangler.jsonc` and exist automatically in `wrangler dev`/deploy — no env var
 needed. Transactional mail goes through **Mailgun** (REST API, not a binding):
-`MAILGUN_SENDING_KEY`/`MAILGUN_API_KEY`, `MAILGUN_DOMAIN`, `MAILGUN_FROM_EMAIL`
-come from `.env.local` in dev and must be set as wrangler secrets in prod
-(`pnpm exec wrangler secret put MAILGUN_*`). There is deliberately **no
-`send_email` binding** — the old `remote: true` binding forced `wrangler dev`
-to open a remote proxy session, which required Cloudflare auth + a workers.dev
-subdomain and blocked anyone without account access from running the app
-locally.
+`MAILGUN_SENDING_KEY` (or `MAILGUN_API_KEY`) and `MAILGUN_DOMAIN` are
+**required**; `MAILGUN_FROM_EMAIL` is optional (falls back to
+`noreply@mg.psicoayudaven.com`); `MAILGUN_REGION` (`us`/`eu`, default `us`)
+picks the API base. They come from `.env.local` in dev and must be set as
+wrangler secrets in prod — one command per secret:
+`pnpm exec wrangler secret put MAILGUN_SENDING_KEY`, then
+`MAILGUN_DOMAIN`, then `MAILGUN_FROM_EMAIL` (and `MAILGUN_REGION` if EU).
+There is deliberately **no `send_email` binding** — the old `remote: true`
+binding forced `wrangler dev` to open a remote proxy session, which required
+Cloudflare auth + a workers.dev subdomain and blocked anyone without account
+access from running the app locally.
 
 ### Database (D1)
 
