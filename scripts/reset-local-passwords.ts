@@ -2,8 +2,8 @@
 // scripts/reset-local-passwords.ts — set every local user's password to one value
 // =============================================================================
 // For local dev only. Replaces the password on every `credential` account in the
-// local wrangler-managed D1 with a single shared value, so you can log in as any
-// user from the seeded DB (e.g. after `wrangler d1 export --remote | import`)
+// local dev.db with a single shared value, so you can log in as any
+// user from the seeded DB (e.g. after `pnpm db:pull-prod`)
 // without knowing each user's real prod password.
 //
 // Usage:
@@ -21,17 +21,12 @@
 // leave this machine). Real Better Auth uses random per-user salts; the verify
 // path only checks the salt:hash format, so a fixed salt works identically.
 //
-// ponytail: hardcoded DB path under .wrangler/state — the hash is stable across
-// miniflare versions for a given database_id, but if wrangler ever changes its
-// hashing scheme this script will need the new path. Auto-detect by globbing the
-// state dir so we don't drift. Ceiling: if multiple D1 bindings exist, this
-// picks the largest file (heuristic for "the one with data"). Upgrade path:
-// expose a wrangler command that does this (none exists today).
+// Opens dev.db (repo root) directly with better-sqlite3 — see
+// scripts/db-check.mjs for the local-database contract.
 // =============================================================================
 
 import { scrypt, randomBytes } from 'node:crypto'
-import { readdirSync, statSync } from 'node:fs'
-import { join } from 'node:path'
+import { existsSync } from 'node:fs'
 import Database from 'better-sqlite3'
 
 type Args = {
@@ -103,28 +98,16 @@ function generateKey(password: string, salt: string): Promise<Buffer> {
 }
 
 function findLocalDb(): string {
-	const dir = '.wrangler/state/v3/d1/miniflare-D1DatabaseObject'
-	let files: string[]
-	try {
-		files = readdirSync(dir)
-			.filter((f) => f.endsWith('.sqlite') && !f.startsWith('metadata'))
-			.map((f) => join(dir, f))
-	} catch {
+	// The single local dev.db at the repo root (see scripts/db-check.mjs).
+	// Throws with a helpful hint if it's missing — that means migrations
+	// haven't been applied yet.
+	if (!existsSync('dev.db')) {
 		throw new Error(
-			`No wrangler D1 state found at ${dir}.\n` +
-				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first to create it.',
+			'dev.db not found at the repo root.\n' +
+				'Run `pnpm db:apply:local` (or just `pnpm dev`) to create it first.',
 		)
 	}
-	if (files.length === 0) {
-		throw new Error(
-			`No D1 sqlite files in ${dir}.\n` +
-				'Run `pnpm exec wrangler d1 migrations apply psico-support-db --local` first.',
-		)
-	}
-	// Pick the largest file — heuristic for the active DB when multiple exist
-	// (older miniflare versions leave orphans).
-	files.sort((a, b) => statSync(b).size - statSync(a).size)
-	return files[0]
+	return 'dev.db'
 }
 
 async function main() {

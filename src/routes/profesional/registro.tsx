@@ -17,10 +17,10 @@ import {
   POPULATION_OPTIONS,
   FOCUS_GROUP_OPTIONS,
   PRACTICE_AREA_OPTIONS,
-  SPECIALIZED_AREA_OPTIONS,
   VENEZUELA_ESTADOS,
   PAIS_OPTIONS,
 } from '#/server/professionals'
+import { SPECIALIZED_AREA_OPTIONS } from '#/lib/professional-shared'
 import type { RegisterInput, SpecializationMode } from '#/server/professionals'
 import { VENEZUELA, ESTADO_CIUDADES } from '#/server/locations'
 import {

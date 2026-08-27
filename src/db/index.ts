@@ -1,54 +1,25 @@
-import { drizzle } from 'drizzle-orm/d1'
+import type { DrizzleD1Database } from 'drizzle-orm/d1'
 
-import * as schema from './schema.ts'
+// The environment split: `#/db/driver` resolves to src/db/driver.ts (Node:
+// better-sqlite3 + local filesystem bucket) in dev, and is aliased to
+// src/db/driver.worker.ts (D1 + R2 bindings) in the production build — see
+// vite.config.ts. Everything else in this file is runtime-agnostic.
+import { getDriverDb, getDriverR2 } from '#/db/driver'
 
-export type CloudflareEnv = {
-  DB: D1Database
-  MEDIA: R2Bucket
-  EMAIL: SendEmail
-  ANALYTICS: AnalyticsEngineDataset
-  // ponytail: wrangler secrets (not bindings) for the Analytics Engine SQL
-  // REST API read path (src/server/analytics-read.ts). Optional — the admin
-  // analytics route shows a "no configurada" banner when absent. Set with
-  // `pnpm exec wrangler secret put CF_ACCOUNT_ID` / `CF_ANALYTICS_TOKEN`.
-  CF_ACCOUNT_ID?: string
-  CF_ANALYTICS_TOKEN?: string
-  // ponytail: server-side feature flag for video-call scheduling (1.25.0).
-  // A wrangler secret (NOT a binding) so flipping it takes effect without
-  // redeploy. Truthy values: 'true' / '1'. Off by default — every appointment
-  // server fn checks appointmentsEnabled() first and rejects when off. Mirror
-  // with VITE_APPOINTMENTS_ENABLED (build-time) so the client CTA/cards hide
-  // too; the two are intentionally separate knobs (a secret can't reach the
-  // client bundle, a VITE_ var is baked at build) — set both together.
-  APPOINTMENTS_ENABLED?: string
-}
+import { getCloudflareEnv } from './env.ts'
+import type * as schema from './schema.ts'
 
-let _env: CloudflareEnv | null = null
+export { getCloudflareEnv, setCloudflareEnv } from './env.ts'
+export type { CloudflareEnv } from './env.ts'
 
-// ponytail: set by the custom server entry on each request so server fns
-// can reach the D1/R2 bindings without threading env through every call.
-export function setCloudflareEnv(env: CloudflareEnv) {
-  _env = env
-}
-
-export function getCloudflareEnv(): CloudflareEnv | null {
-  return _env
-}
-
-export type Db = ReturnType<typeof drizzle<typeof schema>>
-
-let cached: Db | null = null
+// ponytail: the shared DB type is the D1-derived async type even though dev
+// runs better-sqlite3 (sync) underneath — the async type forces every call
+// site to `await`, which works on both drivers. Don't "simplify" callers to
+// drop the await: they'd break in prod.
+export type Db = DrizzleD1Database<typeof schema>
 
 export function getDb(): Db {
-  if (cached) return cached
-  const env = getCloudflareEnv()
-  if (!env?.DB) {
-    throw new Error(
-      'D1 binding (DB) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
-    )
-  }
-  cached = drizzle(env.DB, { schema })
-  return cached
+  return getDriverDb()
 }
 
 // ponytail: D1 queries can fail transiently because the Durable Object hosting
@@ -68,6 +39,9 @@ export function getDb(): Db {
 // (the canonical Cloudflare transient-backend error) and the older reset
 // strings. Without this, retries never fire and every transient blip surfaces
 // as a thrown 500 — which is what WEB-H was for 2+ weeks.
+//
+// On the local better-sqlite3 driver these markers never match, so the wrapper
+// is a pass-through in dev — harmless.
 const TRANSIENT_D1_MARKERS = [
   'storage caused object to be reset',
   'object to be reset',
@@ -115,47 +89,25 @@ export async function withD1Retry<T>(
   throw lastErr
 }
 
-// ponytail: R2 binding for binary uploads (professional certificates).
-// Not cached — the binding is a stateless handle,getDb() caches the drizzle
-// wrapper, R2 has no such wrapper.
+// ponytail: R2 access. The worker driver returns the real MEDIA binding; the
+// Node driver returns the filesystem bucket under .local/media. Not cached at
+// this level — the drivers cache what's stateful.
 export function getR2(): R2Bucket {
-  const env = getCloudflareEnv()
-  if (!env?.MEDIA) {
-    throw new Error(
-      'R2 binding (MEDIA) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
-    )
-  }
-  return env.MEDIA
+  return getDriverR2()
 }
 
-// ponytail: Cloudflare Email Service binding for transactional mail. Like
-// getR2(), not cached — the binding is a stateless handle. Throws a dev-facing
-// error when missing so the failure is obvious in local dev. Sender domain
-// must be onboarded in the dashboard (Compute > Email Service > Email Sending
-// > Onboard Domain) — NOT via `wrangler email sending enable`, which 403s
-// even with the right scope. See wrangler.jsonc send_email ponytail.
-export function getEmailBinding(): SendEmail {
-  const env = getCloudflareEnv()
-  if (!env?.EMAIL) {
-    throw new Error(
-      'Email binding (EMAIL) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
-    )
-  }
-  return env.EMAIL
-}
-
-// ponytail: Analytics Engine binding for product analytics. Like getR2()/
-// getEmailBinding(): a stateless handle, not cached. Returns void on
-// writeDataPoint() (fire-and-forget — never await). In dev, the binding is
-// absent and writes silently no-op via the track() server fn guard; this
-// throws only when called directly (e.g. SSR funnel events) to make a missing
-// binding obvious. See src/server/analytics.ts for the catalog + track fn.
+// ponytail: Analytics Engine binding for product analytics. Returns void on
+// writeDataPoint() (fire-and-forget — never await). In Node dev the binding is
+// absent (the dev env registers no ANALYTICS) and writes silently no-op via
+// the track() server fn guard; this throws only when called directly (e.g. SSR
+// funnel events) to make a missing binding obvious in prod. See
+// src/server/analytics.ts for the catalog + track fn.
 export function getAnalytics(): AnalyticsEngineDataset {
-  const env = getCloudflareEnv()
-  if (!env?.ANALYTICS) {
+  const analytics = getCloudflareEnv()?.ANALYTICS
+  if (!analytics) {
     throw new Error(
-      'Analytics binding (ANALYTICS) not available. Run via `pnpm run dev` (wrangler) or deploy to Cloudflare.',
+      'Analytics binding (ANALYTICS) not available. Deploy to Cloudflare; in Node dev analytics intentionally no-ops.',
     )
   }
-  return env.ANALYTICS
+  return analytics
 }

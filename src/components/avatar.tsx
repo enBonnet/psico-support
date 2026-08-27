@@ -1,5 +1,5 @@
 import { cn } from '#/lib/utils'
-import { publicAvatarUrl } from '#/server/professionals'
+import { publicAvatarUrl } from '#/lib/professional-shared'
 
 // ponytail: shared avatar with initials fallback. Used by the public profile
 // (large) + the pro panel (medium). Size + text are driven by className so each

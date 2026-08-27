@@ -89,7 +89,11 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico' },
       // ponytail: explicit manifest link. VitePWA emits manifest.webmanifest
       // but didn't link it; without this browsers only found it by auto-probing.
-      { rel: 'manifest', href: '/manifest.webmanifest' },
+      // PROD-only: VitePWA serves no manifest in dev (devOptions.enabled=false,
+      // gotcha #7), so an unconditional link 404s on every dev page load.
+      ...(import.meta.env.PROD
+        ? [{ rel: 'manifest', href: '/manifest.webmanifest' }]
+        : []),
     ],
   }),
   shellComponent: RootDocument,

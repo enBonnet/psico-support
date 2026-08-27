@@ -1,4 +1,8 @@
-import { defineConfig, loadEnv, createLogger } from 'vite'
+import {
+  defineConfig,
+  loadEnv,
+  createLogger,
+} from 'vite'
 import type { Plugin } from 'vite'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { resolve, dirname } from 'node:path'
@@ -12,7 +16,6 @@ import { tanstackStart } from '@tanstack/react-start/plugin/vite'
 
 import viteReact from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
-import { cloudflare } from '@cloudflare/vite-plugin'
 
 // ponytail: single source of truth for the app version. Read at build time
 // from package.json and injected into:
@@ -30,6 +33,8 @@ const APP_VERSION = JSON.parse(
   readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
 ).version
 
+const __dirname = dirname(fileURLToPath(import.meta.url))
+
 // ponytail: bake the package version into public/sw.js at build time.
 // public/ files are copied verbatim to disk by Vite's build-public plugin
 // and never enter the Rollup module graph — Vite's `transform` hook
@@ -44,7 +49,6 @@ const APP_VERSION = JSON.parse(
 // Ceiling: if SW moves out of public/ (e.g. into src/ as a TS module),
 // a plain `transform()` hook on the module id replaces this whole plugin.
 function swVersionPlugin(version: string): Plugin {
-  const __dirname = dirname(fileURLToPath(import.meta.url))
   return {
     name: 'sw-version-injection',
     apply: 'build',
@@ -66,11 +70,69 @@ function swVersionPlugin(version: string): Plugin {
   }
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(async ({ mode, command }) => {
   const env = loadEnv(mode, process.cwd(), '')
 
+  // ponytail: local dev runs on plain Node — the Cloudflare plugin (and with
+  // it workerd/miniflare/.wrangler state) is NOT part of `vite dev`. Dev runs
+  // TanStack Start's native Node SSR; SQL comes from better-sqlite3
+  // (src/db/driver.ts, the default resolution of `#/db/driver`).
+  //
+  // TSS_PRERENDERING is the other prod-build context: the post-build
+  // prerender boots an internal `vite preview` server (command === 'serve'!)
+  // to crawl the shell — it MUST keep the Cloudflare plugin so the crawl is
+  // served by workerd/miniflare like a real deploy, and keep the worker
+  // driver alias below. Without it the preview falls back to its Node
+  // middleware and 500s (it imports a server.js the worker build never
+  // emits). Plain `vite preview` (no build context) stays Node — use
+  // `pnpm build && pnpm exec wrangler dev` to smoke a prod build.
+  const isProdBuild =
+    command === 'build' || process.env.TSS_PRERENDERING === 'true'
+
+  // Cloudflare plugin loaded ONLY in the prod-build branch (dynamic import —
+  // a top-level import would make `vite dev` depend on the package even
+  // unused; verified: dev boots with node_modules/@cloudflare hidden).
+  const cloudflarePlugins = isProdBuild
+    ? [
+        (
+          await import('@cloudflare/vite-plugin')
+        ).cloudflare({ viteEnvironment: { name: 'ssr' } }),
+      ]
+    : []
+
+  // Per-environment resolution of `#/db/driver` (gotcha #12), via a plugin
+  // because this Vite version exposes no per-environment `resolve.alias`.
+  // Exact-match: must not also catch relative imports of './driver.*.ts'
+  // within src/db itself.
+  //
+  //   client env → driver.client.ts stub, ALWAYS. Server-fn modules (e.g.
+  //     src/server/analytics.ts) keep their module-level `#/db` imports in the
+  //     client variants TanStack compiles, so the default fs-resolution hands
+  //     the browser the whole DB chain: in dev that ends in better-sqlite3,
+  //     whose native module crashes hydration ("promisify is not a function" —
+  //     every route hung on the pending spinner); in build it would ship D1/R2
+  //     code into dist/client. The stub throws if ever CALLED (only server fns
+  //     should touch the DB) but makes the chain inert to LOAD.
+  //   ssr env (build / TSS prerender preview) → driver.worker.ts (D1 + R2
+  //     bindings from wrangler.jsonc).
+  //   ssr env (plain `vite dev`) → no override; natural resolution picks up
+  //     src/db/driver.ts (better-sqlite3 on dev.db).
+  const driverSelectPlugin: Plugin = {
+    name: 'driver-select',
+    enforce: 'pre',
+    resolveId(source) {
+      if (source !== '#/db/driver') return null
+      if (this.environment.name === 'client') {
+        return resolve(__dirname, 'src/db/driver.client.ts')
+      }
+      return isProdBuild ? resolve(__dirname, 'src/db/driver.worker.ts') : null
+    },
+  }
+
   return {
-    resolve: { tsconfigPaths: true },
+    resolve: {
+      tsconfigPaths: true,
+    },
     define: {
       __APP_VERSION__: JSON.stringify(APP_VERSION),
     },
@@ -111,20 +173,21 @@ export default defineConfig(({ mode }) => {
         /Failed to load source map for .*\/node_modules\//
       return {
         ...base,
-        warn(msg, options) {
+        warn(msg: string, options?: Parameters<typeof base.warn>[1]) {
           if (typeof msg === 'string' && DANGLING_SMAP_RE.test(msg)) return
           base.warn(msg, options)
         },
       }
     })(),
     plugins: [
+      driverSelectPlugin,
       devtools(),
       paraglideVitePlugin({
         project: './project.inlang',
         outdir: './src/paraglide',
         strategy: ['url', 'baseLocale'],
       }),
-      cloudflare({ viteEnvironment: { name: 'ssr' } }),
+      ...cloudflarePlugins,
       tailwindcss(),
       // ponytail: SPA shell generation. spa.enabled triggers a post-build
       // prerender of the maskPath (/) with header X-TSS_SHELL, which the SSR
@@ -134,7 +197,7 @@ export default defineConfig(({ mode }) => {
       // of per-route ssr:false/selective SSR — the profile route still SSRs for
       // crawlers (verified post-build). Upgrade: crawlLinks/precache hashed
       // assets if you want build-time precaching instead of runtime SWR.
-      tanstackStart({ spa: { enabled: true } }),
+      tanstackStart({ spa: { enabled: isProdBuild } }),
       viteReact(),
       // ponytail: precache the app shell so a 3G user who loaded once gets
       // instant subsequent loads. Live data still flows via TanStack Query

@@ -18,6 +18,7 @@ import {
   meetingCancellationHtml,
   buildIcsAttachment,
 } from '#/server/email'
+import type { EmailAttachment } from '#/server/email'
 import {
   parseSchedule,
   parseAppointmentDurations,

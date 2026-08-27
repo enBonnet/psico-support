@@ -8,8 +8,8 @@ import {
   isContactableNow,
   nextStartLabel,
   formatScheduleHuman,
-  publicAvatarUrl,
 } from '#/server/professionals'
+import { publicAvatarUrl } from '#/lib/professional-shared'
 import { notify } from '#/lib/notifications'
 import { track, trackProContact } from '#/lib/analytics-client'
 import { APPOINTMENTS_ENABLED } from '#/lib/features'

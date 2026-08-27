@@ -1,17 +1,19 @@
 // =============================================================================
 // scripts/pull-prod-sanitized.mjs — pull prod D1 into local dev, PII-scrubbed
 // =============================================================================
-// Recovers a wiped .wrangler/ in one command with REALISTIC data (real pros
+// Rebuilds the local dev.db in one command with REALISTIC data (real pros
 // across all verifiedStatus/modality states, real audio categories) — no PII,
-// no daily hand-rebuild. Use after `git clean -fdx` or any .wrangler/ wipe.
+// no daily hand-rebuild. Use after deleting dev.db or any local wipe.
 //
 //   pnpm run db:pull-prod                    # default password: password123
 //   pnpm run db:pull-prod -- --password foo
-//   pnpm run db:pull-prod -- --dry-run       # export + report, write nothing
+//   pnpm run db:pull-prod -- --dry-run       # export + full report against a
+//                                            # THROWAWAY db; dev.db untouched
 //
 // What it does (4 phases):
-//   1. Export prod D1 via `wrangler d1 export --remote` to a gitignored file.
-//   2. Reset the local runtime DB (DROP all tables) and load the prod dump.
+//   1. Export prod D1 via `wrangler d1 export --remote` to a gitignored file
+//      (prod tooling — wrangler is still the deploy/prod CLI).
+//   2. Reset the local dev.db (DROP all tables) and load the prod dump.
 //      (wrangler's export has no BEGIN/COMMIT and no DELETE, so it is NOT
 //      idempotent — we wipe first to avoid UNIQUE violations on re-run.)
 //   3. Sanitize PII via targeted UPDATEs (load-then-update, not regex on SQL —
@@ -39,7 +41,10 @@
 //     persists on disk, .tmp/ is gitignored.
 //   - Fail-loud: every sanitize UPDATE's changes count is checked; aborts if a
 //     table that should have rows got 0 changes (catches a broken pull early).
-//   - --dry-run exports + loads + reports what WOULD be sanitized, no writes.
+//   - --dry-run is truly non-destructive: the whole load+sanitize pipeline
+//     runs against a throwaway database under .tmp/ (deleted afterwards), so
+//     dev.db is never touched. The report reflects exactly what a real run
+//     would do.
 //
 // Requires: wrangler OAuth (already authenticated for --remote) + better-sqlite3
 // (devDependency, same as seed-local.ts / reset-local-passwords.ts).
@@ -60,7 +65,7 @@ import Database from "better-sqlite3";
 
 // --- config ---
 const DB_NAME = "psico-support-db";
-const STATE_DIR = ".wrangler/state/v3/d1/miniflare-D1DatabaseObject";
+const DB_PATH = "dev.db";
 const TMP_DIR = ".tmp";
 const RAW_SQL = join(TMP_DIR, "prod-raw.sql");
 
@@ -80,6 +85,11 @@ const DRY_RUN = args.includes("--dry-run");
 const pwFlag = args.indexOf("--password");
 const PASSWORD = pwFlag >= 0 && args[pwFlag + 1] ? args[pwFlag + 1] : "password123";
 
+// Set once the (unsanitized!) prod dump has been loaded into the real dev.db.
+// If the run dies after this point — sanitize guard, Ctrl-C between phases,
+// anything — dev.db holds RAW PROD PII, and the catch block must say so.
+let loadedProdIntoDevDb = false;
+
 // ANSI helpers
 const c = {
   dim: (s) => `\x1b[2m${s}\x1b[0m`,
@@ -92,13 +102,7 @@ const c = {
 
 // --- helpers ---
 function findLocalDb() {
-  if (!existsSync(STATE_DIR)) return null;
-  const files = readdirSync(STATE_DIR)
-    .filter((f) => f.endsWith(".sqlite") && !f.startsWith("metadata"))
-    .map((f) => join(STATE_DIR, f));
-  if (files.length === 0) return null;
-  files.sort((a, b) => statSync(b).size - statSync(a).size);
-  return files[0];
+  return existsSync(DB_PATH) ? DB_PATH : null;
 }
 
 function run(cmd, cmdArgs, opts = {}) {
@@ -165,20 +169,39 @@ async function main() {
   }
   console.log(c.green("  ✓ exported") + c.dim(` (${(statSync(RAW_SQL).size / 1024).toFixed(1)} KB)\n`));
 
-  // ---- Phase 2: reset + load local runtime DB ----
-  console.log(c.bold("  Phase 2/4 — loading into local runtime DB…"));
-  let dbPath = findLocalDb();
+  // ---- Phase 2: reset + load the target DB ----
+  // DRY RUN: every write below lands in a throwaway database under .tmp/
+  // (deleted in the finally block) — dev.db is never opened for writing.
+  const targetDb = DRY_RUN ? join(TMP_DIR, "dry-run.db") : DB_PATH;
+  console.log(
+    c.bold(`  Phase 2/4 — loading into ${DRY_RUN ? c.yellow("throwaway dry-run DB") : "local dev.db"}…`),
+  );
 
-  // If the runtime DB is missing or has no schema, apply migrations so the
-  // schema exists before we load prod data into it.
-  if (!dbPath) {
-    console.log(c.dim("  local DB missing — applying migrations first…"));
-    run("pnpm", ["exec", "wrangler", "d1", "migrations", "apply", DB_NAME, "--local"]);
-    dbPath = findLocalDb();
+  if (DRY_RUN) {
+    // Fresh throwaway every run. db-apply-local.mjs honors DATABASE_URL, so
+    // point the migrator at the throwaway to give it the same schema dev.db
+    // would have had.
+    rmSync(targetDb, { force: true });
+    rmSync(`${targetDb}-wal`, { force: true });
+    rmSync(`${targetDb}-shm`, { force: true });
+    run("pnpm", ["run", "db:apply:local"], {
+      env: { ...process.env, DATABASE_URL: `file:${targetDb}` },
+    });
+  } else {
+    let dbPath = findLocalDb();
+
+    // If dev.db is missing or has no schema, apply migrations so the schema
+    // exists before we load prod data into it. Plain-Node migrator (same as
+    // the `pnpm dev` preflight) — no wrangler/miniflare in local dev.
+    if (!dbPath) {
+      console.log(c.dim("  local DB missing — applying migrations first…"));
+      run("pnpm", ["run", "db:apply:local"]);
+      dbPath = findLocalDb();
+    }
+    if (!dbPath) throw new Error("Could not locate dev.db even after migrations.");
   }
-  if (!dbPath) throw new Error("Could not locate runtime DB even after migrations.");
 
-  const db = new Database(dbPath);
+  const db = new Database(targetDb);
   try {
     db.pragma("journal_mode = WAL");
     // Wipe all existing tables so the prod dump loads clean (export is NOT
@@ -202,6 +225,56 @@ async function main() {
     const load = db.transaction(() => db.exec(sql));
     load();
     db.exec("PRAGMA foreign_keys = ON");
+    if (!DRY_RUN) loadedProdIntoDevDb = true;
+
+    // The wipe above dropped the LOCAL migration-tracking table. Prod tracks
+    // its applied migrations in `d1_migrations` (same filenames as drizzle/ —
+    // wrangler.jsonc points migrations_dir there), so the dump re-creates it
+    // with the authoritative list. Track ONLY those: a drizzle/*.sql prod
+    // hasn't deployed yet (e.g. 0023 landing before the next CI apply) has no
+    // tables in the dump and must stay PENDING — otherwise db-check.mjs
+    // reports a healthy schema while runtime queries hit missing tables.
+    // Remaining files are applied by the `pnpm dev` preflight (db:apply:local)
+    // on next boot.
+    const drizzleFiles = readdirSync("drizzle").filter((f) => f.endsWith(".sql")).sort();
+    let deployedNames = null;
+    try {
+      deployedNames = new Set(
+        db.prepare("SELECT name FROM d1_migrations").all().map((r) => r.name),
+      );
+    } catch {
+      // No d1_migrations in the dump (very old prod?) — can't verify what's
+      // deployed; fall back to tracking everything and say so loudly.
+      console.log(
+        c.yellow("  ⚠  no d1_migrations in the prod dump — tracking ALL drizzle files as applied (could not verify schema freshness)"),
+      );
+    }
+    db.exec("DROP TABLE IF EXISTS d1_migrations");
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS local_migrations (
+        name TEXT PRIMARY KEY,
+        applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+      )
+    `);
+    const insertMigration = db.prepare(
+      "INSERT OR IGNORE INTO local_migrations (name) VALUES (?)",
+    );
+    const toTrack =
+      deployedNames === null
+        ? drizzleFiles
+        : drizzleFiles.filter((f) => deployedNames.has(f));
+    const notDeployed = drizzleFiles.filter((f) => !toTrack.includes(f));
+    const track = db.transaction(() => {
+      for (const f of toTrack) insertMigration.run(f);
+    });
+    track();
+    if (notDeployed.length > 0) {
+      console.log(
+        c.yellow(
+          `  ⚠  ${notDeployed.length} migration(s) not yet deployed to prod — left PENDING (the pnpm dev preflight will apply them): ${notDeployed.join(", ")}`,
+        ),
+      );
+    }
 
     const userCount = db.prepare("SELECT count(*) AS n FROM user").get()?.n ?? 0;
     if (userCount === 0) {
@@ -223,7 +296,9 @@ async function main() {
   }
 
   if (DRY_RUN) {
-    console.log(c.yellow("\n  (dry run — local DB was reset+loaded+sanitized with the default password; re-run without --dry-run to keep it.)"));
+    console.log(
+      c.yellow("\n  (dry run — nothing was written to dev.db; the load+sanitize report above came from a throwaway db, discarded below.)"),
+    );
   }
   // NOTE: do NOT call process.exit() here — it would skip the .finally() that
   // deletes the raw prod SQL. Let the promise chain resolve naturally so the
@@ -380,6 +455,16 @@ function printSummary(db) {
 main()
   .catch((err) => {
     console.error(c.red(`\n  ✗ ${err.message ?? err}`));
+    if (loadedProdIntoDevDb) {
+      console.error(
+        c.red(
+          "\n  ⚠  The prod dump was already loaded into dev.db when this failure hit —\n" +
+            "     dev.db now contains RAW, UN-SANITIZED PROD DATA (real emails, password\n" +
+            "     hashes, whatsapp numbers). Delete it before any other use:\n" +
+            "       rm dev.db dev.db-wal dev.db-shm   (then re-run this script or pnpm db:seed)",
+        ),
+      );
+    }
     process.exitCode = 1;
   })
   .finally(() => {
@@ -387,6 +472,17 @@ main()
     if (existsSync(RAW_SQL)) {
       rmSync(RAW_SQL);
       // also remove the scratch dir if empty so it doesn't linger
+      try {
+        if (readdirSync(TMP_DIR).length === 0) rmSync(TMP_DIR, { recursive: true });
+      } catch {
+        /* best-effort */
+      }
+    }
+    // Dry-run throwaway DB: gone, always.
+    if (DRY_RUN) {
+      for (const f of [join(TMP_DIR, "dry-run.db"), join(TMP_DIR, "dry-run.db-wal"), join(TMP_DIR, "dry-run.db-shm")]) {
+        rmSync(f, { force: true });
+      }
       try {
         if (readdirSync(TMP_DIR).length === 0) rmSync(TMP_DIR, { recursive: true });
       } catch {

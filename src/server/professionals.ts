@@ -30,6 +30,17 @@ import {
 } from './locations'
 import { bumpContactCount } from './analytics'
 
+// ponytail: client-safe constants live in #/lib/professional-shared — routes
+// and components import them as values (directory filters, triage, avatar
+// URLs), and pointing them here would keep this module's #/db chain inside
+// browser bundles. Imported below for internal schema/serialization use;
+// AVATAR_KEY_PREFIX is re-exported for the media routes that build key paths
+// from it.
+import { AVATAR_KEY_PREFIX, SPECIALIZED_AREA_OPTIONS } from '#/lib/professional-shared'
+import type { SpecializedArea } from '#/lib/professional-shared'
+
+export { AVATAR_KEY_PREFIX } from '#/lib/professional-shared'
+
 // ponytail: target demographics a professional serves. Multi-select, stored
 // as a JSON text array. Spanish labels are the stored keys (single-language app).
 export const POPULATION_OPTIONS = [
@@ -69,24 +80,6 @@ export const PRACTICE_AREA_OPTIONS = [
   'Ansiedad y depresión',
 ] as const
 export type PracticeArea = (typeof PRACTICE_AREA_OPTIONS)[number]
-
-// ponytail: sensitive specialized areas — the "áreas específicas" axis. These
-// are areas where the help-seeker's need is delicate (suicide, trauma, duelo,
-// neurodivergencia, etc.) and where pros can opt into an EXCLUSIVE visibility
-// mode: hidden from default directory browse + random pick, surfaced only when
-// a help-seeker filters by one of these areas (the /ayuda/especifica triage).
-// JSON array + LIKE filter.
-export const SPECIALIZED_AREA_OPTIONS = [
-  'Duelo',
-  'Personas Cuidadoras',
-  'Personas Neurodivergentes',
-  'Oncológica',
-  'Diversidad funcional',
-  'Suicidio',
-  'Acompañamiento y fortalecimiento laboral',
-  'Trauma y Estrés post Traumático',
-] as const
-export type SpecializedArea = (typeof SPECIALIZED_AREA_OPTIONS)[number]
 
 // ponytail: per-pro participation mode for the specialized axis.
 // 'inclusive' (default) — appear in the general directory AND when a
@@ -253,7 +246,6 @@ const AVATAR_EXT: Record<AvatarMime, string> = {
   'image/png': 'png',
   'image/webp': 'webp',
 }
-export const AVATAR_KEY_PREFIX = 'avatars/'
 
 export const avatarSchema = z.object({
   data: z
@@ -262,15 +254,6 @@ export const avatarSchema = z.object({
     .max(Math.ceil((AVATAR_MAX_BYTES * 4) / 3) + 1024),
   type: z.enum(AVATAR_MIME),
 })
-
-// ponytail: pure helper — builds the public playback URL from a stored R2 key.
-// Imported by client routes (profile + panel). Mirrors publicCertificateUrl.
-export function publicAvatarUrl(avatarKey: string): string {
-  const suffix = avatarKey.startsWith(AVATAR_KEY_PREFIX)
-    ? avatarKey.slice(AVATAR_KEY_PREFIX.length)
-    : avatarKey
-  return `/media/avatar/${suffix}`
-}
 
 // ── Social handles ──────────────────────────────────────────────────────────
 // ponytail: bare-handle storage. Users paste "@foo", "https://x.com/foo", or

@@ -19,8 +19,8 @@ import {
 } from '#/components/charts'
 import { Skeleton } from '#/components/ui/skeleton'
 import { notify } from '#/lib/notifications'
-import { TRACKED_EVENTS  } from '#/server/analytics'
-import type {TrackedEvent} from '#/server/analytics';
+import { TRACKED_EVENTS  } from '#/lib/analytics-events'
+import type {TrackedEvent} from '#/lib/analytics-events';
 import type { QueryId } from '#/server/analytics-queries';
 
 // =============================================================================
