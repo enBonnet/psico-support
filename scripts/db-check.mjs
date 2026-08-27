@@ -21,7 +21,7 @@
 // it runs db-apply-local.mjs (which creates dev.db if missing AND applies
 // the schema) and re-checks. Fails loudly if the apply didn't fix it.
 
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import Database from "better-sqlite3";
 
@@ -29,8 +29,20 @@ const ARGS = new Set(process.argv.slice(2));
 const STRICT = ARGS.has("--strict");
 const AUTO_FIX = ARGS.has("--fix");
 
-const DB_PATH = "dev.db";
+const MIGRATIONS_DIR = "drizzle";
 const FIX = "pnpm db:apply:local";
+
+// Same resolution as src/db/driver.ts (devDbPath) and db-apply-local.mjs so
+// all three always target the SAME database. Ceiling (documented there too):
+// this preflight runs BEFORE `dotenv -e .env.local` in the `pnpm dev` chain,
+// so a DATABASE_URL set only in .env.local is not visible here — export it in
+// the shell (or CI) if you deviate from the dev.db default.
+function dbPath() {
+  const url = process.env.DATABASE_URL;
+  if (!url) return "dev.db";
+  return url.startsWith("file:") ? url.slice("file:".length) : url;
+}
+const DB_PATH = dbPath();
 
 // ANSI helpers (plain text if piped — GitHub Actions logs strip these anyway,
 // but they aid local terminal scanning).
@@ -85,10 +97,25 @@ function checkSchema() {
         .map((r) => r.name),
     );
     const hasUser = tables.has("user");
-    const count = tables.has("local_migrations")
-      ? db.prepare("SELECT COUNT(*) AS n FROM local_migrations").get()?.n ?? 0
-      : 0;
-    return { ok: hasUser && count > 0, hasUser, count };
+    // A nonzero migration count is NOT health: a dev.db migrated last week
+    // plus a new drizzle/*.sql pulled today must report pending (and --fix
+    // must apply it), not green-light a stale schema. Compare FILENAMES —
+    // same semantics as db-apply-local.mjs (wrangler-style file listing).
+    const applied = tables.has("local_migrations")
+      ? new Set(
+          db.prepare("SELECT name FROM local_migrations").all().map((r) => r.name),
+        )
+      : new Set();
+    const expected = existsSync(MIGRATIONS_DIR)
+      ? readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql")).sort()
+      : [];
+    const pending = expected.filter((f) => !applied.has(f));
+    return {
+      ok: hasUser && pending.length === 0,
+      hasUser,
+      count: applied.size,
+      pending,
+    };
   } catch (err) {
     return { ok: false, error: String(err.message) };
   } finally {
@@ -146,8 +173,11 @@ if (!state.ok) {
     process.exit(1);
   }
   FAIL(
-    `${red("✗  Local dev.db schema is MISSING or PARTIAL")} ${dim(`(user table: ${state.hasUser ? "yes" : "no"}, migrations recorded: ${state.count})`)}\n` +
-      `   ${bold('Every query will 500 with "no such table".')}\n` +
+    `${red("✗  Local dev.db schema is MISSING, PARTIAL, or OUTDATED")} ${dim(`(user table: ${state.hasUser ? "yes" : "no"}, migrations applied: ${state.count}, pending: ${state.pending?.length ?? 0})`)}\n` +
+      (state.pending?.length
+        ? `   Pending migrations: ${state.pending.join(", ")}\n`
+        : "") +
+      `   ${bold('Every query may 500 with "no such table" or hit a stale schema.')}\n` +
       `   Fix: ${cyan(FIX)}`,
   );
 }

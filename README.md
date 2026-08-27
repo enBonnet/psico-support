@@ -136,13 +136,17 @@ que la instalación funciona igual que en producción.
 
 Copia `.env.example` a `.env.local` y completa:
 
-| Variable             | Requerida | Descripción                                                               |
-| -------------------- | --------- | ------------------------------------------------------------------------- |
-| `BETTER_AUTH_SECRET` | sí        | Secreto para firmar sesiones. Genera con `pnpm dlx @better-auth/cli secret` |
-| `BETTER_AUTH_URL`    | sí        | URL base pública (local: `http://localhost:3000`)                         |
-| `DATABASE_URL`       | sí        | Ruta a la BD SQLite local (p. ej. `file:./dev.db`)                        |
-| `VITE_SENTRY_DSN`    | no        | DSN de Sentry para el cliente y el worker (sin él, Sentry queda inactivo) |
-| `SENTRY_AUTH_TOKEN`  | no        | Token para subir source maps en build/deploy                              |
+| Variable               | Requerida | Descripción                                                               |
+| ---------------------- | --------- | ------------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`   | sí        | Secreto para firmar sesiones. Genera con `pnpm dlx @better-auth/cli secret` |
+| `BETTER_AUTH_URL`      | sí        | URL base pública (local: `http://localhost:3000`)                         |
+| `DATABASE_URL`         | sí        | Ruta a la BD SQLite local (p. ej. `file:./dev.db`)                        |
+| `MAILGUN_SENDING_KEY`  | sí*       | Clave de envío de Mailgun (o `MAILGUN_API_KEY`) — *requerida para enviar correo transaccional (reset de contraseña, confirmaciones de citas); sin ella la app arranca pero `sendEmail()` falla |
+| `MAILGUN_DOMAIN`       | sí*       | Dominio verificado en Mailgun (p. ej. `mg.psicoayudaven.com`) — *requerido junto con la clave |
+| `MAILGUN_FROM_EMAIL`   | no        | Remitente de los correos (por defecto `noreply@mg.psicoayudaven.com`)     |
+| `MAILGUN_REGION`       | no        | `us` (por defecto) o `eu` — debe coincidir con la región del dominio      |
+| `VITE_SENTRY_DSN`      | no        | DSN de Sentry para el cliente y el worker (sin él, Sentry queda inactivo) |
+| `SENTRY_AUTH_TOKEN`    | no        | Token para subir source maps en build/deploy                              |
 
 > Los bindings `DB`, `MEDIA` y `ANALYTICS` se declaran en `wrangler.jsonc` y
 > existen automáticamente en builds de producción y deploy. En `pnpm dev` no
