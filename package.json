@@ -72,7 +72,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260627.1",
+    "@cloudflare/workers-types": "^5.0.0",
     "@inlang/paraglide-js": "^2.13.1",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-event-client": "latest",
