@@ -33,10 +33,9 @@ const MIGRATIONS_DIR = "drizzle";
 const FIX = "pnpm db:apply:local";
 
 // Same resolution as src/db/driver.ts (devDbPath) and db-apply-local.mjs so
-// all three always target the SAME database. Ceiling (documented there too):
-// this preflight runs BEFORE `dotenv -e .env.local` in the `pnpm dev` chain,
-// so a DATABASE_URL set only in .env.local is not visible here — export it in
-// the shell (or CI) if you deviate from the dev.db default.
+// all three always target the SAME database. `pnpm dev` runs this preflight
+// under `dotenv -e .env.local` (same as the server), so a DATABASE_URL set in
+// .env.local is honored here too; exporting it in the shell (or CI) also works.
 function dbPath() {
   const url = process.env.DATABASE_URL;
   if (!url) return "dev.db";

@@ -227,12 +227,28 @@ async function main() {
     db.exec("PRAGMA foreign_keys = ON");
     if (!DRY_RUN) loadedProdIntoDevDb = true;
 
-    // The wipe above dropped the LOCAL migration-tracking table (prod tracks
-    // in `d1_migrations`, which the dump may have re-created — drop it, it
-    // means nothing locally). Rebuild `local_migrations` from the drizzle/
-    // listing: prod is fully migrated (CI applies everything), so every file
-    // counts as applied. Without this, the next `pnpm dev` preflight would
-    // re-run every migration against the freshly loaded schema and fail.
+    // The wipe above dropped the LOCAL migration-tracking table. Prod tracks
+    // its applied migrations in `d1_migrations` (same filenames as drizzle/ —
+    // wrangler.jsonc points migrations_dir there), so the dump re-creates it
+    // with the authoritative list. Track ONLY those: a drizzle/*.sql prod
+    // hasn't deployed yet (e.g. 0023 landing before the next CI apply) has no
+    // tables in the dump and must stay PENDING — otherwise db-check.mjs
+    // reports a healthy schema while runtime queries hit missing tables.
+    // Remaining files are applied by the `pnpm dev` preflight (db:apply:local)
+    // on next boot.
+    const drizzleFiles = readdirSync("drizzle").filter((f) => f.endsWith(".sql")).sort();
+    let deployedNames = null;
+    try {
+      deployedNames = new Set(
+        db.prepare("SELECT name FROM d1_migrations").all().map((r) => r.name),
+      );
+    } catch {
+      // No d1_migrations in the dump (very old prod?) — can't verify what's
+      // deployed; fall back to tracking everything and say so loudly.
+      console.log(
+        c.yellow("  ⚠  no d1_migrations in the prod dump — tracking ALL drizzle files as applied (could not verify schema freshness)"),
+      );
+    }
     db.exec("DROP TABLE IF EXISTS d1_migrations");
     db.exec(`
       CREATE TABLE IF NOT EXISTS local_migrations (
@@ -243,12 +259,22 @@ async function main() {
     const insertMigration = db.prepare(
       "INSERT OR IGNORE INTO local_migrations (name) VALUES (?)",
     );
+    const toTrack =
+      deployedNames === null
+        ? drizzleFiles
+        : drizzleFiles.filter((f) => deployedNames.has(f));
+    const notDeployed = drizzleFiles.filter((f) => !toTrack.includes(f));
     const track = db.transaction(() => {
-      for (const f of readdirSync("drizzle").filter((f) => f.endsWith(".sql")).sort()) {
-        insertMigration.run(f);
-      }
+      for (const f of toTrack) insertMigration.run(f);
     });
     track();
+    if (notDeployed.length > 0) {
+      console.log(
+        c.yellow(
+          `  ⚠  ${notDeployed.length} migration(s) not yet deployed to prod — left PENDING (the pnpm dev preflight will apply them): ${notDeployed.join(", ")}`,
+        ),
+      );
+    }
 
     const userCount = db.prepare("SELECT count(*) AS n FROM user").get()?.n ?? 0;
     if (userCount === 0) {
