@@ -145,6 +145,11 @@ export async function sendEmail({
       `Mailgun send failed (${response.status}): ${body.slice(0, 500)}`,
     )
   }
+  // ponytail: settle the success body before returning. Workers won't reuse
+  // the outbound connection while a response body is left unread, which
+  // stalls subsequent sends; the payload is tiny, so just read it. Fire-and-
+  // forget callers never see this — sendEmail keeps its await/throw shape.
+  await response.text().catch(() => '')
 }
 
 function escapeAttr(value: string): string {
